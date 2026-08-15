@@ -34,3 +34,9 @@
 - `main` → stable
 - `develop` → integration branch
 - Feature branches: `feature/component-a-...`, etc.
+
+**Rules:**
+- Never push directly to `main`
+- All work must be done in feature branches
+- Create a Pull Request into `develop`
+- After review, merge into `develop
