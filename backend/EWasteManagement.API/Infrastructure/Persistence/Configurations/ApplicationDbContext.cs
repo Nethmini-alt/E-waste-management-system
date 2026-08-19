@@ -1,3 +1,4 @@
+using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,11 @@ public class ApplicationDbContext : DbContext
         : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+
+    // Generator & Submission Manager Tables
+    public DbSet<Submission> Submissions => Set<Submission>();
+    public DbSet<SubmissionItem> SubmissionItems => Set<SubmissionItem>();
+    public DbSet<AIAnalysisResult> AIAnalysisResults => Set<AIAnalysisResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
