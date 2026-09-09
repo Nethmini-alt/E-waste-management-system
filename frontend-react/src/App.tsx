@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   CheckCircle, AlertTriangle, Cpu, Loader, ShieldAlert, 
-  Tag, Weight, DollarSign, LayoutDashboard, Send, XCircle, Check
+  Tag, Weight, DollarSign, LayoutDashboard, Send, XCircle, Check, Search, Filter
 } from 'lucide-react';
 
 interface AiAnalysis {
@@ -48,6 +48,11 @@ const App: React.FC = () => {
   // Admin Dashboard States
   const [allSubmissions, setAllSubmissions] = useState<SubmissionResponse[]>([]);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
+
+  // Admin Filter & Search States
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
+  const [selectedHazard, setSelectedHazard] = useState<string>('All');
 
   // Handle Form Submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -109,8 +114,6 @@ const App: React.FC = () => {
     setAdminLoading(true);
     try {
       const res = await axios.get('http://localhost:5172/api/v1/submissions');
-      console.log("Admin Submissions Response:", res.data);
-
       const responseData = res.data;
 
       if (Array.isArray(responseData)) {
@@ -144,6 +147,27 @@ const App: React.FC = () => {
       fetchAdminSubmissions();
     }
   };
+
+  // Filter Submissions Logic
+  const filteredSubmissions = allSubmissions.filter((sub) => {
+    const item = sub.items?.[0] || (sub as any).Items?.[0];
+    const ai = sub.aiAnalysis || (sub as any).aIAnalysis || (sub as any).AiAnalysis;
+
+    const desc = (item?.description || item?.Description || '').toLowerCase();
+    const itemName = (item?.itemName || item?.ItemName || '').toLowerCase();
+    const category = (ai?.wasteCategory || ai?.WasteCategory || '').toLowerCase();
+    const matchesSearch = desc.includes(searchTerm.toLowerCase()) || 
+                          itemName.includes(searchTerm.toLowerCase()) || 
+                          category.includes(searchTerm.toLowerCase()) ||
+                          sub.id.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = selectedStatus === 'All' || sub.status === selectedStatus;
+    
+    const hazard = ai?.hazardLevel || ai?.HazardLevel || 'Unknown';
+    const matchesHazard = selectedHazard === 'All' || hazard === selectedHazard;
+
+    return matchesSearch && matchesStatus && matchesHazard;
+  });
 
   return (
     <div style={{ maxWidth: '900px', margin: '30px auto', fontFamily: 'Arial, sans-serif', padding: '20px' }}>
@@ -275,23 +299,62 @@ const App: React.FC = () => {
           <h2><LayoutDashboard style={{ verticalAlign: 'middle', marginRight: '8px' }} /> Admin E-Waste Review Panel</h2>
           <p style={{ color: '#666' }}>Review hazardous items flagged by Gemini AI and approve/reject collection requests.</p>
 
+          {/* SEARCH & FILTER CONTROLS */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', background: '#f5f5f5', padding: '12px', borderRadius: '8px' }}>
+            <div style={{ flex: 2, minWidth: '200px', display: 'flex', alignItems: 'center', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', padding: '0 8px' }}>
+              <Search size={18} color="#888" />
+              <input 
+                type="text" 
+                placeholder="Search by description, ID or category..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ border: 'none', padding: '8px', width: '100%', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ flex: 1, minWidth: '140px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Filter size={16} color="#555" />
+              <select 
+                value={selectedStatus} 
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value="All">All Statuses</option>
+                <option value="Pending_Approval">Pending Approval</option>
+                <option value="Approved">Approved</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div style={{ flex: 1, minWidth: '140px' }}>
+              <select 
+                value={selectedHazard} 
+                onChange={(e) => setSelectedHazard(e.target.value)}
+                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value="All">All Hazard Levels</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+          </div>
+
           {adminLoading ? (
             <p>Loading submissions list...</p>
-          ) : allSubmissions.length === 0 ? (
-            <p style={{ color: '#777' }}>No e-waste submissions found in database.</p>
+          ) : filteredSubmissions.length === 0 ? (
+            <p style={{ color: '#777' }}>No submissions matched your search/filter criteria.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {allSubmissions.map((sub) => {
+              {filteredSubmissions.map((sub) => {
                 const item = sub.items?.[0] || (sub as any).Items?.[0];
                 const ai = sub.aiAnalysis || (sub as any).aIAnalysis || (sub as any).AiAnalysis;
-                
-                // Flexible Casing Check for Image URL
                 const imgUrl = item?.imageUrl || item?.ImageUrl || item?.image_url;
 
                 return (
                   <div key={sub.id} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '8px', padding: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
                     
-                    {/* Image Container with Fallback */}
                     <div style={{ width: '100px', height: '100px', borderRadius: '6px', overflow: 'hidden', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #eee' }}>
                       {imgUrl ? (
                         <img 
@@ -299,7 +362,6 @@ const App: React.FC = () => {
                           alt={item?.itemName || "E-Waste"} 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           onError={(e) => {
-                            // If external URL breaks, fallback gracefully
                             (e.target as HTMLImageElement).onerror = null;
                             (e.target as HTMLImageElement).src = 'https://placehold.co/100x100?text=E-Waste';
                           }}
