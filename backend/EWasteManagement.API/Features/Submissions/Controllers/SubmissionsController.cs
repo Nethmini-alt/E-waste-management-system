@@ -22,6 +22,13 @@ namespace EWasteManagement.Api.Controllers
             return CreatedAtAction(nameof(GetSubmissionById), new { id = submission.Id }, submission);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllSubmissions()
+        {
+            var submissions = await _submissionService.GetAllSubmissionsAsync();
+            return Ok(submissions);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetSubmissionById(Guid id)
         {
@@ -36,5 +43,18 @@ namespace EWasteManagement.Api.Controllers
             await _submissionService.ProcessAICallbackAsync(id, aiDto);
             return Ok(new { message = "AI analysis saved successfully." });
         }
+
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusDto dto)
+        {
+            var updatedSubmission = await _submissionService.UpdateStatusAsync(id, dto.Status);
+            if (updatedSubmission == null) return NotFound();
+            return Ok(updatedSubmission);
+        }
+    }
+
+    public class UpdateStatusDto
+    {
+        public string Status { get; set; } = string.Empty;
     }
 }

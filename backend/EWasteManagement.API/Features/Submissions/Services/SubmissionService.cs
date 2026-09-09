@@ -38,6 +38,15 @@ namespace EWasteManagement.Api.Services
             return submission;
         }
 
+        public async Task<IEnumerable<Submission>> GetAllSubmissionsAsync()
+        {
+            return await _context.Submissions
+                .Include(s => s.Items)
+                .Include(s => s.AIAnalysis)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+        }
+
         public async Task<Submission?> GetSubmissionByIdAsync(Guid id)
         {
             return await _context.Submissions
@@ -65,6 +74,17 @@ namespace EWasteManagement.Api.Services
 
             _context.AIAnalysisResults.Add(analysis);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<Submission?> UpdateStatusAsync(Guid id, string status)
+        {
+            var submission = await _context.Submissions.FindAsync(id);
+            if (submission == null) return null;
+
+            submission.Status = status;
+            await _context.SaveChangesAsync();
+            
+            return submission;
         }
 
         private async Task TriggerAIAgentAsync(Guid submissionId, string description, List<string> imageUrls)
