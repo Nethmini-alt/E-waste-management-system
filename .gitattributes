@@ -1,0 +1,63 @@
+# ======================
+# Auto detect + normalize
+# text=auto handles line-ending normalization for anything
+# Git identifies as text — no need to repeat this per extension.
+# ======================
+* text=auto
+
+# ======================
+# Force LF — files that MUST stay LF regardless of OS,
+# because Linux/Mac tooling, CI, or Docker consumes them directly.
+# ======================
+*.sh text eol=lf
+*.bash text eol=lf
+*.gitattributes text eol=lf
+*.gitignore text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# ======================
+# Force CRLF — Windows-only files
+# ======================
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# ======================
+# Flutter / Dart — lock file should diff as text but never
+# be hand-edited; still worth normalizing to avoid noisy diffs
+# ======================
+pubspec.lock text eol=lf -diff
+
+# ======================
+# Binary — do not touch, no diff, no normalization
+# ======================
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.aab binary
+*.apk binary
+*.ipa binary
+
+# ======================
+# SVG is XML text, not binary — keep normalized, not forced binary
+# ======================
+*.svg text eol=lf
