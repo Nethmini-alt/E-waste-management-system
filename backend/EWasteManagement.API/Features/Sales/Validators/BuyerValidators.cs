@@ -52,3 +52,22 @@ public class UpdateBuyerValidator : AbstractValidator<UpdateBuyerRequest>
             .WithMessage("Status must be Pending, Active, or Suspended.");
     }
 }
+
+public class RegisterBuyerValidator : AbstractValidator<RegisterBuyerRequest>
+{
+    public RegisterBuyerValidator()
+    {
+        RuleFor(x => x.FullName).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255);
+        RuleFor(x => x.Password)
+            .NotEmpty()
+            .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
+        RuleFor(x => x.PhoneNumber).MaximumLength(30)
+            .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber));
+        RuleFor(x => x.CompanyName).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.ContactPerson).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.BuyerType)
+            .Must(v => v is "Local" or "Export")
+            .WithMessage("BuyerType must be 'Local' or 'Export'.");
+    }
+}

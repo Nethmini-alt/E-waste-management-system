@@ -1,6 +1,7 @@
 using EWasteManagement.API.Features.Sales.DTOs;
 using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Infrastructure.Persistence;
+using EWasteManagement.API.Features.Auth.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EWasteManagement.API.Features.Sales.Services;
@@ -12,6 +13,8 @@ public interface IBuyerService
     Task<BuyerResponse> CreateAsync(CreateBuyerRequest request, CancellationToken ct = default);
     Task<BuyerResponse> UpdateAsync(Guid id, UpdateBuyerRequest request, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<AvailableUserResponse>> GetAvailableUsersAsync(CancellationToken ct = default);
+    Task<BuyerResponse> RegisterBuyerAsync(RegisterBuyerRequest request, CancellationToken ct = default);
 }
 
 public class BuyerService : IBuyerService
@@ -93,6 +96,66 @@ public class BuyerService : IBuyerService
         buyer.IsDeleted = true;
         buyer.DeletedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<AvailableUserResponse>> GetAvailableUsersAsync(CancellationToken ct = default)
+    {
+        // Corporate users who don't yet have a Buyer profile
+        var usedIds = await _db.Buyers
+            .Select(b => b.UserId)
+            .ToListAsync(ct);
+
+        var users = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Role == EWasteManagement.API.Features.Auth.Entities.UserRole.Corporate)
+            .Where(u => !usedIds.Contains(u.UserId))
+            .OrderBy(u => u.FullName)
+            .Select(u => new AvailableUserResponse
+            {
+                UserId = u.UserId,
+                FullName = u.FullName,
+                Email = u.Email
+            })
+            .ToListAsync(ct);
+
+        return users;
+    }
+
+    public async Task<BuyerResponse> RegisterBuyerAsync(RegisterBuyerRequest request, CancellationToken ct = default)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        if (await _db.Users.AnyAsync(u => u.Email == email, ct))
+            throw new InvalidOperationException("Email is already registered.");
+
+        // Create the User with role=Corporate
+        var user = new User
+        {
+            FullName = request.FullName.Trim(),
+            Email = email,
+            Phone = request.PhoneNumber?.Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = UserRole.Corporate
+        };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync(ct);
+
+        // Create the Buyer profile linked to that user
+        var buyer = new Buyer
+        {
+            UserId = user.UserId,
+            CompanyName = request.CompanyName.Trim(),
+            ContactPerson = request.ContactPerson.Trim(),
+            Email = email,
+            PhoneNumber = request.PhoneNumber?.Trim(),
+            Address = request.Address?.Trim(),
+            BuyerType = Enum.Parse<BuyerType>(request.BuyerType, true),
+            Status = BuyerStatus.Pending  // staff must activate
+        };
+        _db.Buyers.Add(buyer);
+        await _db.SaveChangesAsync(ct);
+
+        return Map(buyer);
     }
 
     private static BuyerResponse Map(Buyer b) => new()

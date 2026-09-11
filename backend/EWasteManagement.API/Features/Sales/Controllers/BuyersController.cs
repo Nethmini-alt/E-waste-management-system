@@ -14,6 +14,19 @@ public class BuyersController : ControllerBase
 
     public BuyersController(IBuyerService service) => _service = service;
 
+    /// <summary>Public buyer self-registration. Creates User (role=corporate) + Buyer profile.</summary>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(BuyerResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<BuyerResponse>> Register(
+        [FromBody] RegisterBuyerRequest request,
+        CancellationToken ct)
+    {
+        var result = await _service.RegisterBuyerAsync(request, ct);
+        return CreatedAtAction(nameof(GetById), new { id = result.BuyerId }, result);
+    }
+
     /// <summary>List all buyers (staff/admin only).</summary>
     [HttpGet]
     [ProducesResponseType(typeof(IReadOnlyList<BuyerResponse>), StatusCodes.Status200OK)]
@@ -67,5 +80,14 @@ public class BuyersController : ControllerBase
     {
         await _service.DeleteAsync(id, ct);
         return NoContent();
+    }
+
+    /// <summary>List Corporate users who don't yet have a buyer profile (for staff onboarding).</summary>
+    [HttpGet("available-users")]
+    [ProducesResponseType(typeof(IReadOnlyList<AvailableUserResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<AvailableUserResponse>>> GetAvailableUsers(CancellationToken ct)
+    {
+        var result = await _service.GetAvailableUsersAsync(ct);
+        return Ok(result);
     }
 }
