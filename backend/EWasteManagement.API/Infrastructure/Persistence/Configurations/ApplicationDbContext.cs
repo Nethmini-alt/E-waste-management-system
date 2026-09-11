@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Sales.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EWasteManagement.API.Infrastructure.Persistence;
@@ -15,6 +16,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<SubmissionItem> SubmissionItems => Set<SubmissionItem>();
     public DbSet<AIAnalysisResult> AIAnalysisResults => Set<AIAnalysisResult>();
+
+        // Component D — Sales / Commercial
+    public DbSet<Buyer> Buyers => Set<Buyer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
