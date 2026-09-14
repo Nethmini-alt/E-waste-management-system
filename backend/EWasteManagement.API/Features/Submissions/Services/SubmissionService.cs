@@ -22,6 +22,7 @@ namespace EWasteManagement.Api.Services
             {
                 UserId = dto.UserId,
                 UserType = dto.UserType,
+                PickupAddress = dto.PickupAddress,
                 Items = dto.Items.Select(i => new SubmissionItem
                 {
                     ItemName = i.ItemName,
