@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Collection.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace EWasteManagement.API.Infrastructure.Persistence;
@@ -15,6 +16,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<SubmissionItem> SubmissionItems => Set<SubmissionItem>();
     public DbSet<AIAnalysisResult> AIAnalysisResults => Set<AIAnalysisResult>();
+
+    // Collection & Logistics Tables
+    public DbSet<Collector> Collectors => Set<Collector>();
+    public DbSet<Job> Jobs => Set<Job>();
+    
+    public DbSet<JobAssignmentHistory> JobAssignmentHistory => Set<JobAssignmentHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
