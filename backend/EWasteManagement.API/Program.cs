@@ -1,6 +1,7 @@
 using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";
