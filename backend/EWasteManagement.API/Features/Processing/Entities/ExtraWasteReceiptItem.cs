@@ -10,6 +10,7 @@ public class ExtraWasteReceiptItem : BaseEntity
     public ExtraWasteReceipt? ExtraWasteReceipt { get; set; }
 
     public string ItemType { get; set; } = string.Empty;
+    public decimal WeightKg { get; set; }
     public bool Accepted { get; set; }
     public string? RejectionReason { get; set; }
 

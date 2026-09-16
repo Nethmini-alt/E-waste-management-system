@@ -32,12 +32,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<CollectorPayment> CollectorPayments => Set<CollectorPayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+{
+    base.OnModelCreating(modelBuilder);
+    modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
-        // Every entity deriving BaseEntity gets optimistic concurrency for free,
-        // via Postgres's built-in xmin system column — no extra column/migration needed for it.
+    // Only apply Postgres-specific concurrency handling when Postgres is actually the
+    // provider — lets tests run against SQLite without dragging in Npgsql-only concepts.
+    if (Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+    {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
@@ -46,6 +48,7 @@ public class ApplicationDbContext : DbContext
             }
         }
     }
+}
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

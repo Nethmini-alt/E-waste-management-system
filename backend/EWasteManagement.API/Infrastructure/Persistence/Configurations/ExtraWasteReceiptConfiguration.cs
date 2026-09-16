@@ -18,6 +18,9 @@ public class ExtraWasteReceiptConfiguration : IEntityTypeConfiguration<ExtraWast
         builder.Property(x => x.ReceivedByStaffId).HasColumnName("received_by_staff_id").IsRequired();
         builder.Property(x => x.ReceivedAt).HasColumnName("received_at");
         builder.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(1000);
+        builder.Property(x => x.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(100);
+        // Lets the client safely retry a double-tap without creating a duplicate receipt.
+        builder.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter("idempotency_key IS NOT NULL");
 
         builder.HasMany(x => x.Items)
             .WithOne(x => x.ExtraWasteReceipt)

@@ -19,6 +19,7 @@ public class ExtraWasteReceiptItemConfiguration : IEntityTypeConfiguration<Extra
         builder.Property(x => x.Accepted).HasColumnName("accepted");
         builder.Property(x => x.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(500);
         builder.Property(x => x.InventoryItemId).HasColumnName("inventory_item_id");
+        builder.Property(x => x.WeightKg).HasColumnName("weight_kg").HasColumnType("decimal(10,3)");
 
         builder.HasOne(x => x.InventoryItem)
             .WithMany()

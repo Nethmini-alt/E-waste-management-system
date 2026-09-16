@@ -58,4 +58,13 @@ public class InventoryItem : BaseEntity
         Status = next;
         RaiseDomainEvent(new InventoryStatusChangedEvent(Id, previous, next, staffId, notes));
     }
+
+    /// <summary>
+    /// Raises the very first audit-log entry when an item enters the warehouse. Not a real
+    /// transition (no previous state to move from), so it bypasses AllowedTransitions — but
+    /// it guarantees a ProcessingLog row exists from the moment the item exists, closing the
+    /// gap Day 1 deliberately left open.
+    /// </summary>
+    public void MarkReceived(Guid staffId, string? notes = null)
+        => RaiseDomainEvent(new InventoryStatusChangedEvent(Id, Status, Status, staffId, notes ?? "Received at warehouse"));
 }

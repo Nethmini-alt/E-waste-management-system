@@ -1,6 +1,7 @@
 using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
+using EWasteManagement.API.Features.Processing.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.API.Features.Processing.Events;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -84,6 +85,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddScoped<IDomainEventDispatcher, SimpleDomainEventDispatcher>();
 builder.Services.AddScoped<IDomainEventHandler<InventoryStatusChangedEvent>, InventoryStatusChangedEventHandler>();
+builder.Services.AddScoped<IExtraWasteReceiptService, ExtraWasteReceiptService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
