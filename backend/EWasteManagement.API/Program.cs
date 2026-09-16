@@ -2,6 +2,7 @@ using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
+using EWasteManagement.API.Features.Processing.Events;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -82,6 +83,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddScoped<IDomainEventDispatcher, SimpleDomainEventDispatcher>();
+builder.Services.AddScoped<IDomainEventHandler<InventoryStatusChangedEvent>, InventoryStatusChangedEventHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 

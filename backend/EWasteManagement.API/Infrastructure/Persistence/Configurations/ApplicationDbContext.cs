@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Shared.Common;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,14 @@ public class ApplicationDbContext : DbContext
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<SubmissionItem> SubmissionItems => Set<SubmissionItem>();
     public DbSet<AIAnalysisResult> AIAnalysisResults => Set<AIAnalysisResult>();
+    public DbSet<WarehouseLocation> WarehouseLocations => Set<WarehouseLocation>();
+    public DbSet<RatePolicy> RatePolicies => Set<RatePolicy>();
+    public DbSet<ExtraWasteReceipt> ExtraWasteReceipts => Set<ExtraWasteReceipt>();
+    public DbSet<ExtraWasteReceiptItem> ExtraWasteReceiptItems => Set<ExtraWasteReceiptItem>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<ProcessingLog> ProcessingLogs => Set<ProcessingLog>();
+    public DbSet<ClassificationRecord> ClassificationRecords => Set<ClassificationRecord>();
+    public DbSet<CollectorPayment> CollectorPayments => Set<CollectorPayment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

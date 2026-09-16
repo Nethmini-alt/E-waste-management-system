@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914143804_AddProcessingInventoryTables")]
+    partial class AddProcessingInventoryTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -480,44 +483,6 @@ namespace EWasteManagement.API.Migrations
                         .HasFilter("is_active = true");
 
                     b.ToTable("rate_policies", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222201"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            ItemType = "Laptop",
-                            RatePerKg = 50m
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222202"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            ItemType = "Mobile Phone",
-                            RatePerKg = 80m
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222203"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            ItemType = "Battery",
-                            RatePerKg = 30m
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222204"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            ItemType = "General Household Electronics",
-                            RatePerKg = 40m
-                        });
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.WarehouseLocation", b =>
@@ -551,36 +516,6 @@ namespace EWasteManagement.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("warehouse_locations", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111101"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Where collector deliveries and extra-waste drop-offs are first received and weighed.",
-                            Name = "Receiving Bay"
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111102"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Items are sorted by category before dismantling or direct classification.",
-                            Name = "Sorting Area"
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111103"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Items are broken down into separately trackable child components.",
-                            Name = "Dismantling Area"
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111104"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Classified items awaiting handoff to Component D.",
-                            Name = "Ready-for-Sale Storage"
-                        });
                 });
 
             modelBuilder.Entity("EWasteManagement.Api.Entities.AIAnalysisResult", b =>
