@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Shared.Common;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProcessingLog> ProcessingLogs => Set<ProcessingLog>();
     public DbSet<ClassificationRecord> ClassificationRecords => Set<ClassificationRecord>();
     public DbSet<CollectorPayment> CollectorPayments => Set<CollectorPayment>();
+
+    // Collection & Logistics Tables
+    public DbSet<Collector> Collectors => Set<Collector>();
+    public DbSet<Job> Jobs => Set<Job>();
+    
+    public DbSet<JobAssignmentHistory> JobAssignmentHistory => Set<JobAssignmentHistory>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
 {

@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916105646_AddJobIdUniqueIndexOnInventoryItems")]
+    partial class AddJobIdUniqueIndexOnInventoryItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -394,6 +397,10 @@ namespace EWasteManagement.API.Migrations
 
                     b.HasIndex("ExtraWasteReceiptId");
 
+                    b.HasIndex("JobId")
+                        .IsUnique()
+                        .HasFilter("job_id IS NOT NULL");
+
                     b.HasIndex("ParentInventoryItemId");
 
                     b.ToTable("inventory_items", null, t =>
@@ -641,10 +648,6 @@ namespace EWasteManagement.API.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PickupAddress")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Status")
                         .IsRequired()

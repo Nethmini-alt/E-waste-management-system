@@ -1,7 +1,6 @@
 using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
-using EWasteManagement.API.Features.Processing.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.API.Features.Processing.Events;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,6 +10,9 @@ using Microsoft.OpenApi.Models;
 using EWasteManagement.API.Shared.Common;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using EWasteManagement.API.Features.Collection.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
+using EWasteManagement.API.Features.Processing.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +55,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Services Registration
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";
