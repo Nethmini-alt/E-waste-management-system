@@ -4,15 +4,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './features/auth/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
-
 import LoginPage from './features/auth/LoginPage';
 import SubmitPage from './features/submissions/SubmitPage';
 import AdminReviewPage from './features/submissions/AdminReviewPage';
-
 import BuyersListPage from './features/sales/Buyers/BuyersListPage';
-
 import RegisterPage from './features/auth/RegisterPage';
 import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
+import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -50,6 +48,15 @@ const App: React.FC = () => (
             }
           />
         </Route>
+
+        <Route
+          path="/pricing"
+          element={
+            <ProtectedRoute roles={['staff', 'admin']}>
+              <MaterialPricingListPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
