@@ -56,6 +56,7 @@ builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
+builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
 
 // FluentValidation — scans the assembly for AbstractValidator<T> classes
 builder.Services.AddFluentValidationAutoValidation();
