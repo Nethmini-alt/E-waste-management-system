@@ -16,7 +16,7 @@ public class Job
     public JobStatus Status { get; set; } = JobStatus.Assigned;
 
     // Copied from the submission's PickupAddress at job-creation time, then
-    // geocoded by GoogleMapsService. Kept on Job rather than written back to
+    // geocoded via GeoService (OpenStreetMap). Kept on Job rather than written back to
     // Submission, per the plan discussed with the team.
     public string PickupAddress { get; set; } = string.Empty;
     public decimal? PickupLatitude { get; set; }

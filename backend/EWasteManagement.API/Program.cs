@@ -51,8 +51,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
+builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
-builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
+builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";
