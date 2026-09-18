@@ -58,6 +58,7 @@ builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
 builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
+builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 // Component D — external data providers
 builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
 

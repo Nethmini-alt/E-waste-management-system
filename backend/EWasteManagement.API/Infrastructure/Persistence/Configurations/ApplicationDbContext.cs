@@ -20,6 +20,8 @@ public class ApplicationDbContext : DbContext
         // Component D — Sales / Commercial
     public DbSet<Buyer> Buyers => Set<Buyer>();
     public DbSet<MaterialPricing> MaterialPricings => Set<MaterialPricing>();
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+    public DbSet<SalesOrderItem> SalesOrderItems => Set<SalesOrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
