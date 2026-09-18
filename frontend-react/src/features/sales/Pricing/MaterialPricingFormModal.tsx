@@ -5,18 +5,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { X } from 'lucide-react';
 
-const schema = z
-  .object({
-    materialType: z.string().min(1, 'Required').max(100),
-    pricePerKg: z.coerce
-      .number()
-      .refine((val) => !isNaN(val), { message: 'Must be a number' })
-      .positive('Must be greater than 0')
-      .max(1_000_000, 'Too high'),
-    effectiveDate: z.string().min(1, 'Required'),
-    expiryDate: z.string().optional(),
-  })
-  .refine(
+const schema = z.object({
+  materialType: z.string().min(1, 'Required').max(100),
+  pricePerKg: z.coerce.number().positive('Must be greater than 0').max(1_000_000, 'Too high'),
+  effectiveDate: z.string().min(1, 'Required'),
+  expiryDate: z.string().optional(),
+})
+
+.refine(
     (v) => !v.expiryDate || new Date(v.expiryDate) > new Date(v.effectiveDate),
     {
       message: 'Expiry must be after effective date',

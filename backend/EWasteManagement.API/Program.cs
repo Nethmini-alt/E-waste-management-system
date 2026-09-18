@@ -10,6 +10,7 @@ using EWasteManagement.API.Features.Sales.Services;
 using EWasteManagement.API.Infrastructure.Middleware;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using EWasteManagement.API.Infrastructure.ExternalServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +58,8 @@ builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
 builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
+// Component D — external data providers
+builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
 
 // FluentValidation — scans the assembly for AbstractValidator<T> classes
 builder.Services.AddFluentValidationAutoValidation();
