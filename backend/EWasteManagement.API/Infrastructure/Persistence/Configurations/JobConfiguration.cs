@@ -12,7 +12,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         {
             t.HasCheckConstraint(
                 "CK_jobs_status",
-                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable')");
+                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
         });
 
         builder.HasKey(j => j.JobId);
