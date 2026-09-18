@@ -11,6 +11,8 @@ import BuyersListPage from './features/sales/Buyers/BuyersListPage';
 import RegisterPage from './features/auth/RegisterPage';
 import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
 import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
+import DashboardPage from './features/sales/Dashboard/DashboardPage';
+import MaterialsListPage from './features/sales/Materials/MaterialsListPage';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -27,6 +29,7 @@ const App: React.FC = () => (
             </ProtectedRoute>
           }
         >
+          <Route index element={<DashboardPage />} />
           <Route index element={<Navigate to="/submissions/new" replace />} />
           <Route path="/submissions/new" element={<SubmitPage />} />
           <Route
@@ -54,6 +57,15 @@ const App: React.FC = () => (
           element={
             <ProtectedRoute roles={['staff', 'admin']}>
               <MaterialPricingListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/materials"
+          element={
+            <ProtectedRoute roles={['staff', 'admin']}>
+              <MaterialsListPage />
             </ProtectedRoute>
           }
         />
