@@ -10,13 +10,15 @@ public class JobReceiptService : IJobReceiptService
 {
     private readonly ApplicationDbContext _db;
     private readonly IJobVerificationService _jobVerification;
+    private readonly ICollectorPaymentService _paymentService;
 
-    public JobReceiptService(ApplicationDbContext db, IJobVerificationService jobVerification)
+    public JobReceiptService(ApplicationDbContext db, IJobVerificationService jobVerification, ICollectorPaymentService paymentService)
     {
         _db = db;
         _jobVerification = jobVerification;
+        _paymentService = paymentService;
     }
-
+    
     public async Task<ReceiveJobWasteResponse> ReceiveAsync(
         ReceiveJobWasteRequest request, Guid receivedByStaffId, CancellationToken cancellationToken = default)
     {
@@ -42,6 +44,8 @@ public class JobReceiptService : IJobReceiptService
             ? request.VerifiedWeightKg - job.ReportedWeightKg.Value
             : null;
 
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+
         var inventoryItem = new InventoryItem
         {
             OriginType = OriginType.JobCollection,
@@ -61,6 +65,15 @@ public class JobReceiptService : IJobReceiptService
 
         _db.InventoryItems.Add(inventoryItem);
         await _db.SaveChangesAsync(cancellationToken);
+
+        await _paymentService.CreatePaymentAsync(
+            PaymentSourceType.Job,
+            request.JobId,
+            request.CollectorId,
+            new PaymentContext { TotalWeightKg = request.VerifiedWeightKg, DistanceKm = job.DistanceKm },
+            cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
 
         return new ReceiveJobWasteResponse
         {

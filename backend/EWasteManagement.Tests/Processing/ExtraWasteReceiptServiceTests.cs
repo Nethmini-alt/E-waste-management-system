@@ -14,6 +14,13 @@ public class ExtraWasteReceiptServiceTests : IAsyncLifetime
     private SqliteConnection _connection = null!;
     private ApplicationDbContext _db = null!;
 
+    private ExtraWasteReceiptService CreateService()
+{
+    var rates = new RatePolicyLookupService(_db);
+    var calculators = new IPaymentCalculator[] { new JobPaymentCalculator(rates), new ExtraWastePaymentCalculator(rates) };
+    return new ExtraWasteReceiptService(_db, new CollectorPaymentService(_db, calculators));
+}
+
     public async Task InitializeAsync()
     {
         // Kept open for the test's lifetime — SQLite's in-memory DB disappears the moment
@@ -47,7 +54,7 @@ public class ExtraWasteReceiptServiceTests : IAsyncLifetime
     public async Task ReceiveAsync_MixedAcceptedAndRejected_OnlyAcceptedCreateInventoryItems()
     {
         var locationId = await SeedLocationAsync();
-        var service = new ExtraWasteReceiptService(_db);
+        var service = CreateService();
 
         var request = new ReceiveExtraWasteRequest
         {
@@ -88,7 +95,7 @@ public class ExtraWasteReceiptServiceTests : IAsyncLifetime
     public async Task ReceiveAsync_SameIdempotencyKeyTwice_DoesNotCreateASecondReceipt()
     {
         var locationId = await SeedLocationAsync();
-        var service = new ExtraWasteReceiptService(_db);
+        var service = CreateService();
         var request = new ReceiveExtraWasteRequest
         {
             CollectorId = Guid.NewGuid(),

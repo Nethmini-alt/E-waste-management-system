@@ -8,8 +8,13 @@ namespace EWasteManagement.API.Features.Processing.Services;
 public class ExtraWasteReceiptService : IExtraWasteReceiptService
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICollectorPaymentService _paymentService;
 
-    public ExtraWasteReceiptService(ApplicationDbContext db) => _db = db;
+    public ExtraWasteReceiptService(ApplicationDbContext db, ICollectorPaymentService paymentService)
+    {
+        _db = db;
+        _paymentService = paymentService;
+    }
 
     public async Task<ReceiveExtraWasteResponse> ReceiveAsync(
         ReceiveExtraWasteRequest request, Guid receivedByStaffId, CancellationToken cancellationToken = default)
@@ -73,6 +78,21 @@ public class ExtraWasteReceiptService : IExtraWasteReceiptService
 
         _db.ExtraWasteReceipts.Add(receipt);
         await _db.SaveChangesAsync(cancellationToken);
+
+        var acceptedItems = receipt.Items.Where(i => i.Accepted).ToList();
+        if (acceptedItems.Count > 0)
+        {
+            var lineItems = acceptedItems.Select(i => new PaymentLineItem(i.ItemType, i.WeightKg)).ToList();
+            var paymentContext = new PaymentContext
+            {
+                TotalWeightKg = lineItems.Sum(l => l.WeightKg),
+                LineItems = lineItems
+            };
+
+            await _paymentService.CreatePaymentAsync(
+                PaymentSourceType.ExtraWaste, receipt.Id, request.CollectorId, paymentContext, cancellationToken);
+        }
+        
         await transaction.CommitAsync(cancellationToken);
 
         return MapToResponse(receipt);

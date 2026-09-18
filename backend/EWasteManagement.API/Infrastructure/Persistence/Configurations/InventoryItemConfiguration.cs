@@ -42,6 +42,11 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         builder.Property(x => x.ItemType).HasColumnName("item_type").HasMaxLength(50).IsRequired();
         builder.Property(x => x.VerifiedWeightKg).HasColumnName("verified_weight_kg").HasColumnType("decimal(10,3)");
         builder.Property(x => x.CurrentLocationId).HasColumnName("current_location_id").IsRequired();
+        // A job can only ever become one inventory item. The service pre-checks this too, but this
+        // is the real backstop if two requests for the same job land at the same instant.
+        builder.HasIndex(x => x.JobId)
+            .IsUnique()
+            .HasFilter("job_id IS NOT NULL");
 
         builder.HasOne(x => x.CurrentLocation)
             .WithMany()

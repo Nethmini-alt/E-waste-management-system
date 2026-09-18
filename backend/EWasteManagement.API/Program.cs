@@ -58,6 +58,16 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
+builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
+builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
+builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
+builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
+builder.Services.AddScoped<IRatePolicyLookupService, RatePolicyLookupService>();
+builder.Services.AddScoped<IPaymentCalculator, JobPaymentCalculator>();
+builder.Services.AddScoped<IPaymentCalculator, ExtraWastePaymentCalculator>();
+builder.Services.AddScoped<ICollectorPaymentService, CollectorPaymentService>();
+builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingService>();
+builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";

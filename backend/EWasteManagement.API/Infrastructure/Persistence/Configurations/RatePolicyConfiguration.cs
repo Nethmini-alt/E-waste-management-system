@@ -25,7 +25,8 @@ public class RatePolicyConfiguration : IEntityTypeConfiguration<RatePolicy>
             new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222201"), ItemType = "Laptop", RatePerKg = 50m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
             new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222202"), ItemType = "Mobile Phone", RatePerKg = 80m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
             new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222203"), ItemType = "Battery", RatePerKg = 30m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
-            new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222204"), ItemType = "General Household Electronics", RatePerKg = 40m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) }
+            new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222204"), ItemType = "General Household Electronics", RatePerKg = 40m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
+            new RatePolicy { Id = Guid.Parse("22222222-2222-2222-2222-222222222205"), ItemType = "GeneralCollection", RatePerKg = 20m, IsActive = true, EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc), CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) }
         );
     }
 }
