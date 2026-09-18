@@ -24,7 +24,7 @@ public class CreateBuyerValidator : AbstractValidator<CreateBuyerRequest>
             .MaximumLength(150);
 
         RuleFor(x => x.PhoneNumber)
-            .MaximumLength(30)
+            .MaximumLength(40)
             .When(x => !string.IsNullOrWhiteSpace(x.PhoneNumber));
 
         RuleFor(x => x.BuyerType)

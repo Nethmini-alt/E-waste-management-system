@@ -22,6 +22,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<MaterialPricing> MaterialPricings => Set<MaterialPricing>();
     public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
     public DbSet<SalesOrderItem> SalesOrderItems => Set<SalesOrderItem>();
+    public DbSet<ExportOrder> ExportOrders => Set<ExportOrder>();
+    public DbSet<ExportOrderItem> ExportOrderItems => Set<ExportOrderItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

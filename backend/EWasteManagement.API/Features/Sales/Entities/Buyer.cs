@@ -31,7 +31,7 @@ public class Buyer
     // Navigation
     public User User { get; set; } = null!;
     public ICollection<SalesOrder> SalesOrders { get; set; } = new List<SalesOrder>();
-    //public ICollection<ExportOrder> ExportOrders { get; set; } = new List<ExportOrder>();
+    public ICollection<ExportOrder> ExportOrders { get; set; } = new List<ExportOrder>();
 }
 
 public enum BuyerType
