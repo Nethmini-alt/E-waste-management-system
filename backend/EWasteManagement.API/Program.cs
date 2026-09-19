@@ -61,6 +61,7 @@ builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
+builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
 
 // Component D — external data providers
 builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
