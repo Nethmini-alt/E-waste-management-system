@@ -2,18 +2,28 @@ using System.Text.Json.Serialization;
 
 namespace EWasteManagement.API.Infrastructure.ExternalServices;
 
-// Mirrors Nominatim's and OSRM's response shapes exactly (not our own domain
+// Mirrors Photon's and OSRM's response shapes exactly (not our own domain
 // model) — kept internal so nothing outside this folder depends on their JSON.
 
-// Nominatim returns an array of matches; lat/lon come back as strings, not
-// numbers, which is easy to miss.
-internal class NominatimResult
+// Photon (Komoot's OSM-based geocoder) returns a GeoJSON FeatureCollection.
+// Coordinates come back as [longitude, latitude] — GeoJSON's standard order,
+// the OPPOSITE of how we store/pass lat/lng everywhere else in this codebase.
+internal class PhotonResponse
 {
-    [JsonPropertyName("lat")]
-    public string Lat { get; set; } = string.Empty;
+    [JsonPropertyName("features")]
+    public List<PhotonFeature> Features { get; set; } = new();
+}
 
-    [JsonPropertyName("lon")]
-    public string Lon { get; set; } = string.Empty;
+internal class PhotonFeature
+{
+    [JsonPropertyName("geometry")]
+    public PhotonGeometry Geometry { get; set; } = new();
+}
+
+internal class PhotonGeometry
+{
+    [JsonPropertyName("coordinates")]
+    public List<double> Coordinates { get; set; } = new();
 }
 
 internal class OsrmRouteResponse

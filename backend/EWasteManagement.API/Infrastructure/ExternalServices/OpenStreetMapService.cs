@@ -6,7 +6,7 @@ public class OpenStreetMapService : IGeoService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenStreetMapService> _logger;
-    private readonly string _nominatimBaseUrl;
+    private readonly string _photonBaseUrl;
     private readonly string _osrmBaseUrl;
     private readonly string _userAgent;
 
@@ -15,10 +15,11 @@ public class OpenStreetMapService : IGeoService
         _httpClient = httpClient;
         _logger = logger;
 
-        // Public demo servers by default — no API key, no billing. Swappable
-        // via config later if you self-host OSRM or use a different Nominatim
-        // instance (e.g. for reliability beyond a student project).
-        _nominatimBaseUrl = configuration["OpenStreetMap:NominatimBaseUrl"] ?? "https://nominatim.openstreetmap.org";
+        // Public demo servers by default — no API key, no billing.
+        // Photon (not Nominatim) for geocoding: Nominatim's public server
+        // increasingly 403s non-browser HTTP clients via edge bot-mitigation,
+        // even with a compliant User-Agent — Photon doesn't have this problem.
+        _photonBaseUrl = configuration["OpenStreetMap:PhotonBaseUrl"] ?? "https://photon.komoot.io/api";
         _osrmBaseUrl = configuration["OpenStreetMap:OsrmBaseUrl"] ?? "https://router.project-osrm.org";
 
         var contactEmail = configuration["OpenStreetMap:ContactEmail"] ?? "student-project@example.com";
@@ -33,42 +34,40 @@ public class OpenStreetMapService : IGeoService
             return null;
         }
 
-        var url = $"{_nominatimBaseUrl}/search?q={Uri.EscapeDataString(address)}&format=json&limit=1";
+        var url = $"{_photonBaseUrl}/?q={Uri.EscapeDataString(address)}&limit=1";
 
         try
         {
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-
-            // Nominatim's usage policy requires a real, identifying User-Agent —
-            // requests without one get blocked outright.
             requestMessage.Headers.UserAgent.ParseAdd(_userAgent);
 
             var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Nominatim call failed with status {StatusCode} for address '{Address}'.",
+                _logger.LogWarning("Photon call failed with status {StatusCode} for address '{Address}'.",
                     response.StatusCode, address);
                 return null;
             }
 
             var body = await response.Content.ReadAsStringAsync();
-            var results = JsonSerializer.Deserialize<List<NominatimResult>>(body);
+            var parsed = JsonSerializer.Deserialize<PhotonResponse>(body);
 
-            if (results is null || results.Count == 0)
+            if (parsed is null || parsed.Features.Count == 0)
             {
-                _logger.LogInformation("Nominatim found no match for address '{Address}'.", address);
+                _logger.LogInformation("Photon found no match for address '{Address}'.", address);
                 return null;
             }
 
-            var first = results[0];
-            if (!decimal.TryParse(first.Lat, out var lat) || !decimal.TryParse(first.Lon, out var lon))
+            var coordinates = parsed.Features[0].Geometry.Coordinates;
+            if (coordinates.Count < 2)
             {
-                _logger.LogWarning("Nominatim returned unparseable coordinates for address '{Address}'.", address);
+                _logger.LogWarning("Photon returned an unexpected geometry for address '{Address}'.", address);
                 return null;
             }
 
-            return (lat, lon);
+            // GeoJSON order is [lon, lat] — flipped to our (lat, lng) contract here.
+            return ((decimal)coordinates[1], (decimal)coordinates[0]);
         }
         catch (Exception ex)
         {
@@ -92,7 +91,10 @@ public class OpenStreetMapService : IGeoService
 
         try
         {
-            var response = await _httpClient.GetAsync(url);
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            requestMessage.Headers.UserAgent.ParseAdd(_userAgent);
+
+            var response = await _httpClient.SendAsync(requestMessage);
 
             if (!response.IsSuccessStatusCode)
             {

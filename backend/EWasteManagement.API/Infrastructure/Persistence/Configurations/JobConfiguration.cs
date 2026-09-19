@@ -32,7 +32,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .HasConversion(
                 v => v.ToString().ToLower(),
                 v => Enum.Parse<JobStatus>(v, true))
-            .HasMaxLength(20)
+            .HasMaxLength(30)
             .IsRequired();
         builder.HasIndex(j => j.Status);
 
