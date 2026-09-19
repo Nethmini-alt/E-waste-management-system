@@ -21,11 +21,13 @@ public class ExportOrderService : IExportOrderService
 
     private readonly ApplicationDbContext _db;
     private readonly IRecoveredMaterialsProvider _materials;
+    private readonly IRevenueService _revenue;
 
-    public ExportOrderService(ApplicationDbContext db, IRecoveredMaterialsProvider materials)
+    public ExportOrderService(ApplicationDbContext db, IRecoveredMaterialsProvider materials,IRevenueService revenue)
     {
         _db = db;
         _materials = materials;
+        _revenue = revenue;
     }
 
     // ---------- Reads ----------
@@ -179,14 +181,22 @@ public class ExportOrderService : IExportOrderService
             throw new InvalidOperationException(
                 $"Cannot move from {order.Status} to {newStatus}.");
 
-        // Approving requires admin (checked at controller level too, defense in depth)
-        if (newStatus == ExportOrderStatus.Approved && order.Status == ExportOrderStatus.PendingApproval)
-        {
-            // No additional check here — controller enforces role
-        }
+        var wasCompleted = order.Status == ExportOrderStatus.Completed;
 
         order.Status = newStatus;
         order.UpdatedAt = DateTime.UtcNow;
+
+        if (!wasCompleted && newStatus == ExportOrderStatus.Completed)
+        {
+            await _revenue.RecordOrderRevenueAsync(
+                RevenueType.Export,
+                order.ExportOrderId,
+                order.TotalValue,
+                order.CreatedByUserId,
+                remarks: $"Auto-recorded on completion of export order {order.ExportOrderId}",
+                ct: ct);
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(order.ExportOrderId, ct);

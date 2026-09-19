@@ -58,6 +58,7 @@ builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
 builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
+builder.Services.AddScoped<IRevenueService, RevenueService>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
 

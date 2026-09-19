@@ -1,20 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useEffect, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, Tag, Package, DollarSign, RefreshCw, ArrowRight, TrendingUp,
+  Users, Tag, Package, DollarSign, RefreshCw, ArrowRight,
 } from 'lucide-react';
 import { dashboardApi } from './dashboardApi';
 import type { Buyer } from '../Buyers/types';
 import type { MaterialPricing } from '../Pricing/types';
 import type { RecoveredMaterial } from '../Materials/types';
+import { revenueApi } from '../Revenue/revenueApi';
+import type { RevenueSummary } from '../Revenue/types';
 
 interface DashboardData {
   buyers: Buyer[];
   pricing: MaterialPricing[];
   availableMaterials: RecoveredMaterial[];
+  revenueSummary: RevenueSummary;
 }
 
 const DashboardPage: React.FC = () => {
@@ -23,24 +25,28 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [buyers, pricing, availableMaterials] = await Promise.all([
+      const [buyers, pricing, availableMaterials, revenueSummary] = await Promise.all([
         dashboardApi.buyers(),
         dashboardApi.pricing(),
         dashboardApi.availableMaterials(),
+        revenueApi.summary(),
       ]);
-      setData({ buyers, pricing, availableMaterials });
-    } catch (e: any) {
-      setError(e?.response?.data?.title ?? 'Failed to load dashboard.');
+      setData({ buyers, pricing, availableMaterials, revenueSummary });
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { title?: string } } };
+      setError(err?.response?.data?.title ?? 'Failed to load dashboard.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const stats = data
     ? {
@@ -79,7 +85,7 @@ const DashboardPage: React.FC = () => {
       {loading && <p>Loading dashboard…</p>}
       {error && <div style={errorBox}>{error}</div>}
 
-      {!loading && !error && stats && (
+      {!loading && !error && stats && data && (
         <>
           {/* Stat cards */}
           <div
@@ -102,7 +108,7 @@ const DashboardPage: React.FC = () => {
               icon={<Tag size={20} />}
               label="Approved Prices"
               value={stats.approvedPrices}
-              sub={`${data?.pricing.length ?? 0} total rows`}
+              sub={`${data.pricing.length} total rows`}
               color="#2e7d32"
               onClick={() => navigate('/pricing')}
             />
@@ -110,15 +116,15 @@ const DashboardPage: React.FC = () => {
               icon={<Package size={20} />}
               label="Sellable Materials"
               value={stats.sellableTonnes.toFixed(2)}
-              sub={`${data?.availableMaterials.length ?? 0} batches (tonnes)`}
+              sub={`${data.availableMaterials.length} batches (tonnes)`}
               color="#e65100"
               onClick={() => navigate('/materials')}
             />
             <StatCard
               icon={<DollarSign size={20} />}
               label="Revenue"
-              value="—"
-              sub="Coming in Part 12"
+              value={`Rs. ${data.revenueSummary.totalRevenue.toLocaleString()}`}
+              sub={`${data.revenueSummary.transactionCount} transactions · Local Rs. ${data.revenueSummary.localSaleRevenue.toLocaleString()} · Export Rs. ${data.revenueSummary.exportRevenue.toLocaleString()}`}
               color="#6a1b9a"
               onClick={() => navigate('/revenue')}
             />
@@ -132,7 +138,7 @@ const DashboardPage: React.FC = () => {
               onClick: () => navigate('/materials'),
             }}
           >
-            {data!.availableMaterials.length === 0 ? (
+            {data.availableMaterials.length === 0 ? (
               <EmptyRow message="No sellable materials right now." />
             ) : (
               <table style={table}>
@@ -145,7 +151,7 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {data!.availableMaterials.slice(0, 5).map((m) => (
+                  {data.availableMaterials.slice(0, 5).map((m) => (
                     <tr key={m.recoveredMaterialId} style={trBody}>
                       <td style={{ ...td, fontWeight: 'bold' }}>{m.materialType}</td>
                       <td style={td}>{m.quantityKg.toFixed(2)}</td>
@@ -181,37 +187,30 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentPricing.map((p) => (
-                    <tr key={p.pricingId} style={trBody}>
-                      <td style={{ ...td, fontWeight: 'bold' }}>{p.materialType}</td>
-                      <td style={td}>Rs. {p.pricePerKg.toFixed(2)}</td>
-                      <td style={td}>{p.effectiveDate}</td>
-                      <td style={td}>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                            fontWeight: 'bold',
-                            background:
-                              p.status === 'Approved'
-                                ? '#e8f5e9'
-                                : p.status === 'Draft'
-                                ? '#fff3e0'
-                                : '#eceff1',
-                            color:
-                              p.status === 'Approved'
-                                ? '#2e7d32'
-                                : p.status === 'Draft'
-                                ? '#e65100'
-                                : '#546e7a',
-                          }}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {recentPricing.map((p) => {
+                    const badge = statusBadge(p.status);
+                    return (
+                      <tr key={p.pricingId} style={trBody}>
+                        <td style={{ ...td, fontWeight: 'bold' }}>{p.materialType}</td>
+                        <td style={td}>Rs. {p.pricePerKg.toFixed(2)}</td>
+                        <td style={td}>{p.effectiveDate}</td>
+                        <td style={td}>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              padding: '3px 8px',
+                              borderRadius: 4,
+                              fontWeight: 'bold',
+                              background: badge.background,
+                              color: badge.color,
+                            }}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -220,6 +219,19 @@ const DashboardPage: React.FC = () => {
       )}
     </div>
   );
+};
+
+// ---------- Helpers ----------
+
+const statusBadge = (status: string): { background: string; color: string } => {
+  switch (status) {
+    case 'Approved':
+      return { background: '#e8f5e9', color: '#2e7d32' };
+    case 'Draft':
+      return { background: '#fff3e0', color: '#e65100' };
+    default:
+      return { background: '#eceff1', color: '#546e7a' };
+  }
 };
 
 // ---------- Sub-components ----------
@@ -242,10 +254,12 @@ const StatCard: React.FC<{
       cursor: onClick ? 'pointer' : 'default',
       transition: 'box-shadow 0.15s',
     }}
-    onMouseEnter={(e) =>
-      onClick && (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)')
-    }
-    onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+    onMouseEnter={(e) => {
+      if (onClick) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.boxShadow = 'none';
+    }}
   >
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, color, marginBottom: 6 }}>
       {icon}
@@ -264,7 +278,14 @@ const Section: React.FC<{
   children: React.ReactNode;
 }> = ({ title, action, children }) => (
   <div style={{ marginBottom: 25 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+      }}
+    >
       <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
       {action && (
         <button

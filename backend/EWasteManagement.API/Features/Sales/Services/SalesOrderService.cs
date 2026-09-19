@@ -19,11 +19,13 @@ public class SalesOrderService : ISalesOrderService
 {
     private readonly ApplicationDbContext _db;
     private readonly IRecoveredMaterialsProvider _materials;
+    private readonly IRevenueService _revenue;
 
-    public SalesOrderService(ApplicationDbContext db, IRecoveredMaterialsProvider materials)
+    public SalesOrderService(ApplicationDbContext db, IRecoveredMaterialsProvider materials, IRevenueService revenue)
     {
         _db = db;
         _materials = materials;
+        _revenue = revenue;
     }
 
     // ---------- Reads ----------
@@ -164,8 +166,24 @@ public class SalesOrderService : ISalesOrderService
         if (order.Status == SalesOrderStatus.Draft && newStatus == SalesOrderStatus.Completed)
             throw new InvalidOperationException("Draft orders must be Confirmed before they can be Completed.");
 
+       var wasCompleted = order.Status == SalesOrderStatus.Completed;
+
         order.Status = newStatus;
         order.UpdatedAt = DateTime.UtcNow;
+
+        // Auto-create revenue when transitioning INTO Completed (not on repeat)
+        if (!wasCompleted && newStatus == SalesOrderStatus.Completed)
+        {
+            await _revenue.RecordOrderRevenueAsync(
+                RevenueType.LocalSale,
+                order.SalesOrderId,
+                order.TotalAmount,
+                order.CreatedByUserId,
+                remarks: $"Auto-recorded on completion of sales order {order.SalesOrderId}",
+                ct: ct);
+        }
+
+        // Single save — order status + revenue row commit together
         await _db.SaveChangesAsync(ct);
 
         return await GetByIdAsync(order.SalesOrderId, ct);
