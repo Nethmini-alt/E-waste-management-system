@@ -16,6 +16,9 @@ import MaterialsListPage from './features/sales/Materials/MaterialsListPage';
 import SalesOrdersListPage from './features/sales/SalesOrders/SalesOrdersListPage';
 import ExportOrdersListPage from './features/sales/ExportOrders/ExportOrdersListPage';
 import RevenuePage from './features/sales/Revenue/RevenuePage';
+import PlansListPage from './features/sales/Approvals/PlansListPage';
+import PlanDetailPage from './features/sales/Approvals/PlanDetailPage';
+import ApprovalsPage from './features/sales/Approvals/ApprovalsPage';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -95,6 +98,30 @@ const App: React.FC = () => (
           element={
             <ProtectedRoute roles={['staff', 'admin']}>
               <RevenuePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans"
+          element={
+            <ProtectedRoute roles={['staff', 'admin']}>
+              <PlansListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/plans/:id"
+          element={
+            <ProtectedRoute roles={['staff', 'admin']}>
+              <PlanDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/approvals"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <ApprovalsPage />
             </ProtectedRoute>
           }
         />
