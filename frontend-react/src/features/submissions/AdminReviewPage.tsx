@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  LayoutDashboard, Search, Filter, Check, XCircle, RefreshCw,
+  LayoutDashboard, Search, Filter, Check, XCircle, RefreshCw, MapPin,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import type { SubmissionResponse } from './types';
@@ -16,7 +16,6 @@ const AdminReviewPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedHazard, setSelectedHazard] = useState<string>('All');
 
-  // ---- Load ----
   const load = async () => {
     setLoading(true);
     setError(null);
@@ -35,7 +34,6 @@ const AdminReviewPage: React.FC = () => {
     load();
   }, []);
 
-  // ---- Approve / Reject ----
   const handleDecision = async (id: string, status: 'Approved' | 'Rejected') => {
     try {
       await submissionApi.updateStatus(id, status);
@@ -47,7 +45,6 @@ const AdminReviewPage: React.FC = () => {
     }
   };
 
-  // ---- Filter ----
   const filtered = useMemo(() => {
     return submissions.filter((sub) => {
       const item = sub.items?.[0] || (sub as any).Items?.[0];
@@ -83,7 +80,7 @@ const AdminReviewPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
         <div>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <LayoutDashboard size={22} /> E-Waste Review Panel
+            <LayoutDashboard size={22} /> Admin E-Waste Review Panel
           </h2>
           <p style={{ color: '#666', margin: '4px 0 0 0' }}>
             Review hazardous items flagged by the AI and approve/reject collection requests.
@@ -160,6 +157,12 @@ const AdminReviewPage: React.FC = () => {
             const category = ai?.wasteCategory || ai?.WasteCategory;
             const value = ai?.estimatedValueUsd ?? ai?.EstimatedValueUsd;
 
+            // ✅ pickup address fallback for PascalCase backend too
+            const pickupAddress =
+              sub.pickupAddress ||
+              (sub as any).PickupAddress ||
+              (sub as any).pickup_address;
+
             return (
               <div key={sub.id} style={card}>
                 {/* Image */}
@@ -191,6 +194,22 @@ const AdminReviewPage: React.FC = () => {
 
                   <p style={{ margin: '0 0 8px 0', color: '#555', fontSize: 14 }}>
                     "{item?.description || item?.Description}"
+                  </p>
+
+                  {/* ✅ Pickup Address shown in admin card */}
+                  <p
+                    style={{
+                      margin: '0 0 8px 0',
+                      color: '#2e7d32',
+                      fontSize: 13,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <MapPin size={14} />
+                    <strong>Pickup Address:</strong>&nbsp;
+                    {pickupAddress || 'Not Provided'}
                   </p>
 
                   {ai ? (

@@ -9,6 +9,13 @@ export interface AiAnalysis {
   analyzedAt?: string;
 }
 
+export interface CreateSubmissionPayload {
+  userId: string;
+  userType: string;
+  pickupAddress?: string;
+  items: SubmissionItem[];
+}
+
 export interface SubmissionItem {
   id?: string;
   submissionId?: string;
@@ -25,4 +32,5 @@ export interface SubmissionResponse {
   createdAt?: string;
   items?: SubmissionItem[];
   aiAnalysis?: AiAnalysis;
+  pickupAddress?: string;
 }

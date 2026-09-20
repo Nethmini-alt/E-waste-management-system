@@ -8,6 +8,7 @@ export const submissionApi = {
   create: (payload: {
     userId: string;
     userType: string;
+    pickupAddress?: string;
     items: { itemName: string; description: string; imageUrl: string }[];
   }) =>
     axios

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   CheckCircle, AlertTriangle, Cpu, Loader, ShieldAlert,
-  Tag, Weight, DollarSign,
+  Tag, Weight, DollarSign, MapPin,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import type { SubmissionResponse } from './types';
@@ -10,6 +10,7 @@ import type { SubmissionResponse } from './types';
 const SubmitPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [pickupAddress, setPickupAddress] = useState(''); // ✅ added back
   const [loading, setLoading] = useState(false);
   const [submission, setSubmission] = useState<SubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +26,7 @@ const SubmitPage: React.FC = () => {
       const data = await submissionApi.create({
         userId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
         userType: 'Generator',
+        pickupAddress, // ✅ added back
         items: [{ itemName: 'E-Waste Item', description, imageUrl }],
       });
       setSubmission(data);
@@ -80,6 +82,19 @@ const SubmitPage: React.FC = () => {
           />
         </div>
 
+        {/* ✅ Pickup Address field added back */}
+        <div style={{ marginBottom: 15 }}>
+          <label style={labelStyle}>Pickup Address:</label>
+          <textarea
+            rows={2}
+            style={inputStyle}
+            placeholder="e.g. No. 123, Main Street, Kurunegala"
+            value={pickupAddress}
+            onChange={(e) => setPickupAddress(e.target.value)}
+            required
+          />
+        </div>
+
         <div style={{ marginBottom: 15 }}>
           <label style={labelStyle}>Image URL:</label>
           <input
@@ -96,7 +111,7 @@ const SubmitPage: React.FC = () => {
           {loading
             ? 'Submitting…'
             : polling
-            ? 'Analyzing…'
+            ? 'Analyzing with Gemini AI…'
             : 'Submit E-Waste Item'}
         </button>
       </form>
@@ -109,11 +124,18 @@ const SubmitPage: React.FC = () => {
 
       {submission && (
         <div style={resultCard}>
-          <h3 style={{ color: '#2e7d32', marginTop: 0 }}>
+          <h3 style={{ color: '#2e7d32', marginTop: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
             <CheckCircle size={18} /> Submission Recorded
           </h3>
           <p><strong>ID:</strong> <code>{submission.id}</code></p>
           <p><strong>Status:</strong> {submission.status}</p>
+
+          {/* ✅ Pickup Address shown in result card */}
+          <p style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <MapPin size={14} />
+            <strong>Pickup Address:</strong>{' '}
+            {submission.pickupAddress || pickupAddress}
+          </p>
 
           {polling ? (
             <div style={pollingBox}>
@@ -121,11 +143,11 @@ const SubmitPage: React.FC = () => {
                 size={16}
                 style={{ animation: 'spin 1s linear infinite' }}
               />
-              <span>AI is analyzing your image & description…</span>
+              <span>Gemini AI is analyzing your image & description…</span>
             </div>
           ) : ai ? (
             <div style={aiResultBox}>
-              <h4 style={{ margin: '0 0 10px 0' }}>🤖 AI Assessment</h4>
+              <h4 style={{ margin: '0 0 10px 0' }}>🤖 Gemini AI Assessment Result</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <p><Tag size={14} /> <strong>Category:</strong> {ai.wasteCategory}</p>
                 <p>
@@ -153,7 +175,7 @@ const SubmitPage: React.FC = () => {
                 }}
               >
                 {ai.requiresHumanApproval
-                  ? '⚠️ Requires Admin Approval'
+                  ? '⚠️ Requires Admin Approval (Hazardous)'
                   : '✅ Auto-Approved for Collection'}
               </p>
             </div>
