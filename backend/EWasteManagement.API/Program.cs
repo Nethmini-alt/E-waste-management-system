@@ -1,13 +1,18 @@
 using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
-using EWasteManagement.API.Features.Collection.Services;
-using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
+using EWasteManagement.API.Features.Processing.Events;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using EWasteManagement.API.Shared.Common;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using EWasteManagement.API.Features.Collection.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
+using EWasteManagement.API.Features.Processing.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +59,14 @@ builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
+builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
+builder.Services.AddScoped<IRatePolicyLookupService, RatePolicyLookupService>();
+builder.Services.AddScoped<IPaymentCalculator, JobPaymentCalculator>();
+builder.Services.AddScoped<IPaymentCalculator, ExtraWastePaymentCalculator>();
+builder.Services.AddScoped<ICollectorPaymentService, CollectorPaymentService>();
+builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingService>();
+builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // JWT Authentication
@@ -82,7 +95,17 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddScoped<IDomainEventDispatcher, SimpleDomainEventDispatcher>();
+builder.Services.AddScoped<IDomainEventHandler<InventoryStatusChangedEvent>, InventoryStatusChangedEventHandler>();
+builder.Services.AddScoped<IExtraWasteReceiptService, ExtraWasteReceiptService>();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Pipeline Configuration
 if (app.Environment.IsDevelopment())

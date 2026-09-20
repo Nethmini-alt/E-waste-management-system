@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916105646_AddJobIdUniqueIndexOnInventoryItems")]
+    partial class AddJobIdUniqueIndexOnInventoryItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -92,213 +95,6 @@ namespace EWasteManagement.API.Migrations
                     b.ToTable("users", null, t =>
                         {
                             t.HasCheckConstraint("CK_users_role", "role IN ('household','corporate','collector','staff','admin')");
-                        });
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Collection.Entities.Collector", b =>
-                {
-                    b.Property<Guid>("CollectorId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("collector_id");
-
-                    b.Property<decimal>("CapacityKg")
-                        .HasColumnType("numeric(10,2)")
-                        .HasColumnName("capacity_kg");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal?>("CurrentLatitude")
-                        .HasColumnType("numeric(9,6)")
-                        .HasColumnName("current_latitude");
-
-                    b.Property<decimal?>("CurrentLongitude")
-                        .HasColumnType("numeric(9,6)")
-                        .HasColumnName("current_longitude");
-
-                    b.Property<bool>("IsAvailable")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("is_available");
-
-                    b.Property<DateTime?>("LocationUpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("location_updated_at");
-
-                    b.Property<decimal>("Rating")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(3,2)")
-                        .HasDefaultValue(5.0m)
-                        .HasColumnName("rating");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<string>("VehicleType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("vehicle_type");
-
-                    b.HasKey("CollectorId");
-
-                    b.HasIndex("IsAvailable");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("collectors", (string)null);
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Collection.Entities.Job", b =>
-                {
-                    b.Property<Guid>("JobId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("job_id");
-
-                    b.Property<Guid?>("CollectorId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("collector_id");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("completed_at");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal?>("EstimatedDistanceKm")
-                        .HasColumnType("numeric(8,2)")
-                        .HasColumnName("estimated_distance_km");
-
-                    b.Property<int?>("EstimatedEtaMinutes")
-                        .HasColumnType("integer")
-                        .HasColumnName("estimated_eta_minutes");
-
-                    b.Property<decimal?>("MeasuredWeightKg")
-                        .HasColumnType("numeric(10,2)")
-                        .HasColumnName("measured_weight_kg");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("text")
-                        .HasColumnName("notes");
-
-                    b.Property<string>("PhotoUrl")
-                        .HasColumnType("text")
-                        .HasColumnName("photo_url");
-
-                    b.Property<string>("PickupAddress")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("pickup_address");
-
-                    b.Property<decimal?>("PickupLatitude")
-                        .HasColumnType("numeric(9,6)")
-                        .HasColumnName("pickup_latitude");
-
-                    b.Property<decimal?>("PickupLongitude")
-                        .HasColumnType("numeric(9,6)")
-                        .HasColumnName("pickup_longitude");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("rejection_reason");
-
-                    b.Property<DateTime?>("RespondedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("responded_at");
-
-                    b.Property<DateTime?>("ScheduledWindowEnd")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("scheduled_window_end");
-
-                    b.Property<DateTime?>("ScheduledWindowStart")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("scheduled_window_start");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)")
-                        .HasColumnName("status");
-
-                    b.Property<Guid>("SubmissionId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("submission_id");
-
-                    b.HasKey("JobId");
-
-                    b.HasIndex("CollectorId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("SubmissionId");
-
-                    b.ToTable("jobs", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_jobs_status", "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
-                        });
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Collection.Entities.JobAssignmentHistory", b =>
-                {
-                    b.Property<Guid>("HistoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("history_id");
-
-                    b.Property<Guid>("CollectorId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("collector_id");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("job_id");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("outcome");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("reason");
-
-                    b.Property<DateTime>("Timestamp")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("HistoryId");
-
-                    b.HasIndex("CollectorId");
-
-                    b.HasIndex("JobId");
-
-                    b.HasIndex("JobId", "CollectorId");
-
-                    b.ToTable("job_assignment_history", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_job_assignment_history_outcome", "outcome IN ('assigned','accepted','rejected')");
                         });
                 });
 
@@ -741,15 +537,6 @@ namespace EWasteManagement.API.Migrations
                             IsActive = true,
                             ItemType = "General Household Electronics",
                             RatePerKg = 40m
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222205"),
-                            CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            EffectiveFrom = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            ItemType = "GeneralCollection",
-                            RatePerKg = 20m
                         });
                 });
 
@@ -862,10 +649,6 @@ namespace EWasteManagement.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("PickupAddress")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");
@@ -907,25 +690,6 @@ namespace EWasteManagement.API.Migrations
                     b.HasIndex("SubmissionId");
 
                     b.ToTable("SubmissionItems");
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Collection.Entities.Collector", b =>
-                {
-                    b.HasOne("EWasteManagement.API.Features.Auth.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Collection.Entities.Job", b =>
-                {
-                    b.HasOne("EWasteManagement.API.Features.Collection.Entities.Collector", "CollectorEntity")
-                        .WithMany()
-                        .HasForeignKey("CollectorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("CollectorEntity");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.ClassificationRecord", b =>
