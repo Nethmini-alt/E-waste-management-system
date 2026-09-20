@@ -65,6 +65,7 @@ builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
 
 // Component D — external data providers
 builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
+builder.Services.AddHttpClient<IAgentClient, AgentClient>();
 
 // FluentValidation — scans the assembly for AbstractValidator<T> classes
 builder.Services.AddFluentValidationAutoValidation();

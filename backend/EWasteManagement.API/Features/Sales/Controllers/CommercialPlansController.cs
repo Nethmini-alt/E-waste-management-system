@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using EWasteManagement.API.Features.Sales.DTOs;
 using EWasteManagement.API.Features.Sales.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,8 +12,13 @@ namespace EWasteManagement.API.Features.Sales.Controllers;
 public class CommercialPlansController : ControllerBase
 {
     private readonly ICommercialPlanService _service;
+    private readonly IAgentClient _agent;
 
-    public CommercialPlansController(ICommercialPlanService service) => _service = service;
+    public CommercialPlansController(ICommercialPlanService service, IAgentClient agent) 
+    {
+        _service = service;
+        _agent = agent;
+    }
 
     // ---------- Agent-facing (internal) ----------
 
@@ -90,6 +96,36 @@ public class CommercialPlansController : ControllerBase
     [ProducesResponseType(typeof(CommercialPlanResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<CommercialPlanResponse>> MarkExecuted(Guid id, CancellationToken ct)
         => Ok(await _service.MarkExecutedAsync(id, GetCurrentUserId(), ct));
+
+    /// <summary>
+    /// Trigger the Python agent to generate a new commercial plan.
+    /// The agent submits the plan itself; this endpoint returns the newly created plan.
+    /// Admin-only — plan generation is a privileged operation.
+    /// </summary>
+    [HttpPost("generate")]
+    [Authorize(Roles = "Staff,Admin")]
+    [ProducesResponseType(typeof(CommercialPlanResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<ActionResult<CommercialPlanResponse>> Generate(CancellationToken ct)
+    {
+        Guid planId;
+        try
+        {
+            planId = await _agent.RunAgentAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(503, new
+            {
+                title = "Agent service unavailable",
+                detail = ex.Message,
+                hint = "Ensure the Python agent_service is running on the configured Agent:BaseUrl."
+            });
+        }
+
+        var plan = await _service.GetByIdAsync(planId, ct);
+        return CreatedAtAction(nameof(GetById), new { id = plan.CommercialPlanId }, plan);
+    }
 
     // ---------- Helpers ----------
 
