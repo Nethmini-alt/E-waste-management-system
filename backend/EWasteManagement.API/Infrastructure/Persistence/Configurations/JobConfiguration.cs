@@ -12,7 +12,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         {
             t.HasCheckConstraint(
                 "CK_jobs_status",
-                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable')");
+                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
         });
 
         builder.HasKey(j => j.JobId);
@@ -32,7 +32,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .HasConversion(
                 v => v.ToString().ToLower(),
                 v => Enum.Parse<JobStatus>(v, true))
-            .HasMaxLength(20)
+            .HasMaxLength(30)
             .IsRequired();
         builder.HasIndex(j => j.Status);
 

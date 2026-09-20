@@ -56,6 +56,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
+builder.Services.AddScoped<IMatchingService, MatchingService>();
+builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
 builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
@@ -66,6 +68,7 @@ builder.Services.AddScoped<IPaymentCalculator, ExtraWastePaymentCalculator>();
 builder.Services.AddScoped<ICollectorPaymentService, CollectorPaymentService>();
 builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingService>();
 builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
+builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";

@@ -12,8 +12,13 @@ namespace EWasteManagement.API.Features.Collection.Controllers;
 public class CollectorsController : ControllerBase
 {
     private readonly ICollectorService _collectorService;
+    private readonly IMatchingService _matchingService;
 
-    public CollectorsController(ICollectorService collectorService) => _collectorService = collectorService;
+    public CollectorsController(ICollectorService collectorService, IMatchingService matchingService)
+    {
+        _collectorService = collectorService;
+        _matchingService = matchingService;
+    }
 
     // POST /api/v1/collectors
     // Creates the collector profile for whoever is logged in. UserId comes
@@ -105,4 +110,28 @@ public class CollectorsController : ControllerBase
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new UnauthorizedAccessException("Token is missing a user id claim."));
+
+    // GET /api/v1/collectors/available?pickupLatitude=&pickupLongitude=&...
+    // Staff-facing: manual override / dashboard visibility into who would be matched.
+    [HttpGet("available")]
+    [Authorize(Roles = "Staff,Admin")]
+    public async Task<ActionResult<List<CollectorMatchDto>>> GetAvailable([FromQuery] MatchRequestDto request)
+    {
+        var results = await _matchingService.FindCandidatesAsync(request);
+        return Ok(results);
+    }
+
+    // POST /api/v1/collectors/match
+    // The Matcher/Logistics agent's tool call. Left open (no [Authorize]) to
+    // match how the existing AI callback on SubmissionsController works —
+    // this is a machine-to-machine call from the Python agent, not a user
+    // action. Worth revisiting with an internal service key before deploying
+    // for real, same as the ai-callback endpoint.
+    [HttpPost("match")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<CollectorMatchDto>>> Match(MatchRequestDto request)
+    {
+        var results = await _matchingService.FindCandidatesAsync(request);
+        return Ok(results);
+    }
 }

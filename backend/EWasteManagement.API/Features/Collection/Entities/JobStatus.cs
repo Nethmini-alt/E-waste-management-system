@@ -13,5 +13,6 @@ public enum JobStatus
     InProgress,
     Completed,
     Cancelled,
-    NoCollectorAvailable
+    NoCollectorAvailable,
+    PickupLocationUnresolved
 }

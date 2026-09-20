@@ -234,8 +234,8 @@ namespace EWasteManagement.API.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
                         .HasColumnName("status");
 
                     b.Property<Guid>("SubmissionId")
@@ -252,7 +252,7 @@ namespace EWasteManagement.API.Migrations
 
                     b.ToTable("jobs", null, t =>
                         {
-                            t.HasCheckConstraint("CK_jobs_status", "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable')");
+                            t.HasCheckConstraint("CK_jobs_status", "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
                         });
                 });
 
