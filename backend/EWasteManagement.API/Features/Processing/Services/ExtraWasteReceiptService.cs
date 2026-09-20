@@ -36,6 +36,28 @@ public class ExtraWasteReceiptService : IExtraWasteReceiptService
         if (!locationExists)
             throw new KeyNotFoundException($"WarehouseLocation '{request.WarehouseLocationId}' was not found.");
 
+        var collectorExists = await _db.Collectors
+            .AnyAsync(c => c.CollectorId == request.CollectorId, cancellationToken);
+        if (!collectorExists)
+            throw new KeyNotFoundException($"Collector '{request.CollectorId}' was not found.");
+
+        // Item types match rate policies case-insensitively; the policy's own spelling becomes the
+        // stored name, so "laptop" and "Laptop" never end up as two different inventory types.
+        var canonicalTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var activeRateTypes = await _db.RatePolicies.AsNoTracking()
+            .Where(r => r.IsActive).Select(r => r.ItemType).ToListAsync(cancellationToken);
+        foreach (var rateType in activeRateTypes)
+            canonicalTypes.TryAdd(rateType, rateType);
+
+        // Fail with a clear 400 before writing anything, instead of discovering a missing rate
+        // halfway through the transaction.
+        var unsupportedTypes = request.Items
+            .Where(i => i.Accepted && !canonicalTypes.ContainsKey(i.ItemType))
+            .Select(i => i.ItemType).Distinct().ToList();
+        if (unsupportedTypes.Count > 0)
+            throw new ArgumentException(
+                $"No active rate policy for item type(s): {string.Join(", ", unsupportedTypes.Select(t => $"'{t}'"))}.");
+
         var receipt = new ExtraWasteReceipt
         {
             CollectorId = request.CollectorId,
@@ -48,9 +70,11 @@ public class ExtraWasteReceiptService : IExtraWasteReceiptService
 
         foreach (var itemRequest in request.Items)
         {
+            var itemType = canonicalTypes.GetValueOrDefault(itemRequest.ItemType, itemRequest.ItemType);
+
             var item = new ExtraWasteReceiptItem
             {
-                ItemType = itemRequest.ItemType,
+                ItemType = itemType,
                 WeightKg = itemRequest.WeightKg,
                 Accepted = itemRequest.Accepted,
                 RejectionReason = itemRequest.Accepted ? null : itemRequest.RejectionReason
@@ -61,7 +85,8 @@ public class ExtraWasteReceiptService : IExtraWasteReceiptService
                 var inventoryItem = new InventoryItem
                 {
                     OriginType = OriginType.ExtraWaste,
-                    ItemType = itemRequest.ItemType,
+                    ExtraWasteReceiptId = receipt.Id,
+                    ItemType = itemType,
                     VerifiedWeightKg = itemRequest.WeightKg,
                     CurrentLocationId = request.WarehouseLocationId
                 };

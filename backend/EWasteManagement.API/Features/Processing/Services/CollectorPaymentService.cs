@@ -1,3 +1,4 @@
+using EWasteManagement.API.Features.Processing.DTOs;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Processing.Exceptions;
 using EWasteManagement.API.Infrastructure.Persistence;
@@ -55,5 +56,46 @@ public class CollectorPaymentService : ICollectorPaymentService
         payment.PaidAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
         return payment;
+    }
+
+    public async Task<PendingPaymentsResponse> GetPendingAsync(PendingPaymentsQuery q, CancellationToken cancellationToken = default)
+    {
+        var query = _db.CollectorPayments.AsNoTracking().Where(p => p.Status == PaymentStatus.Pending);
+
+        if (q.CollectorId.HasValue)
+        {
+            var collectorId = q.CollectorId.Value;
+            query = query.Where(p => p.CollectorId == collectorId);
+        }
+        if (q.SourceType.HasValue)
+        {
+            var sourceType = q.SourceType.Value;
+            query = query.Where(p => p.SourceType == sourceType);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Summed in memory: the SQLite provider used by the unit tests cannot aggregate decimals in SQL.
+        var totalAmount = (await query.Select(p => p.Amount).ToListAsync(cancellationToken)).Sum();
+
+        // Oldest first, so the payments that have waited longest are settled first.
+        var rows = await query.OrderBy(p => p.CreatedAt).ThenBy(p => p.Id)
+            .Skip((q.Page - 1) * q.PageSize)
+            .Take(q.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PendingPaymentsResponse
+        {
+            Items = rows.Select(p => new CollectorPaymentResponse
+            {
+                Id = p.Id, SourceType = p.SourceType.ToString(), SourceId = p.SourceId, CollectorId = p.CollectorId,
+                Amount = p.Amount, Status = p.Status.ToString(), CreatedAt = p.CreatedAt, PaidAt = p.PaidAt
+            }).ToList(),
+            Page = q.Page,
+            PageSize = q.PageSize,
+            TotalCount = totalCount,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)q.PageSize),
+            TotalPendingAmount = totalAmount
+        };
     }
 }

@@ -10,4 +10,6 @@ public interface IInventoryProcessingService
     Task<ClassificationResponse> ClassifyAsync(Guid inventoryItemId, ClassifyInventoryItemRequest request, Guid staffId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ProcessingLogEntryResponse>> GetHistoryAsync(Guid inventoryItemId, CancellationToken cancellationToken = default);
     Task MoveLocationAsync(Guid inventoryItemId, Guid newLocationId, Guid staffId, CancellationToken cancellationToken = default);
+    Task<PagedResponse<InventoryItemListItemResponse>> ListAsync(InventoryListQuery query, CancellationToken cancellationToken = default);
+    Task<InventoryItemDetailResponse> GetByIdAsync(Guid inventoryItemId, CancellationToken cancellationToken = default);
 }

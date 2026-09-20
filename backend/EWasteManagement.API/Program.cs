@@ -60,8 +60,6 @@ builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
 builder.Services.AddHttpClient<IGoogleMapsService, GoogleMapsService>();
 builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
 builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
-builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
-builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
 builder.Services.AddScoped<IRatePolicyLookupService, RatePolicyLookupService>();
 builder.Services.AddScoped<IPaymentCalculator, JobPaymentCalculator>();
 builder.Services.AddScoped<IPaymentCalculator, ExtraWastePaymentCalculator>();

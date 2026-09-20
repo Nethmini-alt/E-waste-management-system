@@ -40,6 +40,11 @@ public class JobReceiptService : IJobReceiptService
         if (!locationExists)
             throw new KeyNotFoundException($"WarehouseLocation '{request.WarehouseLocationId}' was not found.");
 
+        var collectorExists = await _db.Collectors
+            .AnyAsync(c => c.CollectorId == request.CollectorId, cancellationToken);
+        if (!collectorExists)
+            throw new KeyNotFoundException($"Collector '{request.CollectorId}' was not found.");
+
         decimal? discrepancy = job.ReportedWeightKg.HasValue
             ? request.VerifiedWeightKg - job.ReportedWeightKg.Value
             : null;

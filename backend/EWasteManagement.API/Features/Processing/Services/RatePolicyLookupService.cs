@@ -9,9 +9,13 @@ public class RatePolicyLookupService : IRatePolicyLookupService
     private readonly ApplicationDbContext _db;
     public RatePolicyLookupService(ApplicationDbContext db) => _db = db;
 
-    // The unique filtered index on (ItemType, IsActive=true) in RatePolicyConfiguration
-    // guarantees at most one row matches — that's what makes this safe without an OrderBy.
+    // Matching is case-insensitive ("laptop" finds "Laptop"). The unique filtered index in
+    // RatePolicyConfiguration is still case-sensitive, so two active rates that differ only by
+    // case must not be created.
     public Task<RatePolicy?> GetActiveRateAsync(string itemType, CancellationToken cancellationToken = default)
-        => _db.RatePolicies.AsNoTracking()
-            .FirstOrDefaultAsync(r => r.ItemType == itemType && r.IsActive, cancellationToken);
+    {
+        var key = itemType.ToLowerInvariant();
+        return _db.RatePolicies.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.IsActive && r.ItemType.ToLower() == key, cancellationToken);
+    }
 }

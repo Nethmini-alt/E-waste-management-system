@@ -22,6 +22,14 @@ public class InventoryProcessingController : ControllerBase
 
     private bool TryGetStaffId(out Guid staffId) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out staffId);
 
+    [HttpGet]
+    public async Task<IActionResult> List([FromQuery] InventoryListQuery query, CancellationToken cancellationToken)
+        => Ok(await _service.ListAsync(query, cancellationToken));
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        => Ok(await _service.GetByIdAsync(id, cancellationToken));
+
     [HttpPut("{id}/status")]
     public async Task<IActionResult> TransitionStatus(Guid id, [FromBody] TransitionInventoryStatusRequest request, CancellationToken cancellationToken)
     {

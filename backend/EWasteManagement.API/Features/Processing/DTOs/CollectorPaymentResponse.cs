@@ -8,5 +8,6 @@ public class CollectorPaymentResponse
     public Guid CollectorId { get; set; }
     public decimal Amount { get; set; }
     public string Status { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
     public DateTime? PaidAt { get; set; }
 }
