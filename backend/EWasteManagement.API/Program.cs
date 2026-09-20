@@ -1,6 +1,8 @@
 using System.Text;
 using EWasteManagement.Api.Services;
 using EWasteManagement.API.Features.Auth.Services;
+using EWasteManagement.API.Features.Collection.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -48,7 +50,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Services Registration
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<ICollectorService, CollectorService>();
+builder.Services.AddScoped<IMatchingService, MatchingService>();
+builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";
