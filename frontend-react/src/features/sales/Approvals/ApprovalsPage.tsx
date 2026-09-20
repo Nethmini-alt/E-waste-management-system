@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckSquare, RefreshCw, Eye, CheckCircle2, XCircle,
-  AlertTriangle, Clock, Bot,
+  AlertTriangle, Clock, Bot, Sparkles,
 } from 'lucide-react';
 import { planApi } from './planApi';
 import type { CommercialPlan } from './types';
@@ -16,6 +16,7 @@ const ApprovalsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quickActionId, setQuickActionId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -48,6 +49,25 @@ const ApprovalsPage: React.FC = () => {
       setQuickActionId(null);
     }
   };
+  const handleGenerate = async () => {
+  if (!confirm(
+    'Run the AI planning agent now?\n\n' +
+    'It will fetch current materials, pricing, and buyers, then submit a new plan for review.'
+  )) return;
+
+  setGenerating(true);
+  try {
+    const plan = await planApi.generate();
+    await load();               // refresh the queue
+    navigate(`/plans/${plan.commercialPlanId}`);   // jump into detail
+  } catch (e: any) {
+    const detail = e?.response?.data?.detail ?? e?.response?.data?.title;
+    const hint = e?.response?.data?.hint;
+    alert(`${detail ?? 'Failed to run agent.'}${hint ? `\n\n${hint}` : ''}`);
+  } finally {
+    setGenerating(false);
+  }
+};
 
   return (
     <div>
@@ -60,7 +80,18 @@ const ApprovalsPage: React.FC = () => {
             AI-generated plans awaiting your decision (human-in-the-loop)
           </p>
         </div>
-        <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={load} style={btnSecondary} disabled={generating}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            style={btnGenerate}
+          >
+            <Sparkles size={14} /> {generating ? 'Running agent…' : 'Generate AI Plan'}
+          </button>
+        </div>
       </div>
 
       {loading && <p>Loading approvals…</p>}
@@ -202,6 +233,19 @@ const errorBox: React.CSSProperties = { padding: 12, background: '#ffebee', colo
 const emptyBox: React.CSSProperties = {
   padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
   border: '1px dashed #ccc',
+};
+const btnGenerate: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #6a1b9a 0%, #1565c0 100%)',
+  color: '#fff',
+  border: 'none',
+  padding: '8px 14px',
+  borderRadius: 6,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  fontWeight: 'bold',
+  fontSize: 13,
 };
 
 export default ApprovalsPage;
