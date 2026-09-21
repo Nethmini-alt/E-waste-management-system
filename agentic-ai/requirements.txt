@@ -1,0 +1,15 @@
+# The whole agentic-ai service (4 agents + graph + API). Tested on Python 3.12.
+fastapi>=0.115            # tested on 0.115.0 and 0.141.1
+uvicorn[standard]
+langgraph==0.2.34         # same pin as the Sales prototype
+langchain-core==0.3.10
+pydantic>=2.9,<3
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+httpx>=0.28.1,<1          # google-genai needs >=0.28.1 (the old Sales pin 0.27.2 cannot coexist with it)
+google-genai
+tzdata                    # Asia/Colombo time zone on Windows
+
+# tests
+pytest>=8
+pytest-asyncio>=0.24
