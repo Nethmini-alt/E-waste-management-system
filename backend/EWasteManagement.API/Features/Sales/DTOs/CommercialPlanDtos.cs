@@ -61,3 +61,11 @@ public class CommercialPlanFilter
     public string? Status { get; set; }
     public string? RecommendedRoute { get; set; }
 }
+
+public class GenerateCommercialPlanRequest
+{
+    public Guid? TargetBuyerId { get; set; }
+    public List<string>? TargetMaterialTypes { get; set; }
+    public decimal? MaxQuantityKg { get; set; }
+    public string? PreferredRoute { get; set; }   // "LocalSale" | "Export"
+}

@@ -67,6 +67,12 @@ class CommercialPlanSubmission(BaseModel):
 class AgentRunRequest(BaseModel):
     workflow_id: UUID | None = Field(alias="workflowId", default=None)
 
+    # Optional goal filters — when omitted, the agent plans for everything
+    target_buyer_id: UUID | None = Field(alias="targetBuyerId", default=None)
+    target_material_types: list[str] | None = Field(alias="targetMaterialTypes", default=None)
+    max_quantity_kg: float | None = Field(alias="maxQuantityKg", default=None)
+    preferred_route: str | None = Field(alias="preferredRoute", default=None)
+
     model_config = {"populate_by_name": True}
 
 

@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using EWasteManagement.API.Features.Sales.DTOs;
 
 namespace EWasteManagement.API.Infrastructure.ExternalServices;
 
@@ -20,25 +21,35 @@ public class AgentClient : IAgentClient
             _http.DefaultRequestHeaders.Add("X-Agent-Key", apiKey);
     }
 
-    public async Task<Guid> RunAgentAsync(CancellationToken ct = default)
+    public async Task<Guid> RunAgentAsync(AgentRunGoal? goal = null, CancellationToken ct = default)
+{
+    _logger.LogInformation("Triggering Python agent at {Base}", _http.BaseAddress);
+
+    // Use your DTO instead of anonymous types
+    var body = goal is null ? new GenerateCommercialPlanRequest() : new GenerateCommercialPlanRequest
     {
-        _logger.LogInformation("Triggering Python agent at {Base}", _http.BaseAddress);
+        TargetBuyerId = goal.TargetBuyerId,
+        TargetMaterialTypes = goal.TargetMaterialTypes,
+        MaxQuantityKg = goal.MaxQuantityKg,
+        PreferredRoute = goal.PreferredRoute,
+    };
 
-        var response = await _http.PostAsJsonAsync("/run", new { }, ct);
+    var response = await _http.PostAsJsonAsync("/run", body, ct);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogError("Agent returned {Status}: {Body}", response.StatusCode, body);
-            throw new InvalidOperationException(
-                $"Agent service failed with status {(int)response.StatusCode}.");
-        }
-
-        var result = await response.Content.ReadFromJsonAsync<AgentRunResult>(cancellationToken: ct)
-            ?? throw new InvalidOperationException("Agent returned an empty response.");
-
-        return result.CommercialPlanId;
+    if (!response.IsSuccessStatusCode)
+    {
+        var respBody = await response.Content.ReadAsStringAsync(ct);
+        _logger.LogError("Agent returned {Status}: {Body}", response.StatusCode, respBody);
+        throw new InvalidOperationException(
+            $"Agent service failed with status {(int)response.StatusCode}.");
     }
+
+    var result = await response.Content.ReadFromJsonAsync<AgentRunResult>(cancellationToken: ct)
+        ?? throw new InvalidOperationException("Agent returned an empty response.");
+
+    return result.CommercialPlanId;
+}
+
 
     // Matches the JSON shape from AgentRunResponse in Python (camelCase)
     private class AgentRunResult

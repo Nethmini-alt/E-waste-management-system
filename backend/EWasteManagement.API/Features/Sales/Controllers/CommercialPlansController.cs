@@ -103,29 +103,39 @@ public class CommercialPlansController : ControllerBase
     /// Admin-only — plan generation is a privileged operation.
     /// </summary>
     [HttpPost("generate")]
-    [Authorize(Roles = "Staff,Admin")]
-    [ProducesResponseType(typeof(CommercialPlanResponse), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<ActionResult<CommercialPlanResponse>> Generate(CancellationToken ct)
+[Authorize(Roles = "Admin")]
+[ProducesResponseType(typeof(CommercialPlanResponse), StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+public async Task<ActionResult<CommercialPlanResponse>> Generate(
+    [FromBody] GenerateCommercialPlanRequest? request,
+    CancellationToken ct)
+{
+    var goal = request is null ? null : new AgentRunGoal
     {
-        Guid planId;
-        try
-        {
-            planId = await _agent.RunAgentAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(503, new
-            {
-                title = "Agent service unavailable",
-                detail = ex.Message,
-                hint = "Ensure the Python agent_service is running on the configured Agent:BaseUrl."
-            });
-        }
+        TargetBuyerId = request.TargetBuyerId,
+        TargetMaterialTypes = request.TargetMaterialTypes,
+        MaxQuantityKg = request.MaxQuantityKg,
+        PreferredRoute = request.PreferredRoute,
+    };
 
-        var plan = await _service.GetByIdAsync(planId, ct);
-        return CreatedAtAction(nameof(GetById), new { id = plan.CommercialPlanId }, plan);
+    Guid planId;
+    try
+    {
+        planId = await _agent.RunAgentAsync(goal, ct);
     }
+    catch (Exception ex)
+    {
+        return StatusCode(503, new
+        {
+            title = "Agent service unavailable",
+            detail = ex.Message,
+            hint = "Ensure the Python agent_service is running on Agent:BaseUrl."
+        });
+    }
+
+    var plan = await _service.GetByIdAsync(planId, ct);
+    return CreatedAtAction(nameof(GetById), new { id = plan.CommercialPlanId }, plan);
+}
 
     // ---------- Helpers ----------
 

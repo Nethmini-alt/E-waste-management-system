@@ -7,6 +7,7 @@ import { planApi } from './planApi';
 import type { CommercialPlan } from './types';
 import PlanStatusPill from './PlanStatusPill';
 import { useAuth } from '../../auth/AuthContext';
+import GeneratePlanModal from './GeneratePlanModal';
 
 const PlansListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ const PlansListPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | CommercialPlan['status']>('All');
   const [routeFilter, setRouteFilter] = useState<'All' | 'LocalSale' | 'Export'>('All');
   const [generating, setGenerating] = useState(false);
+
+  const [generateOpen, setGenerateOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -47,19 +50,19 @@ const PlansListPage: React.FC = () => {
     });
   }, [plans, search, statusFilter, routeFilter]);
 
-  const handleGenerate = async () => {
-    if (!confirm('Run the AI planning agent now?')) return;
-    setGenerating(true);
-    try {
-      const plan = await planApi.generate();
-      navigate(`/plans/${plan.commercialPlanId}`);
-    } catch (e: any) {
-      const detail = e?.response?.data?.detail ?? e?.response?.data?.title;
-      const hint = e?.response?.data?.hint;
-      alert(`${detail ?? 'Failed to run agent.'}${hint ? `\n\n${hint}` : ''}`);
-    } finally {
-      setGenerating(false);
-    }
+  const handleGenerate = async (goal: any) => {
+  setGenerating(true);
+  try {
+    const plan = await planApi.generate(goal);
+    navigate(`/plans/${plan.commercialPlanId}`);
+  } catch (e: any) {
+    const detail = e?.response?.data?.detail ?? e?.response?.data?.title;
+    const hint = e?.response?.data?.hint;
+    alert(`${detail ?? 'Failed to run agent.'}${hint ? `\n\n${hint}` : ''}`);
+    throw e;
+  } finally {
+    setGenerating(false);
+  }
 };
   return (
     <div>
@@ -77,12 +80,8 @@ const PlansListPage: React.FC = () => {
             <RefreshCw size={14} /> Refresh
           </button>
           {hasRole('admin') && (
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              style={btnGenerate}
-            >
-              <Sparkles size={14} /> {generating ? 'Running agent…' : 'Generate AI Plan'}
+            <button onClick={() => setGenerateOpen(true)} style={btnGenerate}         disabled={generating}>
+              <Sparkles size={14} /> Generate AI Plan
             </button>
           )}
         </div>
@@ -188,6 +187,11 @@ const PlansListPage: React.FC = () => {
           </tbody>
         </table>
       )}
+      <GeneratePlanModal
+        open={generateOpen}
+        onClose={() => setGenerateOpen(false)}
+        onSubmit={handleGenerate}
+      />
     </div>
   );
 };

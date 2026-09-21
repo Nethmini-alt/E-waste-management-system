@@ -25,13 +25,19 @@ async def health():
 
 @app.post("/run", response_model=AgentRunResponse)
 async def run(req: AgentRunRequest) -> AgentRunResponse:
-    """
-    Run the planning workflow and submit the resulting plan to ASP.NET Core.
-    Returns the submitted plan summary.
-    """
-    log.info("Starting agent run (workflow=%s)", req.workflow_id)
+    log.info(
+        "Starting agent run (workflow=%s, buyer=%s, materials=%s, max_kg=%s, preferred=%s)",
+        req.workflow_id, req.target_buyer_id,
+        req.target_material_types, req.max_quantity_kg, req.preferred_route,
+    )
     try:
-        state = await run_workflow(req.workflow_id)
+        state = await run_workflow(
+            workflow_id=str(req.workflow_id) if req.workflow_id else None,
+            target_buyer_id=str(req.target_buyer_id) if req.target_buyer_id else None,
+            target_material_types=req.target_material_types,
+            max_quantity_kg=req.max_quantity_kg,
+            preferred_route=req.preferred_route,
+        )
     except Exception as exc:
         log.exception("Agent run failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
