@@ -155,7 +155,7 @@ const AdminReviewPage: React.FC = () => {
             const imgUrl = item?.imageUrl || item?.ImageUrl || item?.image_url;
             const hazard = ai?.hazardLevel || ai?.HazardLevel;
             const category = ai?.wasteCategory || ai?.WasteCategory;
-            const value = ai?.estimatedValueUsd ?? ai?.EstimatedValueUsd;
+            const value = ai?.estimatedValueLkr ?? ai?.EstimatedValueLkr;
 
             // ✅ pickup address fallback for PascalCase backend too
             const pickupAddress =
@@ -229,7 +229,7 @@ const AdminReviewPage: React.FC = () => {
                           {hazard}
                         </span>
                       </span>
-                      <span><strong>Value:</strong> ${value}</span>
+                      <span><strong>Value:</strong> Rs. {value}</span>
                     </div>
                   ) : (
                     <span style={{ fontSize: 12, color: '#e65100' }}>

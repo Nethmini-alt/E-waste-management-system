@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   CheckCircle, AlertTriangle, Cpu, Loader, ShieldAlert,
-  Tag, Weight, DollarSign, MapPin,
+  Tag, Weight, Banknote, MapPin,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import type { SubmissionResponse } from './types';
@@ -165,7 +165,7 @@ const SubmitPage: React.FC = () => {
                   </span>
                 </p>
                 <p><Weight size={14} /> <strong>Est. Weight:</strong> {ai.estimatedVolumeKg} kg</p>
-                <p><DollarSign size={14} /> <strong>Est. Value:</strong> ${ai.estimatedValueUsd}</p>
+                <p><Banknote size={14} /> <strong>Est. Value:</strong> Rs. {ai.estimatedValueLkr}</p>
               </div>
               <p
                 style={{

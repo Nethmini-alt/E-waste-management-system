@@ -37,13 +37,6 @@ namespace EWasteManagement.Api.Controllers
             return Ok(submission);
         }
 
-        [HttpPost("{id}/ai-callback")]
-        public async Task<IActionResult> AICallback(Guid id, [FromBody] AIAnalysisDto aiDto)
-        {
-            await _submissionService.ProcessAICallbackAsync(id, aiDto);
-            return Ok(new { message = "AI analysis saved successfully." });
-        }
-
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusDto dto)
         {

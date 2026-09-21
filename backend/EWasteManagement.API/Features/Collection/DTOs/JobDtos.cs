@@ -12,6 +12,14 @@ public class CreateJobDto
     public decimal? RequiredCapacityKg { get; set; }
     public DateTime? ScheduledWindowStart { get; set; }
     public DateTime? ScheduledWindowEnd { get; set; }
+
+    // Set when an agent plan is approved: give the job to the collector the Matcher chose (after re-checking
+    // they are still available) instead of picking the best one again.
+    public Guid? PreferredCollectorId { get; set; }
+
+    // Coordinates the Matcher already resolved. When both are set the address is not geocoded again.
+    public decimal? PickupLatitude { get; set; }
+    public decimal? PickupLongitude { get; set; }
 }
 
 public class RejectJobDto

@@ -43,7 +43,11 @@ public class JobService : IJobService
             ScheduledWindowEnd = dto.ScheduledWindowEnd
         };
 
-        var coordinates = await _geoService.GeocodeAsync(dto.PickupAddress);
+        // Coordinates the Matcher already resolved win over geocoding again (which is slow and could disagree).
+        (decimal Latitude, decimal Longitude)? coordinates =
+            dto.PickupLatitude is { } lat && dto.PickupLongitude is { } lng
+                ? (lat, lng)
+                : await _geoService.GeocodeAsync(dto.PickupAddress);
 
         if (coordinates is null)
         {
@@ -59,7 +63,9 @@ public class JobService : IJobService
         job.PickupLatitude = coordinates.Value.Latitude;
         job.PickupLongitude = coordinates.Value.Longitude;
 
-        var candidate = await FindBestCandidateAsync(job, dto.RequiredCapacityKg, excludeCollectorIds: new List<Guid>());
+        var candidate = dto.PreferredCollectorId is { } preferredId
+            ? await FindPreferredCandidateAsync(job, dto.RequiredCapacityKg, preferredId)
+            : await FindBestCandidateAsync(job, dto.RequiredCapacityKg, excludeCollectorIds: new List<Guid>());
 
         ApplyAssignmentOutcome(job, candidate);
 
@@ -205,6 +211,25 @@ public class JobService : IJobService
         });
 
         return results.FirstOrDefault();
+    }
+
+    // Re-checks, at assignment time, that the collector an approved plan names is still a valid candidate
+    // (available, positioned, big enough, under the active-job cap). If not, nothing is assigned: the
+    // caller must not silently hand the job to someone the approver never saw.
+    private async Task<CollectorMatchDto> FindPreferredCandidateAsync(
+        Job job, decimal? requiredCapacityKg, Guid preferredCollectorId)
+    {
+        var results = await _matchingService.FindCandidatesAsync(new MatchRequestDto
+        {
+            PickupLatitude = job.PickupLatitude!.Value,
+            PickupLongitude = job.PickupLongitude!.Value,
+            RequiredCapacityKg = requiredCapacityKg,
+            ExcludeCollectorIds = new List<Guid>(),
+            MaxResults = int.MaxValue
+        });
+
+        return results.FirstOrDefault(c => c.CollectorId == preferredCollectorId)
+            ?? throw new PreferredCollectorUnavailableException(preferredCollectorId);
     }
 
     private static void ApplyAssignmentOutcome(Job job, CollectorMatchDto? candidate)

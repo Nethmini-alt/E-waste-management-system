@@ -3,7 +3,7 @@ export interface AiAnalysis {
   submissionId?: string;
   wasteCategory: string;
   estimatedVolumeKg: number;
-  estimatedValueUsd: number;
+  estimatedValueLkr: number;
   hazardLevel: string;
   requiresHumanApproval: boolean;
   analyzedAt?: string;

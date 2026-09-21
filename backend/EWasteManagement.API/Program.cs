@@ -15,6 +15,7 @@ using FluentValidation.AspNetCore;
 using EWasteManagement.API.Infrastructure.ExternalServices;
 
 using EWasteManagement.API.Shared.Common;
+using EWasteManagement.API.Features.AgentWorkflows.Services;
 using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Processing.Services;
 
@@ -63,7 +64,9 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddScoped<IJobService, JobService>();
-builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+builder.Services.AddHttpClient<IAgenticAiClient, AgenticAiClient>();
+builder.Services.AddScoped<IAgentWorkflowService, AgentWorkflowService>();
 builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
 builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
 builder.Services.AddScoped<IRatePolicyLookupService, RatePolicyLookupService>();

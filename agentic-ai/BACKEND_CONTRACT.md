@@ -1,10 +1,11 @@
 # BACKEND_CONTRACT - what ASP.NET Core must do for the agentic-ai service
 
-Everything below is **not built yet on the .NET side** unless marked *(exists)*. The Python service works and is tested
-without it (REPORT_TO_BACKEND=false), but the end-to-end demo (Flutter -> agents -> React approval -> Job) needs these.
-The C# is a starting point I could **not compile here**; treat it as a sketch.
+**Status: items 1-7 below are now built on the .NET side** (the C# sketches in sections 1, 2 and 5 are superseded by the
+real code: `SubmissionService`, `AgentReportingController`, `AgentWorkflowsController`, `AgentKeyAttribute`, `CollectorsController`).
+Still to do: apply the migrations (`dotnet ef database update`), set `REPORT_TO_BACKEND=true`, switch the React approve/reject
+buttons to the new `api/v1/agent-workflows/{id}/approve|reject|revise` endpoints, and notifications (not built).
 
-## 0. Priority list
+## 0. Priority list  (all built)
 
 | # | Change | Why |
 |---|---|---|
@@ -124,4 +125,5 @@ Use the same secret as `AGENT_API_KEY` in the Python `.env`; keep it out of git 
 
 * `Submission` has no coordinates; the Matcher geocodes the address. Storing lat/lng at submission time makes matching faster.
 * `SubmissionsController` has no `[Authorize]`; anyone can create or read submissions.
-* Component A stores `EstimatedValueUsd`; everything else is LKR. Rename/migrate to `EstimatedValueLkr`.
+* ~~Component A stores `EstimatedValueUsd`~~ Renamed to `EstimatedValueLkr` (migration `RenameAIAnalysisValueToLkr`); the
+  agents' result now fills the `AIAnalysisResults` row that the submit and admin-review pages read.

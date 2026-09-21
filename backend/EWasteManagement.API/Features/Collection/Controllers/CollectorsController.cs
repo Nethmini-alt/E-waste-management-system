@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using EWasteManagement.API.Features.Collection.DTOs;
 using EWasteManagement.API.Features.Collection.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
+using EWasteManagement.API.Infrastructure.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,11 +15,16 @@ public class CollectorsController : ControllerBase
 {
     private readonly ICollectorService _collectorService;
     private readonly IMatchingService _matchingService;
+    private readonly IGeoService _geoService;
 
-    public CollectorsController(ICollectorService collectorService, IMatchingService matchingService)
+    public CollectorsController(
+        ICollectorService collectorService,
+        IMatchingService matchingService,
+        IGeoService geoService)
     {
         _collectorService = collectorService;
         _matchingService = matchingService;
+        _geoService = geoService;
     }
 
     // POST /api/v1/collectors
@@ -122,16 +129,29 @@ public class CollectorsController : ControllerBase
     }
 
     // POST /api/v1/collectors/match
-    // The Matcher/Logistics agent's tool call. Left open (no [Authorize]) to
-    // match how the existing AI callback on SubmissionsController works —
-    // this is a machine-to-machine call from the Python agent, not a user
-    // action. Worth revisiting with an internal service key before deploying
-    // for real, same as the ai-callback endpoint.
+    // The Matcher agent's find_collectors tool call. Machine-to-machine: it skips
+    // the user JWT and is guarded by the agent key (X-Agent-Key) instead.
     [HttpPost("match")]
     [AllowAnonymous]
+    [AgentKey]
     public async Task<ActionResult<List<CollectorMatchDto>>> Match(MatchRequestDto request)
     {
         var results = await _matchingService.FindCandidatesAsync(request);
         return Ok(results);
+    }
+
+    // POST /api/v1/collectors/geocode
+    // The Matcher agent's geocode_address tool call: pickup address -> coordinates.
+    // An address that can't be resolved is a normal 200 with resolved = false.
+    [HttpPost("geocode")]
+    [AllowAnonymous]
+    [AgentKey]
+    public async Task<ActionResult<GeocodeResponseDto>> Geocode(GeocodeRequestDto request)
+    {
+        var point = await _geoService.GeocodeAsync(request.Address.Trim());
+
+        return Ok(point is { } p
+            ? new GeocodeResponseDto { Resolved = true, Latitude = p.Latitude, Longitude = p.Longitude }
+            : new GeocodeResponseDto { Resolved = false });
     }
 }

@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using EWasteManagement.Api.Dtos;
 using EWasteManagement.Api.Entities;
+using EWasteManagement.API.Features.AgentWorkflows.Entities;
+using EWasteManagement.API.Features.AgentWorkflows.Services;
+using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
 
 namespace EWasteManagement.Api.Services
@@ -8,12 +11,17 @@ namespace EWasteManagement.Api.Services
     public class SubmissionService : ISubmissionService
     {
         private readonly ApplicationDbContext _context;
-        private readonly HttpClient _httpClient;
+        private readonly IAgenticAiClient _agent;
+        private readonly ILogger<SubmissionService> _logger;
 
-        public SubmissionService(ApplicationDbContext context, HttpClient httpClient)
+        public SubmissionService(
+            ApplicationDbContext context,
+            IAgenticAiClient agent,
+            ILogger<SubmissionService> logger)
         {
             _context = context;
-            _httpClient = httpClient;
+            _agent = agent;
+            _logger = logger;
         }
 
         public async Task<Submission> CreateSubmissionAsync(CreateSubmissionDto dto)
@@ -31,10 +39,15 @@ namespace EWasteManagement.Api.Services
                 }).ToList()
             };
 
+            // The workflow row exists before the agents are called, so the reports they send back always
+            // have somewhere to land.
+            var workflow = new AgentWorkflow { SubmissionId = submission.Id };
+
             _context.Submissions.Add(submission);
+            _context.AgentWorkflows.Add(workflow);
             await _context.SaveChangesAsync();
 
-            _ = TriggerAIAgentAsync(submission.Id, dto.Items.FirstOrDefault()?.Description ?? "", dto.Items.Select(i => i.ImageUrl).ToList());
+            await StartAgentWorkflowAsync(submission, workflow);
 
             return submission;
         }
@@ -56,27 +69,6 @@ namespace EWasteManagement.Api.Services
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
-        public async Task ProcessAICallbackAsync(Guid id, AIAnalysisDto aiDto)
-        {
-            var submission = await _context.Submissions.FindAsync(id);
-            if (submission == null) return;
-
-            var analysis = new AIAnalysisResult
-            {
-                SubmissionId = id,
-                WasteCategory = aiDto.WasteCategory,
-                EstimatedVolumeKg = aiDto.EstimatedVolumeKg,
-                EstimatedValueUsd = aiDto.EstimatedValueUsd,
-                HazardLevel = aiDto.HazardLevel,
-                RequiresHumanApproval = aiDto.RequiresHumanApproval
-            };
-
-            submission.Status = aiDto.RequiresHumanApproval ? "Pending_Approval" : "Approved";
-
-            _context.AIAnalysisResults.Add(analysis);
-            await _context.SaveChangesAsync();
-        }
-
         public async Task<Submission?> UpdateStatusAsync(Guid id, string status)
         {
             var submission = await _context.Submissions.FindAsync(id);
@@ -84,26 +76,31 @@ namespace EWasteManagement.Api.Services
 
             submission.Status = status;
             await _context.SaveChangesAsync();
-            
+
             return submission;
         }
 
-        private async Task TriggerAIAgentAsync(Guid submissionId, string description, List<string> imageUrls)
+        /// <summary>
+        /// Starts the agent workflow (POST /workflows). The agent service answers 202 straight away and reports
+        /// its progress back later. If it cannot be started the submission is handed to staff instead of
+        /// silently waiting for agents that never run. Never throws: the submission itself was saved.
+        /// </summary>
+        private async Task StartAgentWorkflowAsync(Submission submission, AgentWorkflow workflow)
         {
             try
             {
-                var payload = new
-                {
-                    submission_id = submissionId,
-                    description = description,
-                    image_urls = imageUrls
-                };
+                var result = await _agent.StartWorkflowAsync(AgentPayloads.StartRequest(workflow.WorkflowId, submission));
+                if (result.Success) return;
 
-                await _httpClient.PostAsJsonAsync("http://localhost:8000/analyze-submission", payload);
+                workflow.Status = AgentWorkflowStatus.NeedsManualReview;
+                workflow.FailureReason = $"The agents could not be started: {result.Message}";
+                workflow.UpdatedAt = DateTime.UtcNow;
+                submission.Status = "Needs_Review";
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error calling AI Agent: {ex.Message}");
+                _logger.LogError(ex, "Could not start the agent workflow for submission {SubmissionId}.", submission.Id);
             }
         }
     }

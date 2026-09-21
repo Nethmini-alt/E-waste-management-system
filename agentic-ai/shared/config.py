@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     agent_api_key: str = ""
 
     # Tool-call safety limits
-    tool_timeout_seconds: float = 5.0
+    tool_timeout_seconds: float = 10.0  # OSM geocoding alone can take ~3.5s
     tool_max_retries: int = 2  # retries AFTER the first attempt (so up to 3 tries)
 
     # LLM (Gemini). Empty key -> Analyzer records a safe failure; Matcher/Planner run deterministically.

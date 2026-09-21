@@ -1,4 +1,5 @@
 using EWasteManagement.Api.Entities;
+using EWasteManagement.API.Features.AgentWorkflows.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
@@ -49,6 +50,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<RevenueTransaction> RevenueTransactions => Set<RevenueTransaction>();
     public DbSet<CommercialPlan> CommercialPlans => Set<CommercialPlan>();
     public DbSet<ApprovalAction> ApprovalActions => Set<ApprovalAction>();
+
+    // Agentic AI workflows (what the agents did, and the staff decision on it)
+    public DbSet<AgentWorkflow> AgentWorkflows => Set<AgentWorkflow>();
+    public DbSet<AgentStep> AgentSteps => Set<AgentStep>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
