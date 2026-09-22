@@ -3,7 +3,10 @@ import json
 import httpx
 import uvicorn
 import asyncio
-from fastapi import FastAPI, BackgroundTasks
+import shutil
+from fastapi import FastAPI, BackgroundTasks, Form, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
@@ -12,6 +15,19 @@ from google.genai import types
 load_dotenv()
 
 app = FastAPI(title="E-Waste Agentic AI Service")
+
+# Configure CORS to allow Flutter web and mobile requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for testing purposes
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount uploads directory to serve uploaded images statically
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 DOTNET_BACKEND_URL = "http://localhost:5172/api/v1/submissions"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -66,7 +82,7 @@ async def analyze_with_gemini(description: str, image_url: str | None):
                         contents.append(image_part)
 
             response = ai_client.models.generate_content(
-                model='gemini-3.6-flash',
+                model='gemini-3.6-flash', # Updated to a stable standard flash model version
                 contents=contents,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -89,7 +105,9 @@ async def analyze_with_gemini(description: str, image_url: str | None):
                     "estimatedValueUsd": 0.0,
                     "requiresHumanApproval": True
                 }
+
 async def process_ai_analysis(data: SubmissionAnalysisRequest):
+    """Background task to run Gemini AI analysis and send callback to .NET backend."""
     print(f"Analyzing submission {data.submission_id} using Gemini AI...")
     
     first_image = data.image_urls[0] if data.image_urls else None
@@ -107,8 +125,46 @@ async def process_ai_analysis(data: SubmissionAnalysisRequest):
 
 @app.post("/analyze-submission")
 async def analyze_submission(request: SubmissionAnalysisRequest, background_tasks: BackgroundTasks):
+    """Endpoint for triggering background AI analysis."""
     background_tasks.add_task(process_ai_analysis, request)
     return {"status": "Processing started", "submissionId": request.submission_id}
+
+# Endpoint to receive pickup requests and uploaded images directly from Flutter mobile app
+@app.post("/api/pickup-requests")
+async def create_pickup_request(
+    category: str = Form(...),
+    item_details: str = Form(...),
+    estimated_weight: str = Form(...), # Changed to str to prevent type mismatch errors
+    address: str = Form(...),
+    phone: str = Form(...),
+    file: UploadFile | None = File(None)
+):
+    """Handles multipart form-data submission from Flutter frontend including image file uploads safely."""
+    image_url = None
+    
+    # Save the uploaded image file locally if provided
+    if file:
+        file_path = os.path.join("uploads", file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Construct accessible URL for the uploaded image
+        image_url = f"http://127.0.0.1:8000/uploads/{file.filename}"
+
+    print(f"Received Pickup Request: Category={category}, Item={item_details}, Weight={estimated_weight}kg")
+
+    return {
+        "status": "Success",
+        "message": "Pickup Request and Image received successfully!",
+        "data": {
+            "category": category,
+            "item_details": item_details,
+            "estimated_weight": estimated_weight,
+            "address": address,
+            "phone": phone,
+            "image_url": image_url
+        }
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

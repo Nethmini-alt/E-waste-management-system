@@ -22,7 +22,10 @@ namespace EWasteManagement.Api.Services
             {
                 UserId = dto.UserId,
                 UserType = dto.UserType,
-                PickupAddress = dto.PickupAddress,
+                Category = dto.Category,           
+                EstimatedWeight = dto.EstimatedWeight, 
+                PickupAddress = dto.PickupAddress, 
+                PhoneNumber = dto.PhoneNumber,         
                 Items = dto.Items.Select(i => new SubmissionItem
                 {
                     ItemName = i.ItemName,
@@ -61,6 +64,14 @@ namespace EWasteManagement.Api.Services
             var submission = await _context.Submissions.FindAsync(id);
             if (submission == null) return;
 
+            decimal exchangeRate = 300.0m; 
+    decimal estimatedValueLkr = aiDto.EstimatedValueUsd * exchangeRate;
+
+            bool needsHumanApproval = aiDto.RequiresHumanApproval 
+                              || estimatedValueLkr > 15000m 
+                              || aiDto.EstimatedVolumeKg > 5.0m
+                              || aiDto.HazardLevel == "High";
+
             var analysis = new AIAnalysisResult
             {
                 SubmissionId = id,
@@ -68,10 +79,10 @@ namespace EWasteManagement.Api.Services
                 EstimatedVolumeKg = aiDto.EstimatedVolumeKg,
                 EstimatedValueUsd = aiDto.EstimatedValueUsd,
                 HazardLevel = aiDto.HazardLevel,
-                RequiresHumanApproval = aiDto.RequiresHumanApproval
+                RequiresHumanApproval = needsHumanApproval
             };
 
-            submission.Status = aiDto.RequiresHumanApproval ? "Pending_Approval" : "Approved";
+            submission.Status = needsHumanApproval ? "Pending_Approval" : "Approved";
 
             _context.AIAnalysisResults.Add(analysis);
             await _context.SaveChangesAsync();
