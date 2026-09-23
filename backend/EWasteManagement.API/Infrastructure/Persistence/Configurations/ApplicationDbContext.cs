@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Shared.Common;
@@ -37,6 +38,17 @@ public class ApplicationDbContext : DbContext
     public DbSet<Job> Jobs => Set<Job>();
     
     public DbSet<JobAssignmentHistory> JobAssignmentHistory => Set<JobAssignmentHistory>();
+
+        // Component D — Sales / Commercial
+    public DbSet<Buyer> Buyers => Set<Buyer>();
+    public DbSet<MaterialPricing> MaterialPricings => Set<MaterialPricing>();
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+    public DbSet<SalesOrderItem> SalesOrderItems => Set<SalesOrderItem>();
+    public DbSet<ExportOrder> ExportOrders => Set<ExportOrder>();
+    public DbSet<ExportOrderItem> ExportOrderItems => Set<ExportOrderItem>();
+    public DbSet<RevenueTransaction> RevenueTransactions => Set<RevenueTransaction>();
+    public DbSet<CommercialPlan> CommercialPlans => Set<CommercialPlan>();
+    public DbSet<ApprovalAction> ApprovalActions => Set<ApprovalAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
 {

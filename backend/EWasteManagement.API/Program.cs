@@ -7,12 +7,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using EWasteManagement.API.Shared.Common;
+
+using EWasteManagement.API.Features.Sales.Services;
+using EWasteManagement.API.Infrastructure.Middleware;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Infrastructure.ExternalServices;
+
+using EWasteManagement.API.Shared.Common;
+using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Processing.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,6 +74,22 @@ builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingServi
 builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
+// Component D — Sales services
+builder.Services.AddScoped<IBuyerService, BuyerService>();
+builder.Services.AddScoped<IMaterialPricingService, MaterialPricingService>();
+builder.Services.AddScoped<IRevenueService, RevenueService>();
+builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
+builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
+
+// Component D — external data providers
+builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
+builder.Services.AddHttpClient<IAgentClient, AgentClient>();
+
+// FluentValidation — scans the assembly for AbstractValidator<T> classes
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]?? "SuperSecretKeyForEWasteManagementProject2026SecureKey!";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -105,6 +126,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseExceptionHandler();
 
 // Pipeline Configuration
