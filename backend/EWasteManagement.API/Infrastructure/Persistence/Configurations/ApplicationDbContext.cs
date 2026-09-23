@@ -3,6 +3,7 @@ using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.Entities;
+using EWasteManagement.API.Features.Workflow.Entities;
 using EWasteManagement.API.Shared.Common;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,6 +50,10 @@ public class ApplicationDbContext : DbContext
     public DbSet<RevenueTransaction> RevenueTransactions => Set<RevenueTransaction>();
     public DbSet<CommercialPlan> CommercialPlans => Set<CommercialPlan>();
     public DbSet<ApprovalAction> ApprovalActions => Set<ApprovalAction>();
+    // Intake-and-collection-planning workflow
+    public DbSet<CollectionWorkflow> CollectionWorkflows => Set<CollectionWorkflow>();
+    public DbSet<WorkflowApprovalAction> WorkflowApprovalActions => Set<WorkflowApprovalAction>();
+    public DbSet<AgentExecutionLog> AgentExecutionLogs => Set<AgentExecutionLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
 {

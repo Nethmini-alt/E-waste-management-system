@@ -17,6 +17,8 @@ using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Shared.Common;
 using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Processing.Services;
+using EWasteManagement.API.Features.Workflow.Services;
+using EWasteManagement.API.Infrastructure.BackgroundTasks;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,7 +65,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddScoped<IJobService, JobService>();
-builder.Services.AddHttpClient<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IJobVerificationService, JobVerificationService>();
 builder.Services.AddScoped<IJobReceiptService, JobReceiptService>();
 builder.Services.AddScoped<IRatePolicyLookupService, RatePolicyLookupService>();
@@ -85,6 +87,20 @@ builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
 // Component D — external data providers
 builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
 builder.Services.AddHttpClient<IAgentClient, AgentClient>();
+
+// --- Intake-and-collection-planning agentic workflow (slice 3) ---
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IWorkflowOrchestrationService, WorkflowOrchestrationService>();
+builder.Services.AddHttpClient<IPlannerAgentClient, PlannerAgentClient>();
+builder.Services.AddHttpClient<IAnalyzerAgentClient, AnalyzerAgentClient>();
+builder.Services.AddHttpClient<IValidatorAgentClient, ValidatorAgentClient>();
+builder.Services.AddHttpClient<IMatcherAgentClient, MatcherAgentClient>();
+
+// Singleton: one queue shared by every request and by the background
+// processor. WorkflowQueueProcessor is a BackgroundService — it starts
+// with the app and runs for the app's whole lifetime.
+builder.Services.AddSingleton<IWorkflowBackgroundQueue, WorkflowBackgroundQueue>();
+builder.Services.AddHostedService<WorkflowQueueProcessor>();
 
 // FluentValidation — scans the assembly for AbstractValidator<T> classes
 builder.Services.AddFluentValidationAutoValidation();
