@@ -9,6 +9,14 @@ namespace EWasteManagement.API.Shared.Common;
 /// Single place that turns any unhandled exception into a consistent RFC 7807 ProblemDetails response.
 /// Register with builder.Services.AddExceptionHandler&lt;GlobalExceptionHandler&gt;() + AddProblemDetails(),
 /// and app.UseExceptionHandler() in the pipeline (see Program.cs).
+///
+/// This is now the ONLY exception translator in the app — the old
+/// ExceptionHandlingMiddleware was registered before UseExceptionHandler()
+/// in the pipeline, which made it the outer layer; this handler (closer to
+/// the endpoint) always caught exceptions first, so the middleware's
+/// InvalidOperationException/UnauthorizedAccessException cases never ran.
+/// Rather than just reorder and keep two overlapping systems, those two
+/// cases are merged in here and the middleware is deleted.
 /// </summary>
 public class GlobalExceptionHandler : IExceptionHandler
 {
@@ -28,6 +36,8 @@ public class GlobalExceptionHandler : IExceptionHandler
             InvalidStatusTransitionException => (StatusCodes.Status409Conflict, "Invalid status transition"),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "This item was modified by someone else — reload and try again"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
+            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "You do not have permission to do this"),
+            InvalidOperationException => (StatusCodes.Status400BadRequest, "Invalid request"),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
             DuplicateJobReceiptException => (StatusCodes.Status409Conflict, "Job already received"),
             JobNotCompletedException => (StatusCodes.Status409Conflict, "Job not ready for receipt"),
