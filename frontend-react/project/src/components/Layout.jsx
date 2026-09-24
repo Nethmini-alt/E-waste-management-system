@@ -4,9 +4,10 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../features/auth/AuthContext';
 import Hero3D from './Hero3D';
+import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
-  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock,
+  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard,
 } from 'lucide-react';
 
 const navItem =
@@ -22,6 +23,10 @@ export const Layout = () => {
   const location = useLocation();
   const isStaff = user && ['staff', 'admin'].includes(user.role.toLowerCase());
   const isAdmin = user?.role.toLowerCase() === 'admin';
+  const isCollector = user?.role.toLowerCase() === 'collector';
+
+  // Collectors work from the Flutter app; the web shell has nothing for them.
+  if (isCollector) return <CollectorAppNotice />;
 
   return (
     <div className="relative flex min-h-screen overflow-hidden">
@@ -60,22 +65,8 @@ export const Layout = () => {
             <LayoutDashboard size={16} /> Dashboard
           </NavLink>
 
-          {/* Component A — Collection (not built yet) */}
-          <div className={sectionLabel}>Component A — Collection</div>
-          <div className={navItemDisabled} title="Built by another team member — coming soon">
-            <span className="flex items-center gap-3"><Truck size={16} /> Collection</span>
-            <Lock size={12} />
-          </div>
-
-          {/* Component B — Processing (not built yet) */}
-          <div className={sectionLabel}>Component B — Processing</div>
-          <div className={navItemDisabled} title="Built by another team member — coming soon">
-            <span className="flex items-center gap-3"><Recycle size={16} /> Processing</span>
-            <Lock size={12} />
-          </div>
-
-          {/* Component C — Submission */}
-          <div className={sectionLabel}>Component C — Submission</div>
+          {/* Component A — Submission */}
+          <div className={sectionLabel}>Component A — Submission</div>
           <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
             <Send size={16} /> Submit Item
           </NavLink>
@@ -84,6 +75,26 @@ export const Layout = () => {
               <CheckSquare size={16} /> Submissions Review
             </NavLink>
           )}
+
+          {/* Component B — Collection & Logistics (staff side) */}
+          {isStaff && (
+            <>
+              <div className={sectionLabel}>Component B — Collection</div>
+              <NavLink to="/collection/jobs" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <Truck size={16} /> Collection Jobs
+              </NavLink>
+              <NavLink to="/collection/collectors" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <IdCard size={16} /> Collectors
+              </NavLink>
+            </>
+          )}
+
+          {/* Component C — Processing (not built yet) */}
+          <div className={sectionLabel}>Component C — Processing</div>
+          <div className={navItemDisabled} title="Built by another team member — coming soon">
+            <span className="flex items-center gap-3"><Recycle size={16} /> Processing</span>
+            <Lock size={12} />
+          </div>
 
           {/* Component D — Sales (my part) */}
           {isStaff && (
