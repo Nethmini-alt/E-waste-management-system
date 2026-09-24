@@ -85,7 +85,7 @@ builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
 builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
 
 // Component D — external data providers
-builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
+builder.Services.AddScoped<IRecoveredMaterialsProvider, EfRecoveredMaterialsProvider>();
 builder.Services.AddHttpClient<IAgentClient, AgentClient>();
 
 // --- Intake-and-collection-planning agentic workflow (slice 3) ---
