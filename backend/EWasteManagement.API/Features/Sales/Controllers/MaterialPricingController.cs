@@ -69,6 +69,20 @@ public class MaterialPricingController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// Mark every Approved price whose expiry date has passed as Expired, and report how many
+    /// were changed. Runs automatically on a background timer; exposed so staff can force it
+    /// (and so it is testable through the API). Safe to call at any time — pricing lookups
+    /// already refuse to use expired-by-date rows, so nothing depends on this having run.
+    /// </summary>
+    [HttpPost("expire-stale")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ExpireStale(CancellationToken ct)
+    {
+        var expired = await _service.ExpireStaleAsync(ct);
+        return Ok(new { expired });
+    }
+
     // ---------- Helpers ----------
     private Guid GetCurrentUserId()
     {

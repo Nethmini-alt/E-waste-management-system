@@ -118,13 +118,13 @@ public class ExportOrderService : IExportOrderService
                     $"Requested {line.QuantityKg}kg of {material.MaterialType}, " +
                     $"but only {material.QuantityKg}kg available.");
 
+            // Current price — approved AND not past its expiry date (MaterialPricingPolicy),
+            // so a dead price can never be snapshotted onto an export order line.
             var price = await _db.MaterialPricings
-                .Where(p => p.MaterialType == material.MaterialType
-                            && p.Status == PricingStatus.Approved)
-                .OrderByDescending(p => p.EffectiveDate)
-                .FirstOrDefaultAsync(ct)
+                .CurrentForAsync(material.MaterialType, MaterialPricingPolicy.Today, ct)
                 ?? throw new InvalidOperationException(
-                    $"No approved price found for '{material.MaterialType}'.");
+                    $"No current price found for '{material.MaterialType}'. " +
+                    "Approve a price that is effective today and has not expired.");
 
             var lineTotal = Math.Round(line.QuantityKg * price.PricePerKg, 2);
             totalValue += lineTotal;

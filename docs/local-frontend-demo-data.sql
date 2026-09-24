@@ -20,6 +20,22 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Approved prices let the local sales-order form calculate totals.
 -- The first non-deleted user is used only as the audit creator for demo pricing.
+--
+-- material_pricing carries a partial unique index (one APPROVED row per material type), so
+-- retire any other approved row for these materials before re-asserting the demo prices —
+-- otherwise re-running this script against a database where someone approved their own
+-- Copper/Aluminium/Gold/PCB price would fail. NULL expiry means "until replaced", i.e. live.
+UPDATE material_pricing
+SET status = 'expired', updated_at = NOW()
+WHERE status = 'approved'
+  AND material_type IN ('Copper', 'Aluminium', 'Gold', 'PCB')
+  AND pricing_id NOT IN (
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb4'::uuid
+  );
+
 INSERT INTO material_pricing (
     pricing_id, material_type, price_per_kg, effective_date,
     expiry_date, status, created_by_user_id, created_at

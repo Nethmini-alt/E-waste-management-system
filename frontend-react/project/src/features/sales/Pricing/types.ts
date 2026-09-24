@@ -5,6 +5,8 @@ export interface MaterialPricing {
   effectiveDate: string;      // "YYYY-MM-DD"
   expiryDate?: string | null;
   status: 'Draft' | 'Approved' | 'Expired';
+  /** Approved AND still inside its expiry window — the only status that may price an order. */
+  isLive: boolean;
   createdByUserId: string;
   createdByName: string;
   createdAt: string;
