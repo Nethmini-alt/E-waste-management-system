@@ -54,6 +54,16 @@ public class CollectorsController : ControllerBase
         return result is null ? NotFound(new { message = "No collector profile exists for this user yet." }) : Ok(result);
     }
 
+    // GET /api/v1/collectors?isAvailable=true
+    // Staff/admin list for the collectors page, with names and current load.
+    [HttpGet]
+    [Authorize(Roles = "Staff,Admin")]
+    public async Task<ActionResult<List<CollectorResponseDto>>> GetAll([FromQuery] bool? isAvailable)
+    {
+        var result = await _collectorService.GetAllAsync(isAvailable);
+        return Ok(result);
+    }
+
     // GET /api/v1/collectors/{id}
     // Staff/admin lookup — e.g. for the dashboard.
     [HttpGet("{id:guid}")]
