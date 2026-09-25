@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EWasteManagement.API.Features.Processing.Exceptions;
+using EWasteManagement.API.Features.Sales.Exceptions;
 
 namespace EWasteManagement.API.Shared.Common;
 
@@ -41,6 +42,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
             DuplicateJobReceiptException => (StatusCodes.Status409Conflict, "Job already received"),
             JobNotCompletedException => (StatusCodes.Status409Conflict, "Job not ready for receipt"),
+            DuplicateApprovedPricingException => (StatusCodes.Status409Conflict, "Duplicate approved pricing"),
             JobCollectorMismatchException => (StatusCodes.Status409Conflict, "Collector does not match the job"),
             DuplicatePaymentException => (StatusCodes.Status409Conflict, "Payment already exists"),
             PaymentAlreadyPaidException => (StatusCodes.Status409Conflict, "Payment already paid"),

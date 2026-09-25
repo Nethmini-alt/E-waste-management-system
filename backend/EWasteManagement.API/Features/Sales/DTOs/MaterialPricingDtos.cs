@@ -9,6 +9,15 @@ public class MaterialPricingResponse
     public DateOnly EffectiveDate { get; set; }
     public DateOnly? ExpiryDate { get; set; }
     public string Status { get; set; } = string.Empty;    // "Draft" | "Approved" | "Expired"
+
+    /// <summary>
+    /// True when this price may be used to price an order right now — i.e. it is Approved
+    /// and its expiry date has not passed. Status alone is not enough: a row keeps reading
+    /// "Approved" until the background sweeper flips it, so use this flag for anything that
+    /// depends on whether the price is actually usable.
+    /// </summary>
+    public bool IsLive { get; set; }
+
     public Guid CreatedByUserId { get; set; }
     public string CreatedByName { get; set; } = string.Empty;   // populated from User.FullName
     public DateTime CreatedAt { get; set; }

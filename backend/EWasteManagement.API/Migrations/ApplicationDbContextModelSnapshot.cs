@@ -1238,6 +1238,11 @@ namespace EWasteManagement.API.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
+                    b.HasIndex("MaterialType")
+                        .IsUnique()
+                        .HasDatabaseName("IX_material_pricing_material_type_approved_unique")
+                        .HasFilter("status = 'approved'");
+
                     b.HasIndex("MaterialType", "EffectiveDate")
                         .IsUnique();
 
@@ -1644,8 +1649,19 @@ namespace EWasteManagement.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("EstimatedWeight")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("PickupAddress")
                         .IsRequired()

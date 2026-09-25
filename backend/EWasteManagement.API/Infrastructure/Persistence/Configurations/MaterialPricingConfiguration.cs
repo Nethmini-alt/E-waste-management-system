@@ -74,5 +74,15 @@ public class MaterialPricingConfiguration : IEntityTypeConfiguration<MaterialPri
         // Prevent duplicate active price for same material+effective date
         builder.HasIndex(p => new { p.MaterialType, p.EffectiveDate })
             .IsUnique();
+
+        // At most ONE approved price per material type. This is a *partial* (filtered)
+        // unique index, so Draft and Expired rows are unaffected — you can keep any
+        // number of those around as history. Enforcing it in the database (rather than
+        // only in the service layer) means a race between two concurrent approvals can
+        // no longer leave a material with two live prices.
+        builder.HasIndex(p => p.MaterialType)
+            .IsUnique()
+            .HasFilter("status = 'approved'")
+            .HasDatabaseName("IX_material_pricing_material_type_approved_unique");
     }
 }

@@ -87,9 +87,11 @@ const ExportOrderFormModal: React.FC<Props> = ({ open, onClose, onSubmit }) => {
     }
   }, [open]);
 
+  // Same rule as the server: an Approved price that has passed its expiry date is dead and
+  // must not appear in this estimate.
   const priceByMaterialType = useMemo(() => {
     const map = new Map<string, number>();
-    prices.forEach((p) => map.set(p.materialType, p.pricePerKg));
+    prices.filter((p) => p.isLive).forEach((p) => map.set(p.materialType, p.pricePerKg));
     return map;
   }, [prices]);
 

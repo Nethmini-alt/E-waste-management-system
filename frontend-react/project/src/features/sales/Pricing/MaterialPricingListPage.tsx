@@ -107,6 +107,27 @@ const MaterialPricingListPage: React.FC = () => {
     }
   };
 
+  // A row can still read "Approved" for a few hours after its expiry date until the server's
+  // background sweep runs (that sweep is what keeps stored status honest — orders never use
+  // expired-by-date rows either way). This lets staff force it and see the result immediately.
+  const handleExpireStale = async () => {
+    try {
+      const { expired } = await pricingApi.expireStale();
+      await load();
+      alert(
+        expired === 0
+          ? 'No approved prices are past their expiry date.'
+          : `Marked ${expired} price(s) Expired.`
+      );
+    } catch (e: any) {
+      alert(
+        e?.response?.data?.detail ??
+          e?.response?.data?.title ??
+          'Failed to expire past prices.'
+      );
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -115,6 +136,13 @@ const MaterialPricingListPage: React.FC = () => {
         </h2>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
+          <button
+            onClick={handleExpireStale}
+            style={btnSecondary}
+            title="Mark every approved price whose expiry date has passed as Expired"
+          >
+            <Clock size={14} /> Expire past dates
+          </button>
           <button
             onClick={() => { setEditing(null); setModalOpen(true); }}
             style={btnPrimary}
@@ -179,6 +207,14 @@ const MaterialPricingListPage: React.FC = () => {
                 <td style={td}>{p.expiryDate ?? '—'}</td>
                 <td style={td}>
                   <StatusPill status={p.status} />
+                  {p.status === 'Approved' && !p.isLive && (
+                    <div
+                      style={staleNote}
+                      title="The expiry date has passed, so orders cannot use this price. Mark it Expired (or let the background sweep do it)."
+                    >
+                      expiry passed
+                    </div>
+                  )}
                 </td>
                 <td style={{ ...td, fontSize: 13, color: '#666' }}>
                   {p.createdByName || '—'}
@@ -264,6 +300,9 @@ const StatusPill: React.FC<{ status: MaterialPricing['status'] }> = ({ status })
   );
 };
 
+const staleNote: React.CSSProperties = {
+  marginTop: 4, fontSize: 11, fontWeight: 'bold', color: '#e65100',
+};
 const th: React.CSSProperties = { padding: 10, fontSize: 13, fontWeight: 'bold' };
 const td: React.CSSProperties = { padding: 10, fontSize: 14 };
 const btnPrimary: React.CSSProperties = {

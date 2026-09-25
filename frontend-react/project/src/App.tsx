@@ -12,6 +12,10 @@ import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
 import SubmitPage from './features/submissions/SubmitPage';
 import AdminReviewPage from './features/submissions/AdminReviewPage';
 
+import JobsDashboardPage from './features/collection/JobsDashboardPage';
+import JobDetailPage from './features/collection/JobDetailPage';
+import CollectorsPage from './features/collection/CollectorsPage';
+
 import DashboardPage from './features/sales/Dashboard/DashboardPage';
 import BuyersListPage from './features/sales/Buyers/BuyersListPage';
 import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
@@ -45,7 +49,34 @@ const App: React.FC = () => (
         >
           <Route index element={<DashboardPage />} />
 
-          {/* Component C — Submission */}
+          {/* Component B — Collection & Logistics (staff side; collectors use the Flutter app) */}
+          <Route
+            path="/collection/jobs"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <JobsDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/collection/jobs/:id"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <JobDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/collection/collectors"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <CollectorsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Component A — Submission */}
           <Route path="/submissions/new" element={<SubmitPage />} />
           <Route
             path="/submissions/review"

@@ -76,10 +76,12 @@ const SalesOrderFormModal: React.FC<Props> = ({ open, onClose, onSubmit }) => {
     }
   }, [open]);
 
-  // Price lookup by material type
+  // Price lookup by material type. Only "live" prices count — the server prices orders
+  // exclusively from Approved rows whose expiry date has not passed, so including a dead
+  // price here would make this estimate disagree with the total the server computes.
   const priceByMaterialType = useMemo(() => {
     const map = new Map<string, number>();
-    prices.forEach((p) => map.set(p.materialType, p.pricePerKg));
+    prices.filter((p) => p.isLive).forEach((p) => map.set(p.materialType, p.pricePerKg));
     return map;
   }, [prices]);
 

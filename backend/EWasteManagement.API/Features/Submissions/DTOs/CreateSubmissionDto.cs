@@ -4,7 +4,10 @@ namespace EWasteManagement.Api.Dtos
     {
         public Guid UserId { get; set; }
         public string UserType { get; set; } = "Household";
-        public string PickupAddress { get; set; } = string.Empty; // <-- Pickup Address එකතු කර ඇත
+        public string Category { get; set; } = string.Empty;
+        public decimal EstimatedWeight { get; set; }
+        public string PickupAddress { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty; // <-- Pickup Address එකතු කර ඇත
         public List<CreateSubmissionItemDto> Items { get; set; } = new();
     }
 

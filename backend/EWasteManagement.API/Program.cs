@@ -87,7 +87,7 @@ builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
 builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
 
 // Component D — external data providers
-builder.Services.AddSingleton<IRecoveredMaterialsProvider, StubRecoveredMaterialsProvider>();
+builder.Services.AddScoped<IRecoveredMaterialsProvider, EfRecoveredMaterialsProvider>();
 builder.Services.AddHttpClient<IAgentClient, AgentClient>();
 
 // --- Intake-and-collection-planning agentic workflow (slice 3) ---
@@ -103,6 +103,11 @@ builder.Services.AddHttpClient<IMatcherAgentClient, MatcherAgentClient>();
 // with the app and runs for the app's whole lifetime.
 builder.Services.AddSingleton<IWorkflowBackgroundQueue, WorkflowBackgroundQueue>();
 builder.Services.AddHostedService<WorkflowQueueProcessor>();
+
+// Component D — flips Approved material prices whose expiry date has passed to Expired,
+// once at startup and every few hours. Purely cosmetic to the data: order pricing already
+// refuses to use expired-by-date rows (see MaterialPricingPolicy).
+builder.Services.AddHostedService<MaterialPricingExpirySweeper>();
 
 // FluentValidation — scans the assembly for AbstractValidator<T> classes
 builder.Services.AddFluentValidationAutoValidation();
