@@ -158,6 +158,55 @@ public class JobsController : ControllerBase
         }
     }
 
+    // GET /api/v1/jobs/{id}/history
+    // Every offer/accept/reject for this job, oldest first.
+    [HttpGet("{id:guid}/history")]
+    [Authorize(Roles = "Staff,Admin")]
+    public Task<ActionResult<List<JobAssignmentHistoryDto>>> GetHistory(Guid id) =>
+        RunStaffAction(() => _jobService.GetHistoryAsync(id));
+
+    // PUT /api/v1/jobs/{id}/address
+    // Correct an address that couldn't be geocoded; matching re-runs on success.
+    [HttpPut("{id:guid}/address")]
+    [Authorize(Roles = "Staff,Admin")]
+    public Task<ActionResult<JobResponseDto>> UpdateAddress(Guid id, UpdateJobAddressDto dto) =>
+        RunStaffAction(() => _jobService.UpdateAddressAsync(id, dto));
+
+    // PUT /api/v1/jobs/{id}/reassign
+    // Body { "collectorId": "..." } to hand-pick, or {} to re-run matching.
+    [HttpPut("{id:guid}/reassign")]
+    [Authorize(Roles = "Staff,Admin")]
+    public Task<ActionResult<JobResponseDto>> Reassign(Guid id, ReassignJobDto dto) =>
+        RunStaffAction(() => _jobService.ReassignAsync(id, dto));
+
+    // PUT /api/v1/jobs/{id}/cancel
+    [HttpPut("{id:guid}/cancel")]
+    [Authorize(Roles = "Staff,Admin")]
+    public Task<ActionResult<JobResponseDto>> Cancel(Guid id) =>
+        RunStaffAction(() => _jobService.CancelAsync(id));
+
+    // Same exception-to-status mapping as the collector actions above:
+    // bad input 400, missing 404, wrong state 409.
+    private async Task<ActionResult<T>> RunStaffAction<T>(Func<Task<T>> action)
+    {
+        try
+        {
+            return Ok(await action());
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? throw new UnauthorizedAccessException("Token is missing a user id claim."));

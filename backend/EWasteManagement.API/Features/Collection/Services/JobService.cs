@@ -15,6 +15,12 @@ public interface IJobService
     Task<List<JobResponseDto>> GetMyJobsAsync(Guid requestingUserId, JobStatus? status);
     Task<JobResponseDto?> GetByIdAsync(Guid jobId, Guid requestingUserId, bool isPrivileged);
     Task<List<JobResponseDto>> GetAllAsync(JobStatus? status);
+
+    // Staff/admin
+    Task<List<JobAssignmentHistoryDto>> GetHistoryAsync(Guid jobId);
+    Task<JobResponseDto> UpdateAddressAsync(Guid jobId, UpdateJobAddressDto dto);
+    Task<JobResponseDto> ReassignAsync(Guid jobId, ReassignJobDto dto);
+    Task<JobResponseDto> CancelAsync(Guid jobId);
 }
 
 public class JobService : IJobService
@@ -53,7 +59,7 @@ public class JobService : IJobService
             job.Status = JobStatus.PickupLocationUnresolved;
             _db.Jobs.Add(job);
             await _db.SaveChangesAsync();
-            return ToDto(job);
+            return await ToDtoAsync(job);
         }
 
         job.PickupLatitude = coordinates.Value.Latitude;
@@ -69,7 +75,7 @@ public class JobService : IJobService
         if (candidate is not null)
             await LogHistoryAsync(job.JobId, candidate.CollectorId, AssignmentOutcome.Assigned);
 
-        return ToDto(job);
+        return await ToDtoAsync(job);
     }
 
     public async Task<JobResponseDto> AcceptAsync(Guid jobId, Guid requestingUserId)
@@ -85,7 +91,7 @@ public class JobService : IJobService
 
         await LogHistoryAsync(job.JobId, job.CollectorId!.Value, AssignmentOutcome.Accepted);
 
-        return ToDto(job);
+        return await ToDtoAsync(job);
     }
 
     public async Task<JobResponseDto> RejectAsync(Guid jobId, Guid requestingUserId, RejectJobDto dto)
@@ -124,7 +130,7 @@ public class JobService : IJobService
         if (nextCandidate is not null)
             await LogHistoryAsync(jobId, nextCandidate.CollectorId, AssignmentOutcome.Assigned);
 
-        return ToDto(job);
+        return await ToDtoAsync(job);
     }
 
     public async Task<JobResponseDto> CompleteAsync(Guid jobId, Guid requestingUserId, CompleteJobDto dto)
@@ -147,7 +153,7 @@ public class JobService : IJobService
         job.CompletedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-        return ToDto(job);
+        return await ToDtoAsync(job);
     }
 
     public async Task<List<JobResponseDto>> GetMyJobsAsync(Guid requestingUserId, JobStatus? status)
@@ -161,7 +167,7 @@ public class JobService : IJobService
             query = query.Where(j => j.Status == status);
 
         var jobs = await query.OrderByDescending(j => j.CreatedAt).ToListAsync();
-        return jobs.Select(ToDto).ToList();
+        return await ToDtosAsync(jobs);
     }
 
     public async Task<JobResponseDto?> GetByIdAsync(Guid jobId, Guid requestingUserId, bool isPrivileged)
@@ -169,14 +175,14 @@ public class JobService : IJobService
         var job = await _db.Jobs.FindAsync(jobId);
         if (job is null) return null;
 
-        if (isPrivileged) return ToDto(job);
+        if (isPrivileged) return await ToDtoAsync(job);
 
         // Non-privileged callers (collectors) can only view their own job.
         var collector = await _db.Collectors.FirstOrDefaultAsync(c => c.UserId == requestingUserId);
         if (collector is null || job.CollectorId != collector.CollectorId)
             throw new UnauthorizedAccessException("You do not have permission to view this job.");
 
-        return ToDto(job);
+        return await ToDtoAsync(job);
     }
 
     public async Task<List<JobResponseDto>> GetAllAsync(JobStatus? status)
@@ -187,7 +193,161 @@ public class JobService : IJobService
             query = query.Where(j => j.Status == status);
 
         var jobs = await query.OrderByDescending(j => j.CreatedAt).ToListAsync();
-        return jobs.Select(ToDto).ToList();
+        return await ToDtosAsync(jobs);
+    }
+
+    // --- staff actions -------------------------------------------------
+
+    public async Task<List<JobAssignmentHistoryDto>> GetHistoryAsync(Guid jobId)
+    {
+        if (!await _db.Jobs.AnyAsync(j => j.JobId == jobId))
+            throw new KeyNotFoundException("Job not found.");
+
+        var rows = await (
+            from h in _db.JobAssignmentHistory
+            where h.JobId == jobId
+            join c in _db.Collectors on h.CollectorId equals c.CollectorId into cs
+            from c in cs.DefaultIfEmpty()
+            join u in _db.Users on c.UserId equals u.UserId into us
+            from u in us.DefaultIfEmpty()
+            orderby h.Timestamp
+            select new { h, Name = u != null ? u.FullName : null }
+        ).ToListAsync();
+
+        return rows.Select(x => new JobAssignmentHistoryDto
+        {
+            HistoryId = x.h.HistoryId,
+            CollectorId = x.h.CollectorId,
+            CollectorName = x.Name ?? "Unknown collector",
+            Outcome = x.h.Outcome.ToString(),
+            Reason = x.h.Reason,
+            Timestamp = x.h.Timestamp
+        }).ToList();
+    }
+
+    // Fixes an address that couldn't be geocoded (or that geocoded somewhere
+    // no collector can reach), then immediately retries matching.
+    public async Task<JobResponseDto> UpdateAddressAsync(Guid jobId, UpdateJobAddressDto dto)
+    {
+        var job = await _db.Jobs.FindAsync(jobId)
+            ?? throw new KeyNotFoundException("Job not found.");
+
+        if (job.Status is not (JobStatus.PickupLocationUnresolved or JobStatus.NoCollectorAvailable))
+            throw new InvalidOperationException(
+                $"The address can only be changed while a job is unresolved or unassigned (current status: '{job.Status}').");
+
+        if (string.IsNullOrWhiteSpace(dto.PickupAddress))
+            throw new ArgumentException("PickupAddress is required.");
+
+        var coordinates = await _geoService.GeocodeAsync(dto.PickupAddress.Trim());
+        if (coordinates is null)
+            throw new ArgumentException(
+                "That address still couldn't be located. Try adding the street name, town, or a nearby landmark.");
+
+        job.PickupAddress = dto.PickupAddress.Trim();
+        job.PickupLatitude = coordinates.Value.Latitude;
+        job.PickupLongitude = coordinates.Value.Longitude;
+
+        var candidate = await FindBestCandidateAsync(job, requiredCapacityKg: null,
+            excludeCollectorIds: await GetRejectedCollectorIdsAsync(jobId));
+
+        ApplyAssignmentOutcome(job, candidate);
+        await _db.SaveChangesAsync();
+
+        if (candidate is not null)
+            await LogHistoryAsync(jobId, candidate.CollectorId, AssignmentOutcome.Assigned,
+                "Assigned after staff corrected the pickup address");
+
+        return await ToDtoAsync(job);
+    }
+
+    // Staff override. With a CollectorId, hands the job to that collector
+    // directly. Without one, re-runs automatic matching — useful when a job
+    // hit NoCollectorAvailable and collectors have since come online, or
+    // when the assigned collector isn't responding.
+    public async Task<JobResponseDto> ReassignAsync(Guid jobId, ReassignJobDto dto)
+    {
+        var job = await _db.Jobs.FindAsync(jobId)
+            ?? throw new KeyNotFoundException("Job not found.");
+
+        if (job.Status is not (JobStatus.Assigned or JobStatus.NoCollectorAvailable))
+            throw new InvalidOperationException(
+                $"Only jobs that are Assigned or NoCollectorAvailable can be reassigned (current status: '{job.Status}').");
+
+        if (job.PickupLatitude is null || job.PickupLongitude is null)
+            throw new InvalidOperationException("This job has no pickup coordinates. Fix the address first.");
+
+        if (dto.CollectorId is Guid chosenId)
+        {
+            var collector = await _db.Collectors.FindAsync(chosenId)
+                ?? throw new KeyNotFoundException("Collector not found.");
+
+            if (job.CollectorId == chosenId)
+                throw new InvalidOperationException("This job is already assigned to that collector.");
+
+            // Deliberately not enforcing the load cap or capacity here: this
+            // is a human override, and the UI shows load/capacity so staff
+            // can make that call. Availability is enforced, because an
+            // offline collector would never see the job.
+            if (!collector.IsAvailable)
+                throw new InvalidOperationException("That collector is currently offline.");
+
+            var route = collector.CurrentLatitude is null || collector.CurrentLongitude is null
+                ? null
+                : await _geoService.GetDistanceAsync(
+                    collector.CurrentLatitude.Value, collector.CurrentLongitude.Value,
+                    job.PickupLatitude.Value, job.PickupLongitude.Value);
+
+            ApplyAssignmentOutcome(job, new CollectorMatchDto
+            {
+                CollectorId = collector.CollectorId,
+                DistanceKm = route?.DistanceKm,
+                EtaMinutes = route?.DurationMinutes
+            });
+            job.RejectionReason = null;
+            await _db.SaveChangesAsync();
+
+            await LogHistoryAsync(jobId, collector.CollectorId, AssignmentOutcome.Assigned, "Manually assigned by staff");
+            return await ToDtoAsync(job);
+        }
+
+        // Automatic re-match: skip everyone who rejected this job, and the
+        // current assignee (staff are moving it away from them).
+        var exclude = await GetRejectedCollectorIdsAsync(jobId);
+        if (job.CollectorId is Guid currentId)
+            exclude.Add(currentId);
+
+        var candidate = await FindBestCandidateAsync(job, requiredCapacityKg: null, excludeCollectorIds: exclude);
+
+        // Don't take a job away from its current collector just to leave it
+        // with nobody — tell staff instead and leave the job as it was.
+        if (candidate is null && job.Status == JobStatus.Assigned)
+            throw new InvalidOperationException("No other collector is available right now. The job was left with its current collector.");
+
+        ApplyAssignmentOutcome(job, candidate);
+        job.RejectionReason = null;
+        await _db.SaveChangesAsync();
+
+        if (candidate is not null)
+            await LogHistoryAsync(jobId, candidate.CollectorId, AssignmentOutcome.Assigned, "Re-matched by staff");
+
+        return await ToDtoAsync(job);
+    }
+
+    public async Task<JobResponseDto> CancelAsync(Guid jobId)
+    {
+        var job = await _db.Jobs.FindAsync(jobId)
+            ?? throw new KeyNotFoundException("Job not found.");
+
+        if (job.Status is JobStatus.Completed or JobStatus.Cancelled)
+            throw new InvalidOperationException($"A job that is already '{job.Status}' can't be cancelled.");
+
+        // CollectorId is kept so the record still shows who had it; Cancelled
+        // isn't an active status, so it no longer counts towards their load.
+        job.Status = JobStatus.Cancelled;
+        await _db.SaveChangesAsync();
+
+        return await ToDtoAsync(job);
     }
 
     // --- helpers -----------------------------------------------------
@@ -251,6 +411,40 @@ public class JobService : IJobService
             throw new UnauthorizedAccessException("You do not have permission to act on this job.");
 
         return job;
+    }
+
+    private async Task<List<Guid>> GetRejectedCollectorIdsAsync(Guid jobId) =>
+        await _db.JobAssignmentHistory
+            .Where(h => h.JobId == jobId && h.Outcome == AssignmentOutcome.Rejected)
+            .Select(h => h.CollectorId)
+            .Distinct()
+            .ToListAsync();
+
+    private async Task<JobResponseDto> ToDtoAsync(Job job) =>
+        (await ToDtosAsync(new List<Job> { job }))[0];
+
+    // Resolves collector names in one query for the whole list.
+    private async Task<List<JobResponseDto>> ToDtosAsync(List<Job> jobs)
+    {
+        var collectorIds = jobs.Where(j => j.CollectorId != null)
+            .Select(j => j.CollectorId!.Value).Distinct().ToList();
+
+        var names = collectorIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await (
+                from c in _db.Collectors
+                where collectorIds.Contains(c.CollectorId)
+                join u in _db.Users on c.UserId equals u.UserId
+                select new { c.CollectorId, u.FullName }
+            ).ToDictionaryAsync(x => x.CollectorId, x => x.FullName);
+
+        return jobs.Select(j =>
+        {
+            var dto = ToDto(j);
+            if (j.CollectorId is Guid id && names.TryGetValue(id, out var name))
+                dto.CollectorName = name;
+            return dto;
+        }).ToList();
     }
 
     private static JobResponseDto ToDto(Job j) => new()

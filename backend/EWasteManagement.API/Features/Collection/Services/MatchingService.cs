@@ -11,15 +11,23 @@ public interface IMatchingService
     Task<List<CollectorMatchDto>> FindCandidatesAsync(MatchRequestDto request);
 }
 
-public class MatchingService : IMatchingService
+// Shared by matching, the job service and the staff collector list, so the
+// "what counts as busy" rule lives in exactly one place.
+public static class MatchingRules
 {
     // A collector juggling too many jobs at once shouldn't be handed another
     // one, even if they're geographically closest. Simple, explicit cap
     // rather than a more elaborate load-balancing scheme.
-    private const int MaxActiveJobsPerCollector = 3;
+    public const int MaxActiveJobsPerCollector = 3;
 
-    private static readonly JobStatus[] ActiveStatuses =
+    public static readonly JobStatus[] ActiveStatuses =
         { JobStatus.Assigned, JobStatus.Accepted, JobStatus.InProgress };
+}
+
+public class MatchingService : IMatchingService
+{
+    private const int MaxActiveJobsPerCollector = MatchingRules.MaxActiveJobsPerCollector;
+    private static readonly JobStatus[] ActiveStatuses = MatchingRules.ActiveStatuses;
 
     private readonly ApplicationDbContext _db;
     private readonly IGeoService _mapsService;
@@ -70,9 +78,15 @@ public class MatchingService : IMatchingService
             request.PickupLatitude, request.PickupLongitude));
         var distances = await Task.WhenAll(distanceTasks);
 
+        var eligibleUserIds = eligible.Select(x => x.Collector.UserId).ToList();
+        var names = await _db.Users
+            .Where(u => eligibleUserIds.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId, u => u.FullName);
+
         var results = eligible.Zip(distances, (x, distance) => new CollectorMatchDto
         {
             CollectorId = x.Collector.CollectorId,
+            CollectorName = names.GetValueOrDefault(x.Collector.UserId, string.Empty),
             VehicleType = x.Collector.VehicleType,
             CapacityKg = x.Collector.CapacityKg,
             Rating = x.Collector.Rating,
@@ -82,7 +96,7 @@ public class MatchingService : IMatchingService
         }).ToList();
 
         // Step 4: radius filter, if requested — applied on the real driving
-        // distance from Google, not straight-line, so it's an honest cutoff.
+        // distance from the routing service (OSRM), not straight-line, so it's an honest cutoff.
         if (request.RadiusKm is not null)
         {
             results = results
