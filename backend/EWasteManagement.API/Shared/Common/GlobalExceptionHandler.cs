@@ -41,6 +41,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
             DuplicateJobReceiptException => (StatusCodes.Status409Conflict, "Job already received"),
             JobNotCompletedException => (StatusCodes.Status409Conflict, "Job not ready for receipt"),
+            JobCollectorMismatchException => (StatusCodes.Status409Conflict, "Collector does not match the job"),
             DuplicatePaymentException => (StatusCodes.Status409Conflict, "Payment already exists"),
             PaymentAlreadyPaidException => (StatusCodes.Status409Conflict, "Payment already paid"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred"),
