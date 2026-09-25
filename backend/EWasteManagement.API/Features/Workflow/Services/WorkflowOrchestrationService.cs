@@ -185,9 +185,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         var validatorResult = workflow.ValidatorResultJson is null
             ? new { } as object
             : JsonSerializer.Deserialize<ValidatorResultRequest>(workflow.ValidatorResultJson)!;
-        var matcherResult = workflow.MatcherResultJson is null
+        var matcherRecommendation = workflow.MatcherResultJson is null
             ? null
-            : JsonSerializer.Deserialize<MatcherResultRequest>(workflow.MatcherResultJson) as object;
+            : JsonSerializer.Deserialize<MatcherResultRequest>(workflow.MatcherResultJson);
+        var matcherResult = matcherRecommendation as object;
 
         var finalizeResult = await _planner.FinalizeAsync(
             workflow.WorkflowId,
@@ -206,6 +207,10 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 SubmissionId = workflow.SubmissionId,
                 PickupAddress = snapshot?.PickupAddress ?? string.Empty,
                 RequiredCapacityKg = analyzerResult.EstimatedVolumeKg,
+                // Hand the Matcher agent's pick to job creation. JobService
+                // uses it if that collector is still eligible, and records
+                // it in the job history either way.
+                PreferredCollectorId = matcherRecommendation?.RecommendedCollectorId,
             });
             resultingJobId = job.JobId;
         }
@@ -226,12 +231,9 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         //  - Matcher hasn't run yet  -> this was Validator escalating -> go to Matching.
         //  - Matcher already ran     -> this was Matcher's own ambiguous/high-value
         //                               case -> go straight to Finalizing.
-        // NOTE: Finalize's job-creation step re-derives the assignment via
-        // JobService's own matching rather than reusing Matcher's specific
-        // suggested collector id — a deterministic ranking will normally
-        // land on the same candidate anyway. Reusing the exact suggestion
-        // would need a small JobService extension; noted as a follow-up
-        // rather than built here.
+        // Finalize passes Matcher's recommended collector to JobService as
+        // PreferredCollectorId, so an approved recommendation is honoured if
+        // that collector is still eligible when the job is created.
         var nextStatus = workflow.MatcherResultJson is null
             ? WorkflowStatus.Matching
             : WorkflowStatus.Finalizing;

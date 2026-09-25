@@ -104,6 +104,32 @@ public class JobsController : ControllerBase
         }
     }
 
+    // PUT /api/v1/jobs/{id}/start
+    // Collector sets off for the pickup: Accepted -> InProgress. The Flutter
+    // app calls this when the collector taps Navigate.
+    [HttpPut("{id:guid}/start")]
+    [Authorize(Roles = "Collector")]
+    public async Task<ActionResult<JobResponseDto>> Start(Guid id)
+    {
+        try
+        {
+            var result = await _jobService.StartAsync(id, CurrentUserId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
     // PUT /api/v1/jobs/{id}/reject
     // Triggers reassignment internally — the response reflects whatever
     // happened next (reassigned to someone new, or NoCollectorAvailable).

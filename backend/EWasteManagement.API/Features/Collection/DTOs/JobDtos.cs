@@ -12,6 +12,11 @@ public class CreateJobDto
     public decimal? RequiredCapacityKg { get; set; }
     public DateTime? ScheduledWindowStart { get; set; }
     public DateTime? ScheduledWindowEnd { get; set; }
+
+    // The Matcher agent's recommended collector. Used if they're still
+    // eligible when the job is created; otherwise normal matching picks
+    // someone and the history records that the recommendation was replaced.
+    public Guid? PreferredCollectorId { get; set; }
 }
 
 public class RejectJobDto
@@ -38,6 +43,7 @@ public class JobResponseDto
     public decimal? PickupLatitude { get; set; }
     public decimal? PickupLongitude { get; set; }
 
+    public decimal? RequiredCapacityKg { get; set; }
     public DateTime? ScheduledWindowStart { get; set; }
     public DateTime? ScheduledWindowEnd { get; set; }
     public int? EstimatedEtaMinutes { get; set; }
@@ -50,6 +56,7 @@ public class JobResponseDto
 
     public DateTime CreatedAt { get; set; }
     public DateTime? RespondedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }
 
