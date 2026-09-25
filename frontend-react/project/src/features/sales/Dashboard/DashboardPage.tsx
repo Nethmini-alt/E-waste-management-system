@@ -52,7 +52,7 @@ const DashboardPage: React.FC = () => {
     ? {
         totalBuyers: data.buyers.length,
         activeBuyers: data.buyers.filter((b) => b.status === 'Active').length,
-        approvedPrices: data.pricing.filter((p) => p.status === 'Approved').length,
+        approvedPrices: data.pricing.filter((p) => p.isLive).length,
         sellableTonnes:
           data.availableMaterials.reduce((sum, m) => sum + m.quantityKg, 0) / 1000,
       }

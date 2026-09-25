@@ -107,14 +107,14 @@ public class SalesOrderService : ISalesOrderService
                     $"Requested {line.QuantityKg}kg of {material.MaterialType}, " +
                     $"but only {material.QuantityKg}kg available.");
 
-            // 3d. Current approved price
+            // 3d. Current price — the most recent APPROVED row that has not passed its expiry
+            //     date (see MaterialPricingPolicy). An approved-but-expired row never prices
+            //     an order, even before the background sweeper flips its status.
             var price = await _db.MaterialPricings
-                .Where(p => p.MaterialType == material.MaterialType
-                            && p.Status == PricingStatus.Approved)
-                .OrderByDescending(p => p.EffectiveDate)
-                .FirstOrDefaultAsync(ct)
+                .CurrentForAsync(material.MaterialType, MaterialPricingPolicy.Today, ct)
                 ?? throw new InvalidOperationException(
-                    $"No approved price found for '{material.MaterialType}'. Set a price first.");
+                    $"No current price found for '{material.MaterialType}'. " +
+                    "Approve a price that is effective today and has not expired.");
 
             // 3e. Compute line total
             var lineTotal = Math.Round(line.QuantityKg * price.PricePerKg, 2);

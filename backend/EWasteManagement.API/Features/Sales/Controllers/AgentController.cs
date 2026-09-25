@@ -56,16 +56,18 @@ public class AgentController : ControllerBase
         return Ok(data);
     }
 
-    /// <summary>getCurrentMaterialPricing — only Approved prices.</summary>
+    /// <summary>getCurrentMaterialPricing — only Approved prices that have not expired.</summary>
     [HttpGet("pricing/approved")]
     public async Task<IActionResult> GetApprovedPricing(CancellationToken ct)
     {
         var guard = Guard();
         if (guard != null) return guard;
 
+        // Same rule the order services apply: Approved AND inside its expiry window, so the
+        // agent never plans or prices against a dead rate.
         var data = await _db.MaterialPricings
             .AsNoTracking()
-            .Where(p => p.Status == Features.Sales.Entities.PricingStatus.Approved)
+            .WhereLive(MaterialPricingPolicy.Today)
             .OrderByDescending(p => p.EffectiveDate)
             .Select(p => new
             {

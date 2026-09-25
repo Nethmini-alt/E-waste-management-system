@@ -6,9 +6,7 @@ namespace EWasteManagement.API.Infrastructure.ExternalServices;
 /// Boundary interface between Component D and Component C.
 /// Component D never talks to C's storage directly — it always goes through this interface.
 ///
-/// Current implementation: StubRecoveredMaterialsProvider (in-memory dummy data).
-/// Future implementation: EfRecoveredMaterialsProvider or HttpRecoveredMaterialsProvider
-/// when Component C ships its table or API.
+/// Current implementation: EfRecoveredMaterialsProvider, backed by processing inventory.
 /// </summary>
 public interface IRecoveredMaterialsProvider
 {

@@ -21,4 +21,13 @@ export const pricingApi = {
     api.put<MaterialPricing>(`/api/material-pricing/${id}`, body).then((r) => r.data),
 
   remove: (id: string) => api.delete(`/api/material-pricing/${id}`),
+
+  /**
+   * Marks every Approved price whose expiry date has passed as Expired.
+   * The server also does this on a background timer; this lets staff force it from the UI.
+   */
+  expireStale: () =>
+    api
+      .post<{ expired: number }>('/api/material-pricing/expire-stale')
+      .then((r) => r.data),
 };
