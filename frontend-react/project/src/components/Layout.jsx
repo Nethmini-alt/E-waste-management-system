@@ -7,7 +7,8 @@ import Hero3D from './Hero3D';
 import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
-  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard,
+  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard, Boxes,
+  PackagePlus, Wallet, Cpu,
 } from 'lucide-react';
 
 const navItem =
@@ -89,12 +90,18 @@ export const Layout = () => {
             </>
           )}
 
-          {/* Component C — Processing (not built yet) */}
-          <div className={sectionLabel}>Component C — Processing</div>
-          <div className={navItemDisabled} title="Built by another team member — coming soon">
-            <span className="flex items-center gap-3"><Recycle size={16} /> Processing</span>
-            <Lock size={12} />
-          </div>
+          {/* Component C — Processing (staff / admin) */}
+          {isStaff && (
+            <>
+              <div className={sectionLabel}>Component C — Processing</div>
+              <NavLink to="/processing" end className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Recycle size={16} /> Overview</NavLink>
+              <NavLink to="/processing/receive" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><PackagePlus size={16} /> Receive Waste</NavLink>
+              <NavLink to="/processing/inventory" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Boxes size={16} /> Inventory</NavLink>
+              <NavLink to="/processing/payments" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Wallet size={16} /> Payments</NavLink>
+              <NavLink to="/processing/agentic-review" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Cpu size={16} /> Agentic Review</NavLink>
+              <NavLink to="/processing/rate-policies" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Tag size={16} /> Rate Policies</NavLink>
+            </>
+          )}
 
           {/* Component D — Sales (my part) */}
           {isStaff && (

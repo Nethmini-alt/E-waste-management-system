@@ -27,6 +27,8 @@ import PlansListPage from './features/sales/Approvals/PlansListPage';
 import PlanDetailPage from './features/sales/Approvals/PlanDetailPage';
 import ApprovalsPage from './features/sales/Approvals/ApprovalsPage';
 
+import ProcessingRoutes from './features/processing/ProcessingRoutes';
+
 const App: React.FC = () => (
   <AuthProvider>
     <BrowserRouter>
@@ -147,6 +149,16 @@ const App: React.FC = () => (
             element={
               <ProtectedRoute roles={['staff', 'admin']}>
                 <PlanDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Component B — Processing: dashboard, receive, inventory (+ item detail), payments */}
+          <Route
+            path="/processing/*"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <ProcessingRoutes />
               </ProtectedRoute>
             }
           />

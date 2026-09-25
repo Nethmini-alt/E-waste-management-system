@@ -15,6 +15,16 @@ public class ExtraWasteController : ControllerBase
 
     public ExtraWasteController(IExtraWasteReceiptService service) => _service = service;
 
+    // Receipt history, newest first.
+    [HttpGet]
+    public async Task<IActionResult> List([FromQuery] ExtraWasteReceiptListQuery query, CancellationToken cancellationToken)
+        => Ok(await _service.ListAsync(query, cancellationToken));
+
+    // One receipt: accepted AND rejected lines (with reasons) and what each contributed to the payment.
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        => Ok(await _service.GetDetailAsync(id, cancellationToken));
+
     [HttpPost("receive")]
     public async Task<IActionResult> Receive(
         [FromBody] ReceiveExtraWasteRequest request, CancellationToken cancellationToken)

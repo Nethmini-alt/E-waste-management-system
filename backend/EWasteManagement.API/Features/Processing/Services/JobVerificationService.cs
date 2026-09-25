@@ -21,6 +21,7 @@ public class JobVerificationService : IJobVerificationService
             Found: true,
             IsCompleted: job.Status == JobStatus.Completed,
             ReportedWeightKg: job.MeasuredWeightKg,
-            DistanceKm: job.EstimatedDistanceKm);
+            DistanceKm: job.EstimatedDistanceKm,
+            CollectorId: job.CollectorId);
     }
 }
