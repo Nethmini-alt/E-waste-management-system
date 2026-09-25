@@ -7,7 +7,8 @@ import Hero3D from './Hero3D';
 import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
-  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard,
+  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard, Boxes,
+  PackagePlus, Wallet, Cpu,
 } from 'lucide-react';
 
 const navItem =
