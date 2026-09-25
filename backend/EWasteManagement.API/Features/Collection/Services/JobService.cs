@@ -11,6 +11,7 @@ public interface IJobService
     Task<JobResponseDto> CreateAndAssignAsync(CreateJobDto dto);
     Task<JobResponseDto> AcceptAsync(Guid jobId, Guid requestingUserId);
     Task<JobResponseDto> RejectAsync(Guid jobId, Guid requestingUserId, RejectJobDto dto);
+    Task<JobResponseDto> StartAsync(Guid jobId, Guid requestingUserId);
     Task<JobResponseDto> CompleteAsync(Guid jobId, Guid requestingUserId, CompleteJobDto dto);
     Task<List<JobResponseDto>> GetMyJobsAsync(Guid requestingUserId, JobStatus? status);
     Task<JobResponseDto?> GetByIdAsync(Guid jobId, Guid requestingUserId, bool isPrivileged);
@@ -45,6 +46,7 @@ public class JobService : IJobService
         {
             SubmissionId = dto.SubmissionId,
             PickupAddress = dto.PickupAddress,
+            RequiredCapacityKg = dto.RequiredCapacityKg,
             ScheduledWindowStart = dto.ScheduledWindowStart,
             ScheduledWindowEnd = dto.ScheduledWindowEnd
         };
@@ -65,7 +67,9 @@ public class JobService : IJobService
         job.PickupLatitude = coordinates.Value.Latitude;
         job.PickupLongitude = coordinates.Value.Longitude;
 
-        var candidate = await FindBestCandidateAsync(job, dto.RequiredCapacityKg, excludeCollectorIds: new List<Guid>());
+        var (candidate, historyReason) = dto.PreferredCollectorId is Guid preferredId
+            ? await ChoosePreferredOrBestAsync(job, preferredId)
+            : (await FindBestCandidateAsync(job, excludeCollectorIds: new List<Guid>()), (string?)null);
 
         ApplyAssignmentOutcome(job, candidate);
 
@@ -73,7 +77,7 @@ public class JobService : IJobService
         await _db.SaveChangesAsync();
 
         if (candidate is not null)
-            await LogHistoryAsync(job.JobId, candidate.CollectorId, AssignmentOutcome.Assigned);
+            await LogHistoryAsync(job.JobId, candidate.CollectorId, AssignmentOutcome.Assigned, historyReason);
 
         return await ToDtoAsync(job);
     }
@@ -121,7 +125,7 @@ public class JobService : IJobService
 
         var nextCandidate = job.PickupLatitude is null || job.PickupLongitude is null
             ? null
-            : await FindBestCandidateAsync(job, requiredCapacityKg: null, excludeCollectorIds: alreadyOffered);
+            : await FindBestCandidateAsync(job, excludeCollectorIds: alreadyOffered);
 
         job.RejectionReason = null; // stale once we move to a new assignment attempt; history keeps the real record
         ApplyAssignmentOutcome(job, nextCandidate);
@@ -129,6 +133,26 @@ public class JobService : IJobService
 
         if (nextCandidate is not null)
             await LogHistoryAsync(jobId, nextCandidate.CollectorId, AssignmentOutcome.Assigned);
+
+        return await ToDtoAsync(job);
+    }
+
+    // Collector sets off for the pickup (the app calls this when they tap
+    // Navigate). Calling it again while already InProgress is harmless, so a
+    // double tap doesn't show the collector an error.
+    public async Task<JobResponseDto> StartAsync(Guid jobId, Guid requestingUserId)
+    {
+        var job = await GetOwnedJobAsync(jobId, requestingUserId);
+
+        if (job.Status == JobStatus.InProgress)
+            return await ToDtoAsync(job);
+
+        if (job.Status != JobStatus.Accepted)
+            throw new InvalidOperationException($"Cannot start a job in status '{job.Status}'. Accept it first.");
+
+        job.Status = JobStatus.InProgress;
+        job.StartedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
 
         return await ToDtoAsync(job);
     }
@@ -248,7 +272,7 @@ public class JobService : IJobService
         job.PickupLatitude = coordinates.Value.Latitude;
         job.PickupLongitude = coordinates.Value.Longitude;
 
-        var candidate = await FindBestCandidateAsync(job, requiredCapacityKg: null,
+        var candidate = await FindBestCandidateAsync(job,
             excludeCollectorIds: await GetRejectedCollectorIdsAsync(jobId));
 
         ApplyAssignmentOutcome(job, candidate);
@@ -317,7 +341,7 @@ public class JobService : IJobService
         if (job.CollectorId is Guid currentId)
             exclude.Add(currentId);
 
-        var candidate = await FindBestCandidateAsync(job, requiredCapacityKg: null, excludeCollectorIds: exclude);
+        var candidate = await FindBestCandidateAsync(job, excludeCollectorIds: exclude);
 
         // Don't take a job away from its current collector just to leave it
         // with nobody — tell staff instead and leave the job as it was.
@@ -352,19 +376,54 @@ public class JobService : IJobService
 
     // --- helpers -----------------------------------------------------
 
-    private async Task<CollectorMatchDto?> FindBestCandidateAsync(
-        Job job, decimal? requiredCapacityKg, List<Guid> excludeCollectorIds)
-    {
-        var results = await _matchingService.FindCandidatesAsync(new MatchRequestDto
+    // Every matching run for a job uses the job's own RequiredCapacityKg,
+    // so capacity is respected on the first assignment and on every
+    // re-match after it.
+    private Task<List<CollectorMatchDto>> RankCandidatesAsync(Job job, List<Guid> excludeCollectorIds, int maxResults) =>
+        _matchingService.FindCandidatesAsync(new MatchRequestDto
         {
             PickupLatitude = job.PickupLatitude!.Value,
             PickupLongitude = job.PickupLongitude!.Value,
-            RequiredCapacityKg = requiredCapacityKg,
+            RequiredCapacityKg = job.RequiredCapacityKg,
             ExcludeCollectorIds = excludeCollectorIds,
-            MaxResults = 1
+            MaxResults = maxResults
         });
 
-        return results.FirstOrDefault();
+    private async Task<CollectorMatchDto?> FindBestCandidateAsync(Job job, List<Guid> excludeCollectorIds) =>
+        (await RankCandidatesAsync(job, excludeCollectorIds, maxResults: 1)).FirstOrDefault();
+
+    // Big enough to include every eligible collector in practice, so the
+    // Matcher's pick is found if they're still eligible at all.
+    private const int MaxRankedCandidates = 50;
+
+    public const string MatcherRecommendationFollowed = "Recommended by the Matcher agent";
+
+    // Uses the Matcher agent's recommended collector if they still pass the
+    // same rules automatic matching uses (online, has a location, big enough
+    // vehicle, under the job cap). Time can pass between the recommendation
+    // and job creation (e.g. while staff approve), so if they no longer
+    // qualify, fall back to the best available collector and say so in the
+    // history instead of silently replacing the agent's choice.
+    private async Task<(CollectorMatchDto? Candidate, string? HistoryReason)> ChoosePreferredOrBestAsync(Job job, Guid preferredId)
+    {
+        var ranked = await RankCandidatesAsync(job, new List<Guid>(), MaxRankedCandidates);
+
+        var preferred = ranked.FirstOrDefault(c => c.CollectorId == preferredId);
+        if (preferred is not null)
+            return (preferred, MatcherRecommendationFollowed);
+
+        var fallback = ranked.FirstOrDefault();
+        if (fallback is null)
+            return (null, null);
+
+        var preferredName = await (
+            from c in _db.Collectors
+            where c.CollectorId == preferredId
+            join u in _db.Users on c.UserId equals u.UserId
+            select u.FullName
+        ).FirstOrDefaultAsync() ?? "a collector";
+
+        return (fallback, $"Matcher recommended {preferredName}, who could no longer take this job (offline, at the job limit, or vehicle too small). Chosen by automatic matching instead");
     }
 
     private static void ApplyAssignmentOutcome(Job job, CollectorMatchDto? candidate)
@@ -456,6 +515,7 @@ public class JobService : IJobService
         PickupAddress = j.PickupAddress,
         PickupLatitude = j.PickupLatitude,
         PickupLongitude = j.PickupLongitude,
+        RequiredCapacityKg = j.RequiredCapacityKg,
         ScheduledWindowStart = j.ScheduledWindowStart,
         ScheduledWindowEnd = j.ScheduledWindowEnd,
         EstimatedEtaMinutes = j.EstimatedEtaMinutes,
@@ -466,6 +526,7 @@ public class JobService : IJobService
         RejectionReason = j.RejectionReason,
         CreatedAt = j.CreatedAt,
         RespondedAt = j.RespondedAt,
+        StartedAt = j.StartedAt,
         CompletedAt = j.CompletedAt
     };
 }

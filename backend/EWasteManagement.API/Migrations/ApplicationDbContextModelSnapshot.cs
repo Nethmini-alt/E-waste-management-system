@@ -220,6 +220,10 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("rejection_reason");
 
+                    b.Property<decimal?>("RequiredCapacityKg")
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("required_capacity_kg");
+
                     b.Property<DateTime?>("RespondedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("responded_at");
@@ -231,6 +235,10 @@ namespace EWasteManagement.API.Migrations
                     b.Property<DateTime?>("ScheduledWindowStart")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("scheduled_window_start");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
