@@ -83,29 +83,51 @@ async def create_plan_node(state: PlannerState) -> PlannerState:
     }
 
 
+def _field(source: dict | None, camel: str, snake: str, default=None):
+    """Read a key the .NET orchestrator sends in camelCase, falling back to snake_case."""
+    if not source:
+        return default
+    if camel in source:
+        return source[camel]
+    return source.get(snake, default)
+
+
 async def finalize_node(state: PlannerState) -> PlannerState:
-    analyzer = state.get("analyzer_result", {})
-    validator = state.get("validator_result", {})
+    analyzer = state.get("analyzer_result") or {}
+    validator = state.get("validator_result") or {}
     matcher = state.get("matcher_result")
 
-    # Deterministic readiness check — Planner doesn't re-judge risk, it just
-    # respects whatever Validator (and Matcher's own ambiguous-match check)
-    # already decided.
-    validator_blocked = bool(validator.get("requires_human_approval"))
-    matcher_blocked = bool(matcher and not matcher.get("auto_assign", True) and not matcher.get("recommended_collector_id"))
-    ready = not validator_blocked and not matcher_blocked
+    # WorkflowOrchestrationService posts these with HttpClient's JSON
+    # defaults, so keys arrive camelCase: analyzer {wasteCategory,
+    # hazardLevel}, validator {approvedForAutoAssignment,
+    # requiresHumanApproval, reasons}, matcher {recommendedCollectorId,
+    # autoAssign, ambiguous, reasoning}.
+    waste_category = _field(analyzer, "wasteCategory", "waste_category") or "an unclassified item"
+    hazard_level = _field(analyzer, "hazardLevel", "hazard_level") or "unknown"
+    validator_flagged = bool(_field(validator, "requiresHumanApproval", "requires_human_approval"))
+    reasons = _field(validator, "reasons", "reasons") or []
+    auto_assigned = bool(_field(matcher, "autoAssign", "auto_assign"))
+    collector_id = _field(matcher, "recommendedCollectorId", "recommended_collector_id")
+
+    # Readiness does NOT depend on the fields above:
+    #  - Validator's flag: Finalize only runs once every PendingApproval pause
+    #    (Validator's escalation, and the Matcher's suggest-only confirmation)
+    #    has been approved by an admin, so the flag was already resolved by a
+    #    human and must not block job creation here.
+    #  - No collector found: still ready. JobService creates the job with
+    #    status NoCollectorAvailable, and staff assign it from Collection.
+    ready = True
 
     llm = _get_llm()
     parts = [
-        f"Analyzer classified this as {analyzer.get('categories', 'an unclassified item')} "
-        f"with hazard level {analyzer.get('hazard_level', 'unknown')}.",
-        f"Validator {'flagged this for human review' if validator_blocked else 'cleared this automatically'}"
-        + (f": {', '.join(validator.get('reasons', []))}." if validator.get("reasons") else "."),
+        f"Analyzer classified this as {waste_category} with hazard level {hazard_level}.",
+        f"Validator {'flagged this for human review' if validator_flagged else 'cleared this automatically'}"
+        + (f": {'; '.join(r.rstrip('.') for r in reasons)}." if reasons else "."),
     ]
     if matcher:
         parts.append(
-            f"Matcher {'auto-assigned' if matcher.get('auto_assign') else 'proposed'} "
-            f"collector {matcher.get('recommended_collector_id', '(none found)')}."
+            f"Matcher {'auto-assigned' if auto_assigned else 'proposed'} "
+            f"collector {collector_id or '(none found)'}."
         )
 
     summary = " ".join(parts)
