@@ -37,6 +37,7 @@ public class SalesOrderService : ISalesOrderService
             .AsNoTracking()
             .Include(o => o.Buyer)
             .Include(o => o.Items)
+            .Include(o => o.MaterialRequest)
             .AsQueryable();
 
         if (filter.BuyerId.HasValue)
@@ -60,6 +61,7 @@ public class SalesOrderService : ISalesOrderService
             .AsNoTracking()
             .Include(o => o.Buyer)
             .Include(o => o.Items)
+            .Include(o => o.MaterialRequest)
             .FirstOrDefaultAsync(o => o.SalesOrderId == id, ct)
             ?? throw new KeyNotFoundException($"Sales order {id} not found.");
         return Map(order);
@@ -151,10 +153,24 @@ public class SalesOrderService : ISalesOrderService
     public async Task<SalesOrderResponse> UpdateStatusAsync(
         Guid id, UpdateSalesOrderStatusRequest request, CancellationToken ct = default)
     {
-        var order = await _db.SalesOrders.FirstOrDefaultAsync(o => o.SalesOrderId == id, ct)
+        var order = await _db.SalesOrders.Include(o => o.MaterialRequest)
+            .FirstOrDefaultAsync(o => o.SalesOrderId == id, ct)
             ?? throw new KeyNotFoundException($"Sales order {id} not found.");
 
         var newStatus = Enum.Parse<SalesOrderStatus>(request.Status, true);
+
+        var allowedTransition = order.Status switch
+        {
+            SalesOrderStatus.WaitingForStock => newStatus is SalesOrderStatus.WaitingForStock or SalesOrderStatus.Cancelled,
+            SalesOrderStatus.PendingPlanApproval => newStatus is SalesOrderStatus.PendingPlanApproval or SalesOrderStatus.Cancelled,
+            SalesOrderStatus.Draft => newStatus is SalesOrderStatus.Draft or SalesOrderStatus.Confirmed or SalesOrderStatus.Cancelled,
+            SalesOrderStatus.Confirmed => newStatus is SalesOrderStatus.Confirmed or SalesOrderStatus.Completed or SalesOrderStatus.Cancelled,
+            SalesOrderStatus.Completed => newStatus == SalesOrderStatus.Completed,
+            SalesOrderStatus.Cancelled => newStatus == SalesOrderStatus.Cancelled,
+            _ => false
+        };
+        if (!allowedTransition)
+            throw new InvalidOperationException($"Cannot move sales order from {order.Status} to {newStatus}.");
 
         // Business rules for state transitions
         if (order.Status == SalesOrderStatus.Completed && newStatus != SalesOrderStatus.Completed)
@@ -170,6 +186,14 @@ public class SalesOrderService : ISalesOrderService
 
         order.Status = newStatus;
         order.UpdatedAt = DateTime.UtcNow;
+        if (order.MaterialRequest is not null)
+        {
+            if (newStatus == SalesOrderStatus.Completed)
+                order.MaterialRequest.Status = MaterialRequestStatus.Fulfilled;
+            else if (newStatus == SalesOrderStatus.Cancelled)
+                order.MaterialRequest.Status = MaterialRequestStatus.Cancelled;
+            order.MaterialRequest.UpdatedAt = DateTime.UtcNow;
+        }
 
         // Auto-create revenue when transitioning INTO Completed (not on repeat)
         if (!wasCompleted && newStatus == SalesOrderStatus.Completed)
@@ -199,6 +223,9 @@ public class SalesOrderService : ISalesOrderService
             throw new InvalidOperationException(
                 "Only Draft orders can be deleted. Cancel the order instead.");
 
+        if (order.MaterialRequestId.HasValue)
+            throw new InvalidOperationException("Backorder sales orders cannot be deleted. Cancel the order instead.");
+
         _db.SalesOrders.Remove(order);   // cascade removes items
         await _db.SaveChangesAsync(ct);
     }
@@ -209,7 +236,12 @@ public class SalesOrderService : ISalesOrderService
     {
         SalesOrderId = o.SalesOrderId,
         BuyerId = o.BuyerId,
+        MaterialRequestId = o.MaterialRequestId,
+        CommercialPlanId = o.MaterialRequest?.CommercialPlanId,
+        MaterialRequestStatus = o.MaterialRequest?.Status.ToString(),
         BuyerCompanyName = o.Buyer?.CompanyName ?? string.Empty,
+        PendingMaterialType = o.PendingMaterialType,
+        PendingQuantityKg = o.PendingQuantityKg,
         OrderDate = o.OrderDate,
         TotalAmount = o.TotalAmount,
         Status = o.Status.ToString(),

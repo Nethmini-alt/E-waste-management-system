@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Plus, Search, RefreshCw, ShoppingCart, Eye, Trash2, ChevronDown,
 } from 'lucide-react';
@@ -48,7 +49,9 @@ const SalesOrdersListPage: React.FC = () => {
     return orders.filter((o) => {
       const matchesSearch =
         o.buyerCompanyName.toLowerCase().includes(q) ||
-        o.salesOrderId.toLowerCase().includes(q);
+        o.salesOrderId.toLowerCase().includes(q) ||
+        (o.pendingMaterialType ?? '').toLowerCase().includes(q) ||
+        o.items.some((item) => item.materialType.toLowerCase().includes(q));
       const matchesStatus = statusFilter === 'All' || o.status === statusFilter;
       const matchesBuyer = !buyerFilter || o.buyerId === buyerFilter;
       return matchesSearch && matchesStatus && matchesBuyer;
@@ -108,6 +111,8 @@ const SalesOrdersListPage: React.FC = () => {
         </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={selectStyle}>
           <option value="All">All Statuses</option>
+          <option value="WaitingForStock">Waiting for stock</option>
+          <option value="PendingPlanApproval">Plan approval</option>
           <option value="Draft">Draft</option>
           <option value="Confirmed">Confirmed</option>
           <option value="Completed">Completed</option>
@@ -141,6 +146,7 @@ const SalesOrdersListPage: React.FC = () => {
               <th style={th}>Items</th>
               <th style={{ ...th, textAlign: 'right' }}>Total</th>
               <th style={th}>Status</th>
+              <th style={th}>Plan</th>
               <th style={th}>Actions</th>
             </tr>
           </thead>
@@ -154,21 +160,31 @@ const SalesOrdersListPage: React.FC = () => {
                 <td style={{ ...td, fontSize: 13, color: '#666' }}>
                   {new Date(o.orderDate).toLocaleDateString()}
                 </td>
-                <td style={td}>{o.items.length}</td>
+                <td style={td}>
+                  {o.items.length > 0
+                    ? o.items.map((item) => `${item.materialType} (${item.quantityKg.toLocaleString()} kg)`).join(', ')
+                    : `${o.pendingMaterialType ?? 'Material'} (${(o.pendingQuantityKg ?? 0).toLocaleString()} kg)`}
+                </td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>
                   Rs. {o.totalAmount.toFixed(2)}
                 </td>
                 <td style={td}>
                   <StatusDropdown
                     status={o.status}
+                    materialRequestStatus={o.materialRequestStatus}
                     onChange={(s) => handleStatusChange(o, s)}
                   />
+                </td>
+                <td style={td}>
+                  {o.commercialPlanId
+                    ? <Link to={`/plans/${o.commercialPlanId}`}>Review plan</Link>
+                    : o.status === 'WaitingForStock' ? 'Waiting for stock' : '—'}
                 </td>
                 <td style={td}>
                   <button onClick={() => setDetailOrder(o)} style={iconBtn} title="View">
                     <Eye size={16} />
                   </button>
-                  {o.status === 'Draft' && (
+                  {o.status === 'Draft' && !o.materialRequestId && (
                     <button
                       onClick={() => handleDelete(o)}
                       style={{ ...iconBtn, color: '#c62828' }}
@@ -198,9 +214,12 @@ const SalesOrdersListPage: React.FC = () => {
 // ---------- Status dropdown ----------
 const StatusDropdown: React.FC<{
   status: SalesOrder['status'];
+  materialRequestStatus?: SalesOrder['materialRequestStatus'];
   onChange: (s: SalesOrder['status']) => void;
-}> = ({ status, onChange }) => {
+}> = ({ status, materialRequestStatus, onChange }) => {
   const colors: Record<SalesOrder['status'], { bg: string; fg: string }> = {
+    WaitingForStock: { bg: '#fff3e0', fg: '#a45b00' },
+    PendingPlanApproval: { bg: '#e3f2fd', fg: '#1565c0' },
     Draft: { bg: '#fff3e0', fg: '#e65100' },
     Confirmed: { bg: '#e3f2fd', fg: '#1565c0' },
     Completed: { bg: '#e8f5e9', fg: '#2e7d32' },
@@ -208,8 +227,21 @@ const StatusDropdown: React.FC<{
   };
   const c = colors[status];
 
+  const requestStatusLabels: Partial<Record<NonNullable<SalesOrder['materialRequestStatus']>, string>> = {
+    Waiting: 'Waiting for stock',
+    GeneratingPlan: 'Generating plan',
+    PlanGenerated: 'Awaiting admin approval',
+    PlanGenerationFailed: 'Plan retrying',
+    OrderPlaced: 'Order placed',
+    Fulfilled: 'Fulfilled',
+    Cancelled: 'Cancelled',
+  };
+  const displayStatus = materialRequestStatus
+    ? requestStatusLabels[materialRequestStatus] ?? status
+    : status;
+
   // Terminal states: render as a static pill
-  if (status === 'Completed' || status === 'Cancelled') {
+  if (status === 'WaitingForStock' || status === 'PendingPlanApproval' || status === 'Completed' || status === 'Cancelled') {
     return (
       <span
         style={{
@@ -217,13 +249,14 @@ const StatusDropdown: React.FC<{
           fontSize: 12, fontWeight: 'bold',
         }}
       >
-        {status}
+        {displayStatus}
       </span>
     );
   }
 
-  const options: SalesOrder['status'][] =
-    status === 'Draft' ? ['Draft', 'Confirmed', 'Cancelled'] : ['Confirmed', 'Completed', 'Cancelled'];
+  const options: SalesOrder['status'][] = status === 'Draft'
+    ? ['Draft', 'Confirmed', 'Cancelled']
+    : ['Confirmed', 'Completed', 'Cancelled'];
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>

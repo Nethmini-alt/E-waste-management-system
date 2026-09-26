@@ -8,6 +8,10 @@ public class SalesOrder
 {
     public Guid SalesOrderId { get; set; } = Guid.NewGuid();
     public Guid BuyerId { get; set; }
+    public Guid? MaterialRequestId { get; set; }
+
+    public string? PendingMaterialType { get; set; }
+    public decimal? PendingQuantityKg { get; set; }
 
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
@@ -26,11 +30,14 @@ public class SalesOrder
 
     // Navigation
     public Buyer Buyer { get; set; } = null!;
+    public MaterialRequest? MaterialRequest { get; set; }
     public ICollection<SalesOrderItem> Items { get; set; } = new List<SalesOrderItem>();
 }
 
 public enum SalesOrderStatus
 {
+    WaitingForStock,
+    PendingPlanApproval,
     Draft,
     Confirmed,
     Completed,

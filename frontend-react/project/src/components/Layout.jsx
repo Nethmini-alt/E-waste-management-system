@@ -6,7 +6,7 @@ import { useAuth } from '../features/auth/AuthContext';
 import Hero3D from './Hero3D';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
-  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock,
+  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, ClipboardList,
 } from 'lucide-react';
 
 const navItem =
@@ -22,6 +22,7 @@ export const Layout = () => {
   const location = useLocation();
   const isStaff = user && ['staff', 'admin'].includes(user.role.toLowerCase());
   const isAdmin = user?.role.toLowerCase() === 'admin';
+  const isBuyer = user?.role.toLowerCase() === 'corporate';
 
   return (
     <div className="relative flex min-h-screen overflow-hidden">
@@ -60,6 +61,15 @@ export const Layout = () => {
             <LayoutDashboard size={16} /> Dashboard
           </NavLink>
 
+          {isBuyer && (
+            <>
+              <div className={sectionLabel}>Buyer Portal</div>
+              <NavLink to="/material-requests" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <ClipboardList size={16} /> Material Requests
+              </NavLink>
+            </>
+          )}
+
           {/* Component A — Collection (not built yet) */}
           <div className={sectionLabel}>Component A — Collection</div>
           <div className={navItemDisabled} title="Built by another team member — coming soon">
@@ -96,6 +106,7 @@ export const Layout = () => {
               <NavLink to="/export-orders" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Ship size={16} /> Export Orders</NavLink>
               <NavLink to="/revenue" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><DollarSign size={16} /> Revenue</NavLink>
               <NavLink to="/plans" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Bot size={16} /> AI Plans</NavLink>
+              <NavLink to="/material-requests/manage" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><ClipboardList size={16} /> Buyer Demand</NavLink>
             </>
           )}
 

@@ -83,6 +83,8 @@ builder.Services.AddScoped<IRevenueService, RevenueService>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 builder.Services.AddScoped<IExportOrderService, ExportOrderService>();
 builder.Services.AddScoped<ICommercialPlanService, CommercialPlanService>();
+builder.Services.AddScoped<IMaterialRequestService, MaterialRequestService>();
+builder.Services.AddScoped<IMaterialRestockMatcher, MaterialRestockMatcher>();
 
 // Component D — external data providers
 builder.Services.AddScoped<IRecoveredMaterialsProvider, EfRecoveredMaterialsProvider>();
@@ -101,6 +103,8 @@ builder.Services.AddHttpClient<IMatcherAgentClient, MatcherAgentClient>();
 // with the app and runs for the app's whole lifetime.
 builder.Services.AddSingleton<IWorkflowBackgroundQueue, WorkflowBackgroundQueue>();
 builder.Services.AddHostedService<WorkflowQueueProcessor>();
+builder.Services.AddSingleton<IMaterialRestockQueue, MaterialRestockQueue>();
+builder.Services.AddHostedService<MaterialRestockQueueProcessor>();
 
 // Component D — flips Approved material prices whose expiry date has passed to Expired,
 // once at startup and every few hours. Purely cosmetic to the data: order pricing already

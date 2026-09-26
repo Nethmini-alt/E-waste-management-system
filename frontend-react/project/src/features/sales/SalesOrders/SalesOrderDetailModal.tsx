@@ -34,6 +34,11 @@ const SalesOrderDetailModal: React.FC<Props> = ({ order, onClose }) => {
         )}
 
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>Line Items</h4>
+        {order.items.length === 0 && order.pendingMaterialType && (
+          <p style={{ color: '#7a4b00', background: '#fff6e5', padding: 10, borderRadius: 5 }}>
+            Waiting for {order.pendingQuantityKg?.toLocaleString()} kg of {order.pendingMaterialType} to become available.
+          </p>
+        )}
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>

@@ -22,6 +22,8 @@ import RevenuePage from './features/sales/Revenue/RevenuePage';
 import PlansListPage from './features/sales/Approvals/PlansListPage';
 import PlanDetailPage from './features/sales/Approvals/PlanDetailPage';
 import ApprovalsPage from './features/sales/Approvals/ApprovalsPage';
+import MaterialRequestsPage from './features/sales/MaterialRequests/MaterialRequestsPage';
+import MaterialRequestManagementPage from './features/sales/MaterialRequests/MaterialRequestManagementPage';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -42,6 +44,23 @@ const App: React.FC = () => (
           }
         >
           <Route index element={<DashboardPage />} />
+
+          <Route
+            path="/material-requests"
+            element={
+              <ProtectedRoute roles={['corporate']}>
+                <MaterialRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/material-requests/manage"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <MaterialRequestManagementPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Component C — Submission */}
           <Route path="/submissions/new" element={<SubmitPage />} />

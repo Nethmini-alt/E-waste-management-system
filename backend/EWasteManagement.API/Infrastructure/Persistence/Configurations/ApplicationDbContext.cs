@@ -49,6 +49,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ExportOrderItem> ExportOrderItems => Set<ExportOrderItem>();
     public DbSet<RevenueTransaction> RevenueTransactions => Set<RevenueTransaction>();
     public DbSet<CommercialPlan> CommercialPlans => Set<CommercialPlan>();
+    public DbSet<MaterialRequest> MaterialRequests => Set<MaterialRequest>();
     public DbSet<ApprovalAction> ApprovalActions => Set<ApprovalAction>();
     // Intake-and-collection-planning workflow
     public DbSet<CollectionWorkflow> CollectionWorkflows => Set<CollectionWorkflow>();

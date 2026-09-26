@@ -5,7 +5,12 @@ public class SalesOrderResponse
 {
     public Guid SalesOrderId { get; set; }
     public Guid BuyerId { get; set; }
+    public Guid? MaterialRequestId { get; set; }
+    public Guid? CommercialPlanId { get; set; }
+    public string? MaterialRequestStatus { get; set; }
     public string BuyerCompanyName { get; set; } = string.Empty;
+    public string? PendingMaterialType { get; set; }
+    public decimal? PendingQuantityKg { get; set; }
     public DateTime OrderDate { get; set; }
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = string.Empty;

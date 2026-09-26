@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926082145_AddMaterialRequests")]
+    partial class AddMaterialRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1301,7 +1304,7 @@ namespace EWasteManagement.API.Migrations
                         {
                             t.HasCheckConstraint("ck_material_requests_quantity_positive", "quantity_kg > 0");
 
-                            t.HasCheckConstraint("ck_material_requests_status", "status IN ('waiting','generatingplan','plangenerated','plangenerationfailed','orderplaced','fulfilled','cancelled')");
+                            t.HasCheckConstraint("ck_material_requests_status", "status IN ('waiting','generatingplan','plangenerated','fulfilled','cancelled')");
                         });
                 });
 
@@ -1380,10 +1383,6 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
-                    b.Property<Guid?>("MaterialRequestId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("material_request_id");
-
                     b.Property<string>("Notes")
                         .HasColumnType("text")
                         .HasColumnName("notes");
@@ -1393,16 +1392,6 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date")
                         .HasDefaultValueSql("now()");
-
-                    b.Property<string>("PendingMaterialType")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
-                        .HasColumnName("pending_material_type");
-
-                    b.Property<decimal?>("PendingQuantityKg")
-                        .HasPrecision(12, 3)
-                        .HasColumnType("numeric(12,3)")
-                        .HasColumnName("pending_quantity_kg");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1425,14 +1414,11 @@ namespace EWasteManagement.API.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("MaterialRequestId")
-                        .IsUnique();
-
                     b.HasIndex("Status", "OrderDate");
 
                     b.ToTable("sales_orders", null, t =>
                         {
-                            t.HasCheckConstraint("CK_sales_orders_status", "status IN ('waitingforstock','pendingplanapproval','draft','confirmed','completed','cancelled')");
+                            t.HasCheckConstraint("CK_sales_orders_status", "status IN ('draft','confirmed','completed','cancelled')");
 
                             t.HasCheckConstraint("CK_sales_orders_total_non_negative", "total_amount >= 0");
                         });
@@ -1978,14 +1964,7 @@ namespace EWasteManagement.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", "MaterialRequest")
-                        .WithOne("SalesOrder")
-                        .HasForeignKey("EWasteManagement.API.Features.Sales.Entities.SalesOrder", "MaterialRequestId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Buyer");
-
-                    b.Navigation("MaterialRequest");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.SalesOrderItem", b =>
@@ -2054,11 +2033,6 @@ namespace EWasteManagement.API.Migrations
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.ExportOrder", b =>
                 {
                     b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", b =>
-                {
-                    b.Navigation("SalesOrder");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.SalesOrder", b =>

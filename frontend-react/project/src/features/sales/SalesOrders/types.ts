@@ -10,10 +10,15 @@ export interface SalesOrderItem {
 export interface SalesOrder {
   salesOrderId: string;
   buyerId: string;
+  materialRequestId?: string | null;
+  commercialPlanId?: string | null;
+  materialRequestStatus?: 'Waiting' | 'GeneratingPlan' | 'PlanGenerated' | 'PlanGenerationFailed' | 'OrderPlaced' | 'Fulfilled' | 'Cancelled' | null;
   buyerCompanyName: string;
+  pendingMaterialType?: string | null;
+  pendingQuantityKg?: number | null;
   orderDate: string;
   totalAmount: number;
-  status: 'Draft' | 'Confirmed' | 'Completed' | 'Cancelled';
+  status: 'WaitingForStock' | 'PendingPlanApproval' | 'Draft' | 'Confirmed' | 'Completed' | 'Cancelled';
   notes?: string | null;
   createdByUserId: string;
   createdAt: string;
