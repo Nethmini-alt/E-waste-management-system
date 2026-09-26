@@ -53,7 +53,7 @@ type ModalState =
 const TRANSITION_BUTTON_LABELS: Partial<Record<InventoryStatus, string>> = {
   Sorting: 'Start sorting',
   ReadyForSale: 'Mark ready for sale',
-  ExportOnly: 'Mark export only',
+  ExportOnly: 'Reserve for export',
   OnHold: 'Put on hold',
 };
 
@@ -172,7 +172,7 @@ const InventoryDetailPage: React.FC = () => {
   }
 
   const status = item.status;
-  const manualTransitions = getManualTransitions(status);
+  const manualTransitions = getManualTransitions(status, item.classification?.category);
   const showDismantle = canAddDismantleStep(status);
   const showClassify = canClassify(status);
   const terminal = isTerminalStatus(status);

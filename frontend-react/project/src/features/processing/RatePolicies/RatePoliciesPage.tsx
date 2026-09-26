@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Search, Tag } from 'lucide-react';
+import { Plus, Search, Tag } from 'lucide-react';
 import { lookupApi } from '../lookupApi';
+import { ratePolicyApi } from './ratePolicyApi';
+import RatePolicyFormModal from './RatePolicyFormModal';
 import type { RatePolicy } from '../types';
 import { JOB_PAYMENT_RATE_KEY } from '../processingEnums';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useItemTypes, useRatePolicies } from '../hooks/useLookups';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDate, formatMoney } from '../utils/format';
 import {
@@ -10,8 +14,13 @@ import {
   ErrorMessage,
   GlassCard,
   LoadingState,
+  Modal,
   Notice,
   PageHeader,
+  btnDanger,
+  btnPrimary,
+  btnSecondary,
+  btnSmall,
   inputClass,
   tableCellClass,
   tableHeadClass,
@@ -19,22 +28,35 @@ import {
 
 type Filter = 'all' | 'active' | 'inactive';
 
+type Dialog = { type: 'form'; policy: RatePolicy | null } | { type: 'deactivate'; policy: RatePolicy } | null;
+
+const isJobRate = (p: RatePolicy): boolean => p.itemType.toLowerCase() === JOB_PAYMENT_RATE_KEY.toLowerCase();
+
 /**
- * Read-only view of the rate policies that price collector payments. Rates are not editable here
- * (or anywhere in this app yet); this page only lets staff see what the system pays per kg.
+ * The rate policies that price collector payments. Staff see them read-only; Admins can add a rate,
+ * revise one (the old row is kept as history), deactivate it, or restore an inactive one. The server
+ * enforces all of this — the buttons are only hidden for Staff.
  */
 const RatePoliciesPage: React.FC = () => {
+  const user = useCurrentUser();
+  const isAdmin = user?.role.toLowerCase() === 'admin';
+
   const [policies, setPolicies] = useState<RatePolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
 
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // activeOnly=false: include inactive policies too, so the page shows the full picture.
+      // activeOnly=false: include inactive policies too, so the page shows the full history.
       setPolicies(await lookupApi.ratePolicies(false));
     } catch (e) {
       setError(getApiErrorMessage(e, 'Failed to load the rate policies.'));
@@ -47,18 +69,73 @@ const RatePoliciesPage: React.FC = () => {
     load();
   }, [load]);
 
+  // Grouped by item type; within a type the active rate first, then the newest history.
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return policies
       .filter((p) => (filter === 'all' ? true : filter === 'active' ? p.isActive : !p.isActive))
-      .filter((p) => !q || p.itemType.toLowerCase().includes(q));
+      .filter((p) => !q || p.itemType.toLowerCase().includes(q))
+      .sort(
+        (a, b) =>
+          a.itemType.localeCompare(b.itemType, undefined, { sensitivity: 'base' }) ||
+          Number(b.isActive) - Number(a.isActive) ||
+          b.effectiveFrom.localeCompare(a.effectiveFrom),
+      );
   }, [policies, filter, search]);
 
   const activeCount = policies.filter((p) => p.isActive).length;
 
+  // Only one active rate per type (ignoring case): an inactive row can be restored only when its type has none.
+  const activeTypes = useMemo(() => new Set(policies.filter((p) => p.isActive).map((p) => p.itemType.toLowerCase())), [policies]);
+
+  const afterChange = (message: string) => {
+    setDialog(null);
+    setActionError(null);
+    setNotice(message);
+    // Receive forms and dismantle dropdowns cache these lists; make them fetch again.
+    useRatePolicies.invalidate();
+    useItemTypes.invalidate();
+    load();
+  };
+
+  const runAction = async (action: () => Promise<RatePolicy>, message: (saved: RatePolicy) => string) => {
+    setBusy(true);
+    setActionError(null);
+    setNotice(null);
+    try {
+      afterChange(message(await action()));
+    } catch (e) {
+      setActionError(getApiErrorMessage(e, 'The change could not be saved.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div>
-      <PageHeader title="Rate policies" subtitle="What the system pays collectors per kilogram, by item type. View only." icon={Tag} />
+      <PageHeader
+        title="Rate policies"
+        subtitle={
+          isAdmin
+            ? 'What the system pays collectors per kilogram, by item type.'
+            : 'What the system pays collectors per kilogram, by item type. Only an Admin can change rates.'
+        }
+        icon={Tag}
+        actions={
+          isAdmin && (
+            <button type="button" className={btnPrimary} onClick={() => setDialog({ type: 'form', policy: null })}>
+              <Plus size={15} /> Add rate
+            </button>
+          )
+        }
+      />
+
+      {notice && (
+        <Notice tone="success" className="mb-4">
+          {notice}
+        </Notice>
+      )}
+      {actionError && !dialog && <ErrorMessage className="mb-4" message={actionError} />}
 
       <Notice tone="info" className="mb-4" title="How rates are used">
         Extra-waste payments are priced per accepted item at its item type's active rate. Job-collection payments use the{' '}
@@ -105,7 +182,7 @@ const RatePoliciesPage: React.FC = () => {
           <div className="p-5">
             <ErrorMessage message={error} onRetry={load} />
           </div>
-        ) : loading ? (
+        ) : loading && policies.length === 0 ? (
           <LoadingState label="Loading rate policies…" />
         ) : rows.length === 0 ? (
           <EmptyState icon={Tag} title="No rate policies" description={policies.length === 0 ? 'No rate policies exist yet.' : 'No policy matches your filter.'} />
@@ -118,6 +195,7 @@ const RatePoliciesPage: React.FC = () => {
                   <th className={`${tableHeadClass} px-4 py-3 text-right`}>Rate per kg</th>
                   <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
                   <th className={`${tableHeadClass} px-4 py-3`}>Effective from</th>
+                  {isAdmin && <th className={`${tableHeadClass} px-4 py-3 text-right`}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -125,7 +203,7 @@ const RatePoliciesPage: React.FC = () => {
                   <tr key={p.id} className="border-b border-mint-50 last:border-0">
                     <td className={tableCellClass}>
                       <span className="font-semibold text-ink-900">{p.itemType}</span>
-                      {p.itemType === JOB_PAYMENT_RATE_KEY && (
+                      {isJobRate(p) && (
                         <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800">Job collections only</span>
                       )}
                     </td>
@@ -137,6 +215,41 @@ const RatePoliciesPage: React.FC = () => {
                       </span>
                     </td>
                     <td className={`${tableCellClass} whitespace-nowrap`}>{formatDate(p.effectiveFrom)}</td>
+                    {isAdmin && (
+                      <td className={`${tableCellClass} whitespace-nowrap text-right`}>
+                        {p.isActive ? (
+                          <div className="inline-flex gap-1.5">
+                            <button type="button" className={`${btnSecondary} ${btnSmall}`} onClick={() => setDialog({ type: 'form', policy: p })} disabled={busy}>
+                              Revise
+                            </button>
+                            {!isJobRate(p) && (
+                              <button
+                                type="button"
+                                className={`${btnSecondary} ${btnSmall}`}
+                                onClick={() => {
+                                  setActionError(null);
+                                  setDialog({ type: 'deactivate', policy: p });
+                                }}
+                                disabled={busy}
+                              >
+                                Deactivate
+                              </button>
+                            )}
+                          </div>
+                        ) : activeTypes.has(p.itemType.toLowerCase()) ? (
+                          <span className="text-xs text-ink-600">History</span>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`${btnSecondary} ${btnSmall}`}
+                            onClick={() => runAction(() => ratePolicyApi.restore(p.id), (r) => `${r.itemType} is active again at ${formatMoney(r.ratePerKg)} per kg.`)}
+                            disabled={busy}
+                          >
+                            Restore
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -144,6 +257,47 @@ const RatePoliciesPage: React.FC = () => {
           </div>
         )}
       </GlassCard>
+
+      <RatePolicyFormModal
+        open={dialog?.type === 'form'}
+        policy={dialog?.type === 'form' ? dialog.policy : null}
+        onClose={() => setDialog(null)}
+        onDone={afterChange}
+      />
+
+      <Modal
+        open={dialog?.type === 'deactivate'}
+        onClose={() => setDialog(null)}
+        title={dialog?.type === 'deactivate' ? `Deactivate ${dialog.policy.itemType}?` : ''}
+        busy={busy}
+        footer={
+          <>
+            <button type="button" className={btnSecondary} onClick={() => setDialog(null)} disabled={busy}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={btnDanger}
+              disabled={busy}
+              onClick={() => {
+                if (dialog?.type !== 'deactivate') return;
+                const { id } = dialog.policy;
+                runAction(() => ratePolicyApi.deactivate(id), (r) => `${r.itemType} is no longer paid for. You can restore it later.`);
+              }}
+            >
+              {busy ? 'Deactivating…' : 'Deactivate'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-ink-800">
+            Collectors can no longer be paid for this item type on extra-waste receipts, and it leaves the item-type lists unless Sales
+            prices it as a material. Existing payments and inventory items are not changed. The rate stays in the history and can be restored.
+          </p>
+          {actionError && <ErrorMessage message={actionError} />}
+        </div>
+      </Modal>
     </div>
   );
 };

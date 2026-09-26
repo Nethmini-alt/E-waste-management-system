@@ -120,6 +120,8 @@ export interface DismantleLogInput {
 export interface DismantleLogResponse {
   inventoryItemId: string;
   updatedWeightKg: number | null;
+  /** Weight that went neither into the components nor the remainder. */
+  lossKg: number;
   childInventoryItemIds: string[];
 }
 

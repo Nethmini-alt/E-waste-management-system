@@ -12,12 +12,16 @@ public class JobReceiptService : IJobReceiptService
     private readonly ApplicationDbContext _db;
     private readonly IJobVerificationService _jobVerification;
     private readonly ICollectorPaymentService _paymentService;
+    private readonly IItemTypeCatalogService _itemTypes;
 
-    public JobReceiptService(ApplicationDbContext db, IJobVerificationService jobVerification, ICollectorPaymentService paymentService)
+    public JobReceiptService(
+        ApplicationDbContext db, IJobVerificationService jobVerification, ICollectorPaymentService paymentService,
+        IItemTypeCatalogService itemTypes)
     {
         _db = db;
         _jobVerification = jobVerification;
         _paymentService = paymentService;
+        _itemTypes = itemTypes;
     }
     
     public async Task<ReceiveJobWasteResponse> ReceiveAsync(
@@ -53,6 +57,8 @@ public class JobReceiptService : IJobReceiptService
         if (job.CollectorId.Value != request.CollectorId)
             throw JobCollectorMismatchException.WrongCollector(request.JobId, request.CollectorId);
 
+        var itemType = await ResolveItemTypeAsync(request.ItemType, job.SubmissionId, cancellationToken);
+
         decimal? discrepancy = job.ReportedWeightKg.HasValue
             ? request.VerifiedWeightKg - job.ReportedWeightKg.Value
             : null;
@@ -63,7 +69,7 @@ public class JobReceiptService : IJobReceiptService
         {
             OriginType = OriginType.JobCollection,
             JobId = request.JobId,
-            ItemType = "Mixed Job Collection", // refined once sorted/classified later
+            ItemType = itemType,
             VerifiedWeightKg = request.VerifiedWeightKg,
             CurrentLocationId = request.WarehouseLocationId
         };
@@ -100,6 +106,7 @@ public class JobReceiptService : IJobReceiptService
         {
             InventoryItemId = inventoryItem.Id,
             JobId = request.JobId,
+            ItemType = itemType,
             VerifiedWeightKg = request.VerifiedWeightKg,
             ReportedWeightKg = job.ReportedWeightKg,
             DiscrepancyKg = discrepancy,
@@ -126,9 +133,16 @@ public class JobReceiptService : IJobReceiptService
                                 select new { c.CollectorId, u.FullName, c.VehicleType })
             .ToDictionaryAsync(x => x.CollectorId, cancellationToken);
 
+        var submissionIds = jobs.Select(j => j.SubmissionId).Distinct().ToList();
+        var categories = await _db.Submissions.AsNoTracking()
+            .Where(s => submissionIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Category, cancellationToken);
+        var allowedTypes = await _itemTypes.GetAllowedTypesAsync(cancellationToken);
+
         return jobs.Select(j =>
         {
             collectors.TryGetValue(j.CollectorId!.Value, out var collector);
+            var category = categories.GetValueOrDefault(j.SubmissionId);
             return new ReceivableJobResponse
             {
                 JobId = j.JobId,
@@ -138,8 +152,35 @@ public class JobReceiptService : IJobReceiptService
                 PickupAddress = j.PickupAddress,
                 ReportedWeightKg = j.MeasuredWeightKg,
                 EstimatedDistanceKm = j.EstimatedDistanceKm,
-                CompletedAt = j.CompletedAt
+                CompletedAt = j.CompletedAt,
+                SubmissionCategory = string.IsNullOrWhiteSpace(category) ? null : category,
+                SuggestedItemType = MatchAllowed(allowedTypes, category)
             };
         }).ToList();
     }
+
+    // The type the worker picked wins. Without one, the customer's submission category is used — but only
+    // when it is on the item-type list, so every job item can later be classified and priced like any other.
+    private async Task<string> ResolveItemTypeAsync(string? requested, Guid? submissionId, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(requested))
+            return await _itemTypes.ResolveAsync(requested, cancellationToken)
+                ?? throw new ArgumentException($"'{requested.Trim()}' is not a known item type. Choose a type from the item-type list.");
+
+        var category = submissionId is null
+            ? null
+            : await _db.Submissions.AsNoTracking()
+                .Where(s => s.Id == submissionId.Value)
+                .Select(s => s.Category)
+                .FirstOrDefaultAsync(cancellationToken);
+
+        return await _itemTypes.ResolveAsync(category, cancellationToken)
+            ?? throw new ArgumentException(
+                "Choose the item type for this job — the submission's category doesn't match a known item type.");
+    }
+
+    private static string? MatchAllowed(IReadOnlyList<string> allowedTypes, string? category)
+        => string.IsNullOrWhiteSpace(category)
+            ? null
+            : allowedTypes.FirstOrDefault(t => string.Equals(t, category.Trim(), StringComparison.OrdinalIgnoreCase));
 }

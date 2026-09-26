@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { inventoryApi } from './inventoryApi';
 import type { InventoryDetail } from './types';
 import type { WarehouseLocation } from '../types';
-import { INVENTORY_STATUS_LABELS, LIMITS, type InventoryStatus } from '../processingEnums';
+import { INVENTORY_STATUS_LABELS, LIMITS, SUGGESTED_LOCATION_FOR_STATUS, type InventoryStatus } from '../processingEnums';
 import { getApiErrorMessage } from '../utils/apiError';
 import { ErrorMessage, Modal, Notice, btnDanger, btnPrimary, btnSecondary, inputClass, labelClass } from '../components';
 
@@ -28,10 +28,10 @@ const COPY: Partial<Record<InventoryStatus, Copy>> = {
     warning: 'Ready for sale is final — the status cannot be changed afterwards (the location still can).',
   },
   ExportOnly: {
-    title: 'Mark export only',
-    description: 'Flags the classified item as available for export only.',
-    confirm: 'Mark export only',
-    warning: 'Export only is final — the status cannot be changed afterwards (the location still can).',
+    title: 'Reserve for export',
+    description: 'Reserves the export-grade item for export channels only.',
+    confirm: 'Reserve for export',
+    warning: 'Reserved for export is final — the status cannot be changed afterwards (the location still can).',
   },
   OnHold: {
     title: 'Put item on hold',
@@ -60,10 +60,13 @@ const TransitionModal: React.FC<TransitionModalProps> = ({ open, item, nextStatu
   useEffect(() => {
     if (open) {
       setNotes('');
-      setNewLocationId('');
+      // Pre-select the area this status belongs in (e.g. On hold -> Hazardous Hold Area); staff can change it.
+      const suggestedName = nextStatus ? SUGGESTED_LOCATION_FOR_STATUS[nextStatus] : undefined;
+      const suggested = suggestedName ? locations.find((l) => l.name.toLowerCase() === suggestedName.toLowerCase()) : undefined;
+      setNewLocationId(suggested && suggested.id !== item.currentLocationId ? suggested.id : '');
       setError(null);
     }
-  }, [open, nextStatus]);
+  }, [open, nextStatus, locations, item.currentLocationId]);
 
   if (!nextStatus) return null;
   const copy = COPY[nextStatus] ?? {

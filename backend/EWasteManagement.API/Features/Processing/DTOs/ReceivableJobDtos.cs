@@ -14,4 +14,13 @@ public class ReceivableJobResponse
     public decimal? ReportedWeightKg { get; set; }
     public decimal? EstimatedDistanceKm { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    /// <summary>The category the customer chose on the submission, as they wrote it (null if unknown).</summary>
+    public string? SubmissionCategory { get; set; }
+
+    /// <summary>
+    /// <see cref="SubmissionCategory"/> matched to the item-type list, pre-selected on the receive form.
+    /// Null when the category is not on the list — staff must choose the type.
+    /// </summary>
+    public string? SuggestedItemType { get; set; }
 }

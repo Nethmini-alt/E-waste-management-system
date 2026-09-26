@@ -1,16 +1,51 @@
-# mobile_flutter
+# E-Waste mobile app (Flutter)
 
-A new Flutter project.
+One app for every mobile user. The screen a person sees depends on their role:
 
-## Getting Started
+| Role | Screens | Owner |
+|---|---|---|
+| Staff, Admin | Warehouse — Processing & Inventory (receive, inventory, dismantle, classify, QR scan) | Component C |
+| Household, Corporate, Collector | "Coming soon" screen until their screens are added | Components A, B, D |
 
-This project is a starting point for a Flutter application.
+Paying collectors and managing rate policies stay on the web app (Admin only).
 
-A few resources to get you started if this is your first Flutter project:
+## Run it
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Start the API (`backend/EWasteManagement.API`, `dotnet run`) — it listens on `http://localhost:5172`.
+2. From this folder:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run                      # Android emulator: uses http://10.0.2.2:5172 automatically
+flutter run -d chrome            # web: uses http://localhost:5172
+flutter run --dart-define=API_BASE_URL=http://192.168.1.20:5172   # a real phone on your Wi-Fi
+```
+
+Sign in with a Staff or Admin account. Plain `http` is allowed in debug builds only.
+
+## Structure
+
+```
+lib/
+├── main.dart, app.dart
+├── core/                 shared by every feature
+│   ├── auth/             sign-in, session (secure storage), token expiry
+│   ├── config/env.dart   API base URL
+│   ├── network/          Dio client (JWT + 401 handling), API error messages
+│   ├── router/           go_router + role-based redirects  ← add your role's home here
+│   ├── theme/            colours and text styles copied from the web app
+│   ├── utils/            formatting (Rs., kg, dates)
+│   └── widgets/          glass card, buttons, notices, sheets, form fields
+└── features/
+    ├── auth/             sign-in screen
+    └── warehouse/        Component C (data → application → presentation)
+```
+
+Add your component as `lib/features/<name>/` and reuse `core/` so every part looks the same.
+
+## Rules shared with the backend
+
+- Enums are **sent as numbers** in request bodies and **returned as strings** — see
+  `features/warehouse/data/processing_enums.dart` (never reorder those enums).
+- Inventory QR labels hold `EWI:{inventory item id}`.
+- `flutter analyze` and `flutter test` must pass.

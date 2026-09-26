@@ -120,7 +120,7 @@ const DashboardPage: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total items" value={total} hint="Everything received" icon={Boxes} />
             <StatCard label="In progress" value={inProgress} hint="Received, sorting or dismantling" icon={Layers} />
-            <StatCard label="Ready to hand off" value={outbound} hint="Ready for sale or export only" icon={ShoppingCart} />
+            <StatCard label="Ready to hand off" value={outbound} hint="Ready for sale or reserved for export" icon={ShoppingCart} />
             <StatCard
               label="Pending payments"
               value={formatMoney(data.pendingPayments.totalAmount)}

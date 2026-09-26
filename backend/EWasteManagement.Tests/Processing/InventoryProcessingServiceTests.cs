@@ -25,7 +25,7 @@ public class InventoryProcessingServiceTests : IAsyncLifetime
         _db = new ApplicationDbContext(options, new NoOpDomainEventDispatcher());
         // Real dispatcher swapped in only where we need to prove logs are written automatically.
         await _db.Database.EnsureCreatedAsync();
-        _service = new InventoryProcessingService(_db);
+        _service = new InventoryProcessingService(_db, new ItemTypeCatalogService(_db));
 
         var location = new WarehouseLocation { Name = "Sorting Area" };
         _db.WarehouseLocations.Add(location);
@@ -95,6 +95,142 @@ public class InventoryProcessingServiceTests : IAsyncLifetime
         Assert.Single(result.ChildInventoryItemIds);
         var child = await _db.InventoryItems.SingleAsync(i => i.Id == result.ChildInventoryItemIds[0]);
         Assert.Equal(itemId, child.ParentInventoryItemId);
+    }
+
+    // ---------------------------------------------------------------- dismantle: weight is conserved
+    // The seeded item weighs 3 kg.
+
+    [Fact]
+    public async Task AddDismantleLogAsync_NoRemainingWeight_TakesTheComponentsOffTheParent()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Battery removed",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } }
+        }, Guid.NewGuid());
+
+        Assert.Equal(2.6m, result.UpdatedWeightKg);
+        Assert.Equal(0m, result.LossKg);
+        _db.ChangeTracker.Clear();
+        Assert.Equal(2.6m, (await _db.InventoryItems.SingleAsync(i => i.Id == itemId)).VerifiedWeightKg);
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_WithRemainingWeight_RecordsTheGapAsLoss()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Battery removed",
+            RemainingWeightKg = 2.1m,
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } }
+        }, Guid.NewGuid());
+
+        Assert.Equal(2.1m, result.UpdatedWeightKg);
+        Assert.Equal(0.5m, result.LossKg);
+        var log = await _db.ProcessingLogs.SingleAsync(l => l.InventoryItemId == itemId && l.Action == "DismantleStep");
+        Assert.Contains("loss 0.5 kg", log.Notes);
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_ComponentsHeavierThanTheParent_IsRejectedAndChangesNothing()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Too much",
+            ChildItems =
+            {
+                new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 2m },
+                new CreateChildInventoryItemRequest { ItemType = "Laptop", WeightKg = 1.5m }
+            }
+        }, Guid.NewGuid()));
+
+        _db.ChangeTracker.Clear();
+        var item = await _db.InventoryItems.SingleAsync(i => i.Id == itemId);
+        Assert.Equal(3m, item.VerifiedWeightKg);
+        Assert.Equal(InventoryStatus.Sorting, item.Status);
+        Assert.Equal(1, await _db.InventoryItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_ComponentsPlusRemainingOverTheParent_IsRejected()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Double counted",
+            RemainingWeightKg = 3m,
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } }
+        }, Guid.NewGuid()));
+
+        Assert.Equal(1, await _db.InventoryItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_UnknownComponentType_IsRejected_KnownTypeUsesTheListsSpelling()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Mystery part",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Unicorn Parts", WeightKg = 0.1m } }
+        }, Guid.NewGuid()));
+        Assert.Equal(1, await _db.InventoryItems.CountAsync());
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Battery removed",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "  battery ", WeightKg = 0.4m } }
+        }, Guid.NewGuid());
+
+        var child = await _db.InventoryItems.SingleAsync(i => i.Id == result.ChildInventoryItemIds[0]);
+        Assert.Equal("Battery", child.ItemType);
+    }
+
+    // ---------------------------------------------------------------- category decides the outcome
+
+    private async Task<Guid> SeedClassifiedItemAsync(ClassificationCategory category)
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+        await _service.ClassifyAsync(itemId, new ClassifyInventoryItemRequest { Category = category }, Guid.NewGuid());
+        return itemId;
+    }
+
+    [Theory]
+    [InlineData(ClassificationCategory.Reusable, InventoryStatus.ReadyForSale)]
+    [InlineData(ClassificationCategory.LocalRecyclable, InventoryStatus.ReadyForSale)]
+    [InlineData(ClassificationCategory.ExportOnly, InventoryStatus.ExportOnly)]
+    [InlineData(ClassificationCategory.Reusable, InventoryStatus.OnHold)]
+    [InlineData(ClassificationCategory.ExportOnly, InventoryStatus.OnHold)]
+    public async Task TransitionStatusAsync_OutcomeMatchingTheCategory_IsAllowed(ClassificationCategory category, InventoryStatus outcome)
+    {
+        var itemId = await SeedClassifiedItemAsync(category);
+
+        var result = await _service.TransitionStatusAsync(itemId, outcome, Guid.NewGuid(), null, null);
+
+        Assert.Equal(outcome.ToString(), result.Status);
+    }
+
+    [Theory]
+    [InlineData(ClassificationCategory.Reusable, InventoryStatus.ExportOnly)]
+    [InlineData(ClassificationCategory.LocalRecyclable, InventoryStatus.ExportOnly)]
+    [InlineData(ClassificationCategory.ExportOnly, InventoryStatus.ReadyForSale)]
+    public async Task TransitionStatusAsync_OutcomeNotMatchingTheCategory_IsRejected(ClassificationCategory category, InventoryStatus outcome)
+    {
+        var itemId = await SeedClassifiedItemAsync(category);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.TransitionStatusAsync(itemId, outcome, Guid.NewGuid(), null, null));
+
+        _db.ChangeTracker.Clear();
+        Assert.Equal(InventoryStatus.Classified, (await _db.InventoryItems.SingleAsync(i => i.Id == itemId)).Status);
     }
 
     [Fact]

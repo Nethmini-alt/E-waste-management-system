@@ -32,7 +32,13 @@ public class AddDismantleLogRequest
 public class DismantleLogResponse
 {
     public Guid InventoryItemId { get; set; }
+
+    /// <summary>The parent's weight after this step (always set).</summary>
     public decimal? UpdatedWeightKg { get; set; }
+
+    /// <summary>Weight that went neither into the components nor the remainder (dust, screws, scrap).</summary>
+    public decimal LossKg { get; set; }
+
     public List<Guid> ChildInventoryItemIds { get; set; } = new();
 }
 

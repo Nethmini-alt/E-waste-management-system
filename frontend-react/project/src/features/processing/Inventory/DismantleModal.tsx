@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { inventoryApi } from './inventoryApi';
 import type { InventoryDetail } from './types';
-import { INVENTORY_STATUS_LABELS, LIMITS, isReservedExtraWasteType } from '../processingEnums';
+import { INVENTORY_STATUS_LABELS, LIMITS } from '../processingEnums';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatKg } from '../utils/format';
-import { useRatePolicies } from '../hooks/useLookups';
+import { useItemTypes } from '../hooks/useLookups';
 import { ErrorMessage, Modal, Notice, btnPrimary, btnSecondary, inputClass, labelClass } from '../components';
 
 interface ChildRow {
@@ -25,7 +25,7 @@ let rowKey = 0;
 const newRow = (): ChildRow => ({ key: ++rowKey, itemType: '', weightKg: '' });
 
 const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, onDone }) => {
-  const rates = useRatePolicies();
+  const itemTypes = useItemTypes();
   const [description, setDescription] = useState('');
   const [remainingWeight, setRemainingWeight] = useState('');
   const [children, setChildren] = useState<ChildRow[]>([]);
@@ -46,22 +46,29 @@ const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, on
   const updateChild = (key: number, patch: Partial<ChildRow>) =>
     setChildren((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
-  // Field-level checks mirror AddDismantleLogRequestValidator on the backend.
+  // Weight is conserved, exactly as the backend enforces it: components + remainder <= current weight.
+  // With no remainder entered, the components are taken off the item automatically.
+  const current = item.verifiedWeightKg;
+  const childTotal = children.reduce((sum, c) => sum + (Number(c.weightKg) > 0 ? Number(c.weightKg) : 0), 0);
+  const remainingEntered = remainingWeight !== '' && Number(remainingWeight) >= 0;
+  const newWeight = remainingEntered ? Number(remainingWeight) : current - childTotal;
+  const lossKg = current - childTotal - newWeight;
+  // Small tolerance so 0.1 + 0.2 style float noise never blocks a valid entry.
+  const overweight = childTotal + newWeight > current + 0.0005 || childTotal > current + 0.0005;
+
+  // Field-level checks mirror AddDismantleLogRequestValidator and the service's weight rule.
   const problems = useMemo(() => {
     const out: string[] = [];
     if (!description.trim()) out.push('Describe what was done in this step.');
     if (description.length > LIMITS.notes) out.push(`Description must be ${LIMITS.notes} characters or fewer.`);
     if (remainingWeight !== '' && !(Number(remainingWeight) >= 0)) out.push('Remaining weight must be 0 or more.');
     children.forEach((c, i) => {
-      if (!c.itemType.trim()) out.push(`Child item ${i + 1}: enter an item type.`);
-      if (c.itemType.length > LIMITS.childItemType) out.push(`Child item ${i + 1}: item type must be ${LIMITS.childItemType} characters or fewer.`);
+      if (!c.itemType) out.push(`Child item ${i + 1}: choose an item type.`);
       if (!(Number(c.weightKg) > 0)) out.push(`Child item ${i + 1}: weight must be greater than 0.`);
     });
+    if (overweight) out.push(`Components plus the remaining weight can't be more than this item's current ${formatKg(current)}.`);
     return out;
-  }, [description, remainingWeight, children]);
-
-  const childTotal = children.reduce((sum, c) => sum + (Number(c.weightKg) > 0 ? Number(c.weightKg) : 0), 0);
-  const overweight = childTotal > item.verifiedWeightKg;
+  }, [description, remainingWeight, children, overweight, current]);
 
   const submit = async () => {
     setSubmitted(true);
@@ -75,10 +82,11 @@ const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, on
         childItems: children.map((c) => ({ itemType: c.itemType, weightKg: Number(c.weightKg) })),
       });
       const created = result.childInventoryItemIds.length;
+      const loss = result.lossKg > 0 ? ` ${formatKg(result.lossKg)} recorded as loss.` : '';
       onDone(
         created > 0
-          ? `Dismantle step logged — ${created} child item${created === 1 ? '' : 's'} created.`
-          : 'Dismantle step logged.',
+          ? `Dismantle step logged — ${created} child item${created === 1 ? '' : 's'} created.${loss}`
+          : `Dismantle step logged.${loss}`,
       );
     } catch (e) {
       setError(getApiErrorMessage(e, 'Failed to log the dismantle step.'));
@@ -139,7 +147,9 @@ const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, on
             className={inputClass}
             placeholder={`Currently ${item.verifiedWeightKg}`}
           />
-          <p className="mt-1 text-xs text-ink-600">If entered, it replaces this item's weight after the components come off.</p>
+          <p className="mt-1 text-xs text-ink-600">
+            Leave blank to subtract the components automatically. If entered, any difference is recorded as loss (dust, screws, scrap).
+          </p>
         </div>
 
         <div>
@@ -156,24 +166,22 @@ const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, on
             </p>
           ) : (
             <div className="space-y-2">
-              <datalist id="dm-types">
-                {rates.data
-                  .filter((r) => !isReservedExtraWasteType(r.itemType))
-                  .map((r) => (
-                    <option key={r.id} value={r.itemType} />
-                  ))}
-              </datalist>
               {children.map((c, i) => (
                 <div key={c.key} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
-                  <input
-                    list="dm-types"
+                  <select
                     value={c.itemType}
-                    maxLength={LIMITS.childItemType}
                     onChange={(e) => updateChild(c.key, { itemType: e.target.value })}
-                    placeholder={`Component ${i + 1} type`}
                     aria-label={`Component ${i + 1} type`}
                     className={inputClass}
-                  />
+                    disabled={itemTypes.loading}
+                  >
+                    <option value="">{itemTypes.loading ? 'Loading…' : `Component ${i + 1} type…`}</option>
+                    {itemTypes.data.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="number"
                     min="0"
@@ -197,9 +205,13 @@ const DismantleModal: React.FC<DismantleModalProps> = ({ open, item, onClose, on
             </div>
           )}
 
-          {overweight && (
-            <Notice tone="warning" className="mt-3">
-              The components total {formatKg(childTotal)}, which is more than this item's current weight of {formatKg(item.verifiedWeightKg)}. Check the weights before logging.
+          {itemTypes.error && <ErrorMessage className="mt-2" message={itemTypes.error} onRetry={itemTypes.reload} />}
+
+          {(children.length > 0 || remainingEntered) && (
+            <Notice tone={overweight ? 'error' : 'info'} className="mt-3">
+              {overweight
+                ? `Components (${formatKg(childTotal)}) plus the remaining weight (${formatKg(Math.max(newWeight, 0))}) are more than this item's current ${formatKg(current)}.`
+                : `This item will go from ${formatKg(current)} to ${formatKg(newWeight)}; components ${formatKg(childTotal)}${lossKg > 0.0005 ? `; loss ${formatKg(lossKg)}` : ''}.`}
             </Notice>
           )}
         </div>

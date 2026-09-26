@@ -9,5 +9,8 @@ export const lookupApi = {
   ratePolicies: (activeOnly = true) =>
     api.get<RatePolicy[]>('/api/v1/inventory/lookups/rate-policies', { params: { activeOnly } }).then((r) => r.data),
 
+  /** Types a job item or dismantled component may be given (active rate-policy types + priced materials). */
+  itemTypes: () => api.get<string[]>('/api/v1/inventory/lookups/item-types').then((r) => r.data),
+
   collectors: () => api.get<CollectorLookup[]>('/api/v1/inventory/lookups/collectors').then((r) => r.data),
 };

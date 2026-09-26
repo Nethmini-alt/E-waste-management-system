@@ -10,15 +10,20 @@ interface LookupState<T> {
   reload: () => void;
 }
 
+type LookupHook<T> = (() => LookupState<T[]>) & {
+  /** Forget the cached rows so the next page that uses this lookup fetches them again. */
+  invalidate: () => void;
+};
+
 /**
  * Builds a hook for one lookup. Reference data (locations, rates, collectors) barely changes,
  * so each lookup is fetched once per browser session and shared between pages; `reload()`
- * forces a fresh fetch.
+ * forces a fresh fetch, and `invalidate()` drops the cache after the data was changed.
  */
-function createLookupHook<T>(fetcher: () => Promise<T[]>): () => LookupState<T[]> {
+function createLookupHook<T>(fetcher: () => Promise<T[]>): LookupHook<T> {
   const cache: { data: T[] | null; promise: Promise<T[]> | null } = { data: null, promise: null };
 
-  return function useLookup(): LookupState<T[]> {
+  function useLookup(): LookupState<T[]> {
     const [data, setData] = useState<T[]>(cache.data ?? []);
     const [loading, setLoading] = useState(cache.data === null);
     const [error, setError] = useState<string | null>(null);
@@ -64,9 +69,17 @@ function createLookupHook<T>(fetcher: () => Promise<T[]>): () => LookupState<T[]
     }, [load]);
 
     return { data, loading, error, reload: () => load(true) };
-  };
+  }
+
+  return Object.assign(useLookup, {
+    invalidate: () => {
+      cache.data = null;
+      cache.promise = null;
+    },
+  });
 }
 
 export const useWarehouseLocations = createLookupHook<WarehouseLocation>(() => lookupApi.warehouseLocations());
 export const useRatePolicies = createLookupHook<RatePolicy>(() => lookupApi.ratePolicies(true));
+export const useItemTypes = createLookupHook<string>(() => lookupApi.itemTypes());
 export const useCollectors = createLookupHook<CollectorLookup>(() => lookupApi.collectors());
