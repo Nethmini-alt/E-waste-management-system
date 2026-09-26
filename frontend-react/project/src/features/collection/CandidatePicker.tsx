@@ -113,6 +113,14 @@ const CandidatePicker: React.FC<Props> = ({ job, history, onDone }) => {
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink-900">
                     {c.collectorName || 'Unnamed collector'}
+                    {job.requiredCapacityKg != null && c.capacityKg < job.requiredCapacityKg && (
+                      <span
+                        className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900"
+                        title={`Estimated load is about ${job.requiredCapacityKg} kg`}
+                      >
+                        Vehicle too small
+                      </span>
+                    )}
                     {declined.has(c.collectorId) && (
                       <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">
                         Declined this job
