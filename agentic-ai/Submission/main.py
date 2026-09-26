@@ -38,7 +38,7 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
     try:
         state = await classify_node(state)
     except Exception as exc:
-        await tools.log_execution(req.workflow_id, 2, req.model_dump(), None, False, str(exc))
+        await tools.log_execution(req.workflow_id, 2, req.model_dump(mode="json"), None, False, str(exc))
         log.exception("Analyzer run failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -51,7 +51,7 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
     }
     await tools.submit_analysis(req.workflow_id, result)
     await tools.log_execution(
-        req.workflow_id, 2, req.model_dump(), result,
+        req.workflow_id, 2, req.model_dump(mode="json"), result,
         succeeded=not state.get("errors"), error_message="; ".join(state.get("errors", [])) or None,
     )
     log.info("Analyzer run done in %.2fs (workflow=%s)", time.time() - started, req.workflow_id)

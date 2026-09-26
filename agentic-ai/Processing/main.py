@@ -42,7 +42,7 @@ async def run(req: ValidatorRunRequest) -> ValidatorRunResponse:
     try:
         state = validate_node(state)
     except Exception as exc:
-        await tools.log_execution(req.workflow_id, 3, req.model_dump(), None, False, str(exc))
+        await tools.log_execution(req.workflow_id, 3, req.model_dump(mode="json"), None, False, str(exc))
         log.exception("Validator run failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -52,7 +52,7 @@ async def run(req: ValidatorRunRequest) -> ValidatorRunResponse:
         "reasons": state["reasons"],
     }
     await tools.submit_validation(req.workflow_id, result)
-    await tools.log_execution(req.workflow_id, 3, req.model_dump(), result, True, None)
+    await tools.log_execution(req.workflow_id, 3, req.model_dump(mode="json"), result, True, None)
     log.info("Validator run done in %.2fs (workflow=%s, approved=%s)",
               time.time() - started, req.workflow_id, result["approved_for_auto_assignment"])
 
