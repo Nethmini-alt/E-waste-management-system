@@ -3,6 +3,7 @@ using EWasteManagement.API.Features.Collection.DTOs;
 using EWasteManagement.API.Features.Collection.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EWasteManagement.API.Shared.Security;
 
 namespace EWasteManagement.API.Features.Collection.Controllers;
 
@@ -52,6 +53,16 @@ public class CollectorsController : ControllerBase
     {
         var result = await _collectorService.GetByUserIdAsync(CurrentUserId);
         return result is null ? NotFound(new { message = "No collector profile exists for this user yet." }) : Ok(result);
+    }
+
+    // GET /api/v1/collectors?isAvailable=true
+    // Staff/admin list for the collectors page, with names and current load.
+    [HttpGet]
+    [Authorize(Roles = "Staff,Admin")]
+    public async Task<ActionResult<List<CollectorResponseDto>>> GetAll([FromQuery] bool? isAvailable)
+    {
+        var result = await _collectorService.GetAllAsync(isAvailable);
+        return Ok(result);
     }
 
     // GET /api/v1/collectors/{id}
@@ -122,13 +133,13 @@ public class CollectorsController : ControllerBase
     }
 
     // POST /api/v1/collectors/match
-    // The Matcher/Logistics agent's tool call. Left open (no [Authorize]) to
-    // match how the existing AI callback on SubmissionsController works —
-    // this is a machine-to-machine call from the Python agent, not a user
-    // action. Worth revisiting with an internal service key before deploying
-    // for real, same as the ai-callback endpoint.
+    // The Matcher/Logistics agent's tool call. Machine-to-machine, so there's
+    // no user JWT ([AllowAnonymous]); instead the agent must present the
+    // shared X-Agent-Key. The response contains collectors' live locations,
+    // so it must not be open to anyone who knows the URL.
     [HttpPost("match")]
     [AllowAnonymous]
+    [RequireAgentKey]
     public async Task<ActionResult<List<CollectorMatchDto>>> Match(MatchRequestDto request)
     {
         var results = await _matchingService.FindCandidatesAsync(request);

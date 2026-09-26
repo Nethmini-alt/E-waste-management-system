@@ -15,6 +15,11 @@ public class JobReceiptController : ControllerBase
 
     public JobReceiptController(IJobReceiptService service) => _service = service;
 
+    // Completed jobs with a collector that have not been received into inventory yet (server-side filter).
+    [HttpGet("receivable")]
+    public async Task<IActionResult> GetReceivable(CancellationToken cancellationToken)
+        => Ok(await _service.GetReceivableJobsAsync(cancellationToken));
+
     [HttpPost("receive")]
     public async Task<IActionResult> Receive(
         [FromBody] ReceiveJobWasteRequest request, CancellationToken cancellationToken)

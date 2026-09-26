@@ -74,6 +74,8 @@ builder.Services.AddScoped<IPaymentCalculator, ExtraWastePaymentCalculator>();
 builder.Services.AddScoped<ICollectorPaymentService, CollectorPaymentService>();
 builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingService>();
 builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
+builder.Services.AddScoped<IProcessingLookupService, ProcessingLookupService>();
+builder.Services.AddScoped<IWorkflowApprovalHistoryService, WorkflowApprovalHistoryService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // Component D — Sales services

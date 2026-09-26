@@ -220,6 +220,10 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("rejection_reason");
 
+                    b.Property<decimal?>("RequiredCapacityKg")
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("required_capacity_kg");
+
                     b.Property<DateTime?>("RespondedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("responded_at");
@@ -231,6 +235,10 @@ namespace EWasteManagement.API.Migrations
                     b.Property<DateTime?>("ScheduledWindowStart")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("scheduled_window_start");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -388,6 +396,10 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("decimal(10,2)")
                         .HasColumnName("amount");
 
+                    b.Property<string>("CalculationSnapshot")
+                        .HasColumnType("text")
+                        .HasColumnName("calculation_snapshot");
+
                     b.Property<Guid>("CollectorId")
                         .HasColumnType("uuid")
                         .HasColumnName("collector_id");
@@ -396,9 +408,17 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("CreatedByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_staff_id");
+
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("paid_at");
+
+                    b.Property<Guid?>("PaidByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paid_by_staff_id");
 
                     b.Property<Guid>("SourceId")
                         .HasColumnType("uuid")

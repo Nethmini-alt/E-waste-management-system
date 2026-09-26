@@ -49,6 +49,10 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .HasColumnName("pickup_longitude")
             .HasColumnType("numeric(9,6)");
 
+        builder.Property(j => j.RequiredCapacityKg)
+            .HasColumnName("required_capacity_kg")
+            .HasColumnType("numeric(10,2)");
+
         builder.Property(j => j.ScheduledWindowStart).HasColumnName("scheduled_window_start");
         builder.Property(j => j.ScheduledWindowEnd).HasColumnName("scheduled_window_end");
         builder.Property(j => j.EstimatedEtaMinutes).HasColumnName("estimated_eta_minutes");
@@ -71,6 +75,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
             .HasDefaultValueSql("now()");
 
         builder.Property(j => j.RespondedAt).HasColumnName("responded_at");
+        builder.Property(j => j.StartedAt).HasColumnName("started_at");
         builder.Property(j => j.CompletedAt).HasColumnName("completed_at");
     }
 }

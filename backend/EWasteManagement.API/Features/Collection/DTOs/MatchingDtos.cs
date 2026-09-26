@@ -20,12 +20,13 @@ public class MatchRequestDto
 public class CollectorMatchDto
 {
     public Guid CollectorId { get; set; }
+    public string CollectorName { get; set; } = string.Empty;
     public string VehicleType { get; set; } = string.Empty;
     public decimal CapacityKg { get; set; }
     public decimal Rating { get; set; }
     public int ActiveJobCount { get; set; }
 
-    // Null means Google couldn't resolve a route for this candidate —
+    // Null means the routing service couldn't resolve a route for this candidate —
     // it's still returned (sorted last) rather than silently dropped, so
     // staff/agent can see something went wrong rather than just seeing fewer results.
     public decimal? DistanceKm { get; set; }

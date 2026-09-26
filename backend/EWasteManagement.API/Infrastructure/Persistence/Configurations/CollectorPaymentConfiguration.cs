@@ -36,6 +36,12 @@ public class CollectorPaymentConfiguration : IEntityTypeConfiguration<CollectorP
         builder.Property(x => x.Amount).HasColumnName("amount").HasColumnType("decimal(10,2)");
         builder.Property(x => x.PaidAt).HasColumnName("paid_at");
 
+        // Snapshot of the calculation used at creation time (JSON text) + who created / paid it.
+        // Loose staff ids (no FK), like the other Processing audit columns.
+        builder.Property(x => x.CalculationSnapshot).HasColumnName("calculation_snapshot");
+        builder.Property(x => x.CreatedByStaffId).HasColumnName("created_by_staff_id");
+        builder.Property(x => x.PaidByStaffId).HasColumnName("paid_by_staff_id");
+
         // Enforces "one payment per source" from the final flow — no duplicate payments possible.
         builder.HasIndex(x => new { x.SourceType, x.SourceId }).IsUnique();
     }

@@ -22,6 +22,11 @@ public class Job
     public decimal? PickupLatitude { get; set; }
     public decimal? PickupLongitude { get; set; }
 
+    // The Analyzer's weight estimate, kept so every re-match for this job
+    // (after a rejection, or when staff re-run matching) still skips
+    // vehicles that are too small. Null means no capacity filter.
+    public decimal? RequiredCapacityKg { get; set; }
+
     public DateTime? ScheduledWindowStart { get; set; }
     public DateTime? ScheduledWindowEnd { get; set; }
     public int? EstimatedEtaMinutes { get; set; }
@@ -35,5 +40,8 @@ public class Job
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? RespondedAt { get; set; }
+
+    // When the collector set off (Accepted -> InProgress, from the app's Navigate button).
+    public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
 }

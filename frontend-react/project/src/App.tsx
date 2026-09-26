@@ -12,6 +12,10 @@ import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
 import SubmitPage from './features/submissions/SubmitPage';
 import AdminReviewPage from './features/submissions/AdminReviewPage';
 
+import JobsDashboardPage from './features/collection/JobsDashboardPage';
+import JobDetailPage from './features/collection/JobDetailPage';
+import CollectorsPage from './features/collection/CollectorsPage';
+
 import DashboardPage from './features/sales/Dashboard/DashboardPage';
 import BuyersListPage from './features/sales/Buyers/BuyersListPage';
 import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
@@ -22,8 +26,11 @@ import RevenuePage from './features/sales/Revenue/RevenuePage';
 import PlansListPage from './features/sales/Approvals/PlansListPage';
 import PlanDetailPage from './features/sales/Approvals/PlanDetailPage';
 import ApprovalsPage from './features/sales/Approvals/ApprovalsPage';
+
 import MaterialRequestsPage from './features/sales/MaterialRequests/MaterialRequestsPage';
 import MaterialRequestManagementPage from './features/sales/MaterialRequests/MaterialRequestManagementPage';
+
+import ProcessingRoutes from './features/processing/ProcessingRoutes';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -45,6 +52,7 @@ const App: React.FC = () => (
         >
           <Route index element={<DashboardPage />} />
 
+          {/* Buyer Portal */}
           <Route
             path="/material-requests"
             element={
@@ -62,7 +70,33 @@ const App: React.FC = () => (
             }
           />
 
-          {/* Component C — Submission */}
+          {/* Component B — Collection & Logistics (staff side; collectors use the Flutter app) */}
+          <Route
+            path="/collection/jobs"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <JobsDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/collection/jobs/:id"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <JobDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/collection/collectors"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <CollectorsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Component A — Submission */}
           <Route path="/submissions/new" element={<SubmitPage />} />
           <Route
             path="/submissions/review"
@@ -135,6 +169,16 @@ const App: React.FC = () => (
             element={
               <ProtectedRoute roles={['staff', 'admin']}>
                 <PlanDetailPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Component B — Processing: dashboard, receive, inventory (+ item detail), payments */}
+          <Route
+            path="/processing/*"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <ProcessingRoutes />
               </ProtectedRoute>
             }
           />

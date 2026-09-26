@@ -1,3 +1,4 @@
+using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.DTOs;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Processing.Exceptions;
@@ -45,6 +46,13 @@ public class JobReceiptService : IJobReceiptService
         if (!collectorExists)
             throw new KeyNotFoundException($"Collector '{request.CollectorId}' was not found.");
 
+        // The job already says who collected it. Never trust the collector id on the request, and
+        // never guess one for a job that has none.
+        if (job.CollectorId is null)
+            throw JobCollectorMismatchException.NoCollectorAssigned(request.JobId);
+        if (job.CollectorId.Value != request.CollectorId)
+            throw JobCollectorMismatchException.WrongCollector(request.JobId, request.CollectorId);
+
         decimal? discrepancy = job.ReportedWeightKg.HasValue
             ? request.VerifiedWeightKg - job.ReportedWeightKg.Value
             : null;
@@ -71,11 +79,19 @@ public class JobReceiptService : IJobReceiptService
         _db.InventoryItems.Add(inventoryItem);
         await _db.SaveChangesAsync(cancellationToken);
 
+        // The payment goes to the job's own collector (checked above) and is stamped with the
+        // authenticated staff member who received the job.
         await _paymentService.CreatePaymentAsync(
             PaymentSourceType.Job,
             request.JobId,
-            request.CollectorId,
-            new PaymentContext { TotalWeightKg = request.VerifiedWeightKg, DistanceKm = job.DistanceKm },
+            job.CollectorId.Value,
+            new PaymentContext
+            {
+                TotalWeightKg = request.VerifiedWeightKg,
+                DistanceKm = job.DistanceKm,
+                ReportedWeightKg = job.ReportedWeightKg
+            },
+            receivedByStaffId,
             cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
@@ -89,5 +105,41 @@ public class JobReceiptService : IJobReceiptService
             DiscrepancyKg = discrepancy,
             ReceivedAt = inventoryItem.CreatedAt
         };
+    }
+
+    public async Task<IReadOnlyList<ReceivableJobResponse>> GetReceivableJobsAsync(CancellationToken cancellationToken = default)
+    {
+        // Filtered on the server: a job stops being offered as soon as an inventory item exists for it
+        // (the same fact the receive call and its unique index rely on). Jobs without a collector
+        // cannot be received, so they are not offered either.
+        var jobs = await _db.Jobs.AsNoTracking()
+            .Where(j => j.Status == JobStatus.Completed
+                        && j.CollectorId != null
+                        && !_db.InventoryItems.Any(i => i.JobId == j.JobId))
+            .OrderByDescending(j => j.CompletedAt).ThenByDescending(j => j.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var collectorIds = jobs.Select(j => j.CollectorId!.Value).Distinct().ToList();
+        var collectors = await (from c in _db.Collectors.AsNoTracking()
+                                join u in _db.Users.AsNoTracking() on c.UserId equals u.UserId
+                                where collectorIds.Contains(c.CollectorId)
+                                select new { c.CollectorId, u.FullName, c.VehicleType })
+            .ToDictionaryAsync(x => x.CollectorId, cancellationToken);
+
+        return jobs.Select(j =>
+        {
+            collectors.TryGetValue(j.CollectorId!.Value, out var collector);
+            return new ReceivableJobResponse
+            {
+                JobId = j.JobId,
+                CollectorId = j.CollectorId.Value,
+                CollectorName = collector?.FullName,
+                CollectorVehicleType = collector?.VehicleType,
+                PickupAddress = j.PickupAddress,
+                ReportedWeightKg = j.MeasuredWeightKg,
+                EstimatedDistanceKm = j.EstimatedDistanceKm,
+                CompletedAt = j.CompletedAt
+            };
+        }).ToList();
     }
 }
