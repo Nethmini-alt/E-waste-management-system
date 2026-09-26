@@ -21,6 +21,8 @@ export interface Job {
   pickupLatitude: number | null;
   pickupLongitude: number | null;
 
+  /** The Analyzer's weight estimate; every re-match skips smaller vehicles. */
+  requiredCapacityKg: number | null;
   scheduledWindowStart: string | null;
   scheduledWindowEnd: string | null;
   estimatedEtaMinutes: number | null;
@@ -33,6 +35,8 @@ export interface Job {
 
   createdAt: string;
   respondedAt: string | null;
+  /** When the collector tapped Navigate (Accepted -> InProgress). */
+  startedAt: string | null;
   completedAt: string | null;
 }
 

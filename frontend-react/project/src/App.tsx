@@ -97,7 +97,14 @@ const App: React.FC = () => (
           />
 
           {/* Component A — Submission */}
-          <Route path="/submissions/new" element={<SubmitPage />} />
+          <Route
+            path="/submissions/new"
+            element={
+              <ProtectedRoute roles={['household', 'corporate']}>
+                <SubmitPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/submissions/review"
             element={

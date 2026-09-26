@@ -44,13 +44,13 @@ async def plan(req: PlanRequest) -> PlanResponse:
     try:
         state = await create_plan_node(state)
     except Exception as exc:
-        await tools.log_execution(req.workflow_id, 1, req.model_dump(), None, False, str(exc))
+        await tools.log_execution(req.workflow_id, 1, req.model_dump(mode="json"), None, False, str(exc))
         log.exception("Planner /plan failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     await tools.submit_plan(req.workflow_id, state["steps"], state["skip_matcher"], state["plan_reasoning"])
     await tools.log_execution(
-        req.workflow_id, 1, req.model_dump(),
+        req.workflow_id, 1, req.model_dump(mode="json"),
         {"steps": [s.model_dump() for s in state["steps"]], "skip_matcher": state["skip_matcher"]},
         True, None,
     )
@@ -78,13 +78,13 @@ async def finalize(req: FinalizeRequest) -> FinalizeResponse:
     try:
         state = await finalize_node(state)
     except Exception as exc:
-        await tools.log_execution(req.workflow_id, 5, req.model_dump(), None, False, str(exc))
+        await tools.log_execution(req.workflow_id, 5, req.model_dump(mode="json"), None, False, str(exc))
         log.exception("Planner /finalize failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     await tools.submit_final_plan(req.workflow_id, state["final_reasoning_summary"], state["ready_for_job_creation"])
     await tools.log_execution(
-        req.workflow_id, 5, req.model_dump(),
+        req.workflow_id, 5, req.model_dump(mode="json"),
         {"ready_for_job_creation": state["ready_for_job_creation"]}, True, None,
     )
     log.info("Planner /finalize done in %.2fs (workflow=%s)", time.time() - started, req.workflow_id)
