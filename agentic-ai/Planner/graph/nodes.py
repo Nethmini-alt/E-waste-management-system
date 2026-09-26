@@ -116,7 +116,19 @@ async def finalize_node(state: PlannerState) -> PlannerState:
                 "Rewrite this workflow summary in two clear sentences for a staff "
                 f"dashboard, keeping every fact: {summary}"
             )
-            summary = prose.content if hasattr(prose, "content") else summary
+            content = prose.content if hasattr(prose, "content") else summary
+            # Some Gemini responses come back as a list of content-part dicts
+            # (e.g. a "thought signature" part alongside the text) rather than
+            # a plain string. FinalizeResponse.final_reasoning_summary is a
+            # str, so passing the list through as-is fails FastAPI's
+            # response-model validation with an unhandled 500 on every
+            # finalize call that hits this shape.
+            if isinstance(content, list):
+                content = "".join(
+                    part.get("text", "") if isinstance(part, dict) else str(part)
+                    for part in content
+                ).strip()
+            summary = content or summary
         except Exception:
             pass  # fall back to the deterministic summary already built above
 
