@@ -2,7 +2,7 @@ import React from 'react';
 import type { Job, JobHistoryEntry } from './types';
 import { formatDateTime, timeAgo } from './jobStatus';
 
-type Tone = 'neutral' | 'good' | 'bad' | 'staff';
+type Tone = 'neutral' | 'good' | 'bad' | 'staff' | 'agent';
 
 interface Step {
   key: string;
@@ -17,11 +17,16 @@ const DOT: Record<Tone, string> = {
   good: 'bg-mint-600',
   bad: 'bg-rose-500',
   staff: 'bg-amber-500',
+  agent: 'bg-violet-500',
 };
 
-// Staff actions write a reason onto the history row (see JobService);
-// automatic assignments leave it empty.
-const isStaffAction = (h: JobHistoryEntry) => !!h.reason && h.outcome === 'Assigned';
+// Assignment rows carry a reason when something other than plain automatic
+// matching decided (see JobService): the Matcher agent's recommendation, or
+// a staff action. Plain automatic assignments leave it empty.
+const assignmentTone = (h: JobHistoryEntry): Tone => {
+  if (!h.reason) return 'neutral';
+  return h.reason.includes('Matcher') ? 'agent' : 'staff';
+};
 
 const buildSteps = (job: Job, history: JobHistoryEntry[]): Step[] => {
   const steps: Step[] = [{ key: 'created', title: 'Job created from approved submission', at: job.createdAt, tone: 'neutral' }];
@@ -33,7 +38,7 @@ const buildSteps = (job: Job, history: JobHistoryEntry[]): Step[] => {
         title: `Offered to ${h.collectorName}`,
         detail: h.reason ?? 'Chosen by automatic matching',
         at: h.timestamp,
-        tone: isStaffAction(h) ? 'staff' : 'neutral',
+        tone: assignmentTone(h),
       });
     } else if (h.outcome === 'Accepted') {
       steps.push({ key: h.historyId, title: `${h.collectorName} accepted`, at: h.timestamp, tone: 'good' });
@@ -53,6 +58,8 @@ const buildSteps = (job: Job, history: JobHistoryEntry[]): Step[] => {
     steps.push({ key: 'unresolved', title: "Address couldn't be located", detail: 'Waiting for staff to correct it', tone: 'staff' });
   if (job.status === 'NoCollectorAvailable')
     steps.push({ key: 'nocollector', title: 'No collector available', detail: 'Waiting for staff to assign one', tone: 'staff' });
+  if (job.startedAt)
+    steps.push({ key: 'started', title: `${job.collectorName ?? 'Collector'} set off for the pickup`, at: job.startedAt, tone: 'good' });
   if (job.status === 'Completed')
     steps.push({ key: 'completed', title: 'Collected', at: job.completedAt, tone: 'good' });
   if (job.status === 'Cancelled')
