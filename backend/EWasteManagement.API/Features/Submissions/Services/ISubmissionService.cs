@@ -8,5 +8,8 @@ namespace EWasteManagement.Api.Services
         Task<Submission> CreateSubmissionAsync(CreateSubmissionDto dto);
         Task<Submission?> GetSubmissionByIdAsync(Guid id);
         Task ProcessAICallbackAsync(Guid id, AIAnalysisDto aiDto);
+        Task<IEnumerable<Submission>> GetAllSubmissionsAsync();
+        Task<IEnumerable<Submission>> GetSubmissionsByUserIdAsync(Guid userId);
+        Task<Submission?> UpdateStatusAsync(Guid id, string status);
     }
 }

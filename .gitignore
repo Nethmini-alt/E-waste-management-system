@@ -54,3 +54,5 @@ Thumbs.db
 *.secret
 *.key
 *.pem
+appsettings.json
+.env

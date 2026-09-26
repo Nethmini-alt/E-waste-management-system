@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: #bef3f3;
+  color: #0b1512;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------------------------------------------------------------- *
+ * Liquid-glass surface used by GlassCard, the sidebar, auth panels *
+ * ---------------------------------------------------------------- */
+.glass {
+  position: relative;
+  background: rgba(255, 255, 255, 0.466);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 8px 30px -8px rgba(5, 150, 105, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass {
+    background: rgba(11, 21, 18, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Pill / gradient buttons */
+.btn-glass {
+  background: linear-gradient(135deg, #10b981, #047857);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 25px -8px rgba(5, 150, 105, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.btn-glass:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+.btn-glass:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-glass-light {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  color: #065f46;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.btn-glass-light:hover {
+  background: rgba(255, 255, 255, 0.85);
+  transform: translateY(-1px);
+}
+
+/* ---------------------------------------------------------------- *
+ * Faint animated circuit-board texture, used as a cheap CSS-only   *
+ * background layer behind the glass panels (no WebGL cost)         *
+ * ---------------------------------------------------------------- */
+.circuit-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(5, 150, 105, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5, 150, 105, 0.07) 1px, transparent 1px);
+  background-size: 42px 42px;
+  background-color: #f4faf7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .circuit-bg {
+    background-color: #0b1512;
+    background-image:
+      linear-gradient(rgba(45, 212, 191, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45, 212, 191, 0.08) 1px, transparent 1px);
+  }
+}
+
+/* Soft floating gradient blobs, layered above the circuit grid */
+.bg-blob {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.35;
+  animation: blob-float 16s ease-in-out infinite;
+}
+.blob-1 {
+  width: 480px;
+  height: 480px;
+  top: -120px;
+  left: -100px;
+  background: radial-gradient(circle at 30% 30%, #34d399, transparent 70%);
+}
+.blob-2 {
+  width: 420px;
+  height: 420px;
+  bottom: -140px;
+  right: -80px;
+  background: radial-gradient(circle at 60% 60%, #2dd4bf, transparent 70%);
+  animation-delay: -6s;
+}
+.blob-3 {
+  width: 320px;
+  height: 320px;
+  top: 40%;
+  left: 60%;
+  background: radial-gradient(circle at 50% 50%, #facc15, transparent 70%);
+  animation-delay: -11s;
+  opacity: 0.2;
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 25px) scale(0.97); }
+}
+
+/* Full-bleed Hero3D wrapper: fills whatever positioned parent it's in */
+.hero3d-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.font-display {
+  font-family: 'Sora', system-ui, sans-serif;
+}
