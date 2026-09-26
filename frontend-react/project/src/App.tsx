@@ -27,6 +27,9 @@ import PlansListPage from './features/sales/Approvals/PlansListPage';
 import PlanDetailPage from './features/sales/Approvals/PlanDetailPage';
 import ApprovalsPage from './features/sales/Approvals/ApprovalsPage';
 
+import MaterialRequestsPage from './features/sales/MaterialRequests/MaterialRequestsPage';
+import MaterialRequestManagementPage from './features/sales/MaterialRequests/MaterialRequestManagementPage';
+
 import ProcessingRoutes from './features/processing/ProcessingRoutes';
 
 const App: React.FC = () => (
@@ -49,6 +52,24 @@ const App: React.FC = () => (
         >
           <Route index element={<DashboardPage />} />
 
+          {/* Buyer Portal */}
+          <Route
+            path="/material-requests"
+            element={
+              <ProtectedRoute roles={['corporate']}>
+                <MaterialRequestsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/material-requests/manage"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <MaterialRequestManagementPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Component B — Collection & Logistics (staff side; collectors use the Flutter app) */}
           <Route
             path="/collection/jobs"
@@ -66,7 +87,6 @@ const App: React.FC = () => (
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/collection/collectors"
             element={
@@ -77,7 +97,14 @@ const App: React.FC = () => (
           />
 
           {/* Component A — Submission */}
-          <Route path="/submissions/new" element={<SubmitPage />} />
+          <Route
+            path="/submissions/new"
+            element={
+              <ProtectedRoute roles={['household', 'corporate']}>
+                <SubmitPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/submissions/review"
             element={

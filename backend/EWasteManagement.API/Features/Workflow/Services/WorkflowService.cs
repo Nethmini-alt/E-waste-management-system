@@ -17,7 +17,7 @@ public class WorkflowService : IWorkflowService
         _config = config;
     }
 
-    public async Task<CollectionWorkflow> CreateAsync(Guid submissionId, CancellationToken ct = default)
+    public CollectionWorkflow Add(Guid submissionId)
     {
         var workflow = new CollectionWorkflow
         {
@@ -25,6 +25,12 @@ public class WorkflowService : IWorkflowService
             Status = WorkflowStatus.Planning,
         };
         _db.CollectionWorkflows.Add(workflow);
+        return workflow;
+    }
+
+    public async Task<CollectionWorkflow> CreateAsync(Guid submissionId, CancellationToken ct = default)
+    {
+        var workflow = Add(submissionId);
         await _db.SaveChangesAsync(ct);
         return workflow;
     }

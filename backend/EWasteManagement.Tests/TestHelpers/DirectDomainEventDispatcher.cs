@@ -1,4 +1,5 @@
 using EWasteManagement.API.Features.Processing.Events;
+using EWasteManagement.API.Infrastructure.BackgroundTasks;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.API.Shared.Common;
 
@@ -13,6 +14,13 @@ public class DirectDomainEventDispatcher : IDomainEventDispatcher
     {
         foreach (var domainEvent in domainEvents)
             if (domainEvent is InventoryStatusChangedEvent statusChanged)
-                await new InventoryStatusChangedEventHandler(_db).Handle(statusChanged, cancellationToken);
+                await new InventoryStatusChangedEventHandler(_db, new NoOpMaterialRestockQueue()).Handle(statusChanged, cancellationToken);
+    }
+
+    private sealed class NoOpMaterialRestockQueue : IMaterialRestockQueue
+    {
+        public void Enqueue(Guid inventoryItemId) { }
+        public IAsyncEnumerable<Guid> DequeueAllAsync(CancellationToken cancellationToken)
+            => throw new NotImplementedException();
     }
 }

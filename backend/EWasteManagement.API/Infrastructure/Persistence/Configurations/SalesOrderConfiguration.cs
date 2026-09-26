@@ -12,7 +12,7 @@ public class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrder>
         {
             t.HasCheckConstraint(
                 "CK_sales_orders_status",
-                "status IN ('draft','confirmed','completed','cancelled')");
+                "status IN ('waitingforstock','pendingplanapproval','draft','confirmed','completed','cancelled')");
 
             t.HasCheckConstraint(
                 "CK_sales_orders_total_non_negative",
@@ -23,6 +23,9 @@ public class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrder>
         builder.Property(o => o.SalesOrderId).HasColumnName("sales_order_id");
 
         builder.Property(o => o.BuyerId).HasColumnName("buyer_id").IsRequired();
+        builder.Property(o => o.MaterialRequestId).HasColumnName("material_request_id");
+        builder.Property(o => o.PendingMaterialType).HasColumnName("pending_material_type").HasMaxLength(100);
+        builder.Property(o => o.PendingQuantityKg).HasColumnName("pending_quantity_kg").HasPrecision(12, 3);
 
         builder.Property(o => o.OrderDate)
             .HasColumnName("order_date")
@@ -59,6 +62,11 @@ public class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrder>
             .HasForeignKey(o => o.BuyerId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(o => o.MaterialRequest)
+            .WithOne(request => request.SalesOrder)
+            .HasForeignKey<SalesOrder>(o => o.MaterialRequestId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // FK to User (restrict — audit trail)
         builder.HasOne<EWasteManagement.API.Features.Auth.Entities.User>()
             .WithMany()
@@ -68,5 +76,6 @@ public class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrder>
         // Index for revenue reports
         builder.HasIndex(o => new { o.Status, o.OrderDate });
         builder.HasIndex(o => o.BuyerId);
+        builder.HasIndex(o => o.MaterialRequestId).IsUnique();
     }
 }

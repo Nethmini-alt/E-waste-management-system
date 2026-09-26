@@ -7,7 +7,7 @@ import Hero3D from './Hero3D';
 import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
-  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, IdCard, Boxes,
+  Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, ClipboardList, IdCard, Boxes,
   PackagePlus, Wallet, Cpu,
 } from 'lucide-react';
 
@@ -24,7 +24,9 @@ export const Layout = () => {
   const location = useLocation();
   const isStaff = user && ['staff', 'admin'].includes(user.role.toLowerCase());
   const isAdmin = user?.role.toLowerCase() === 'admin';
+  const isBuyer = user?.role.toLowerCase() === 'corporate';
   const isCollector = user?.role.toLowerCase() === 'collector';
+  const isGenerator = user && ['household', 'corporate'].includes(user.role.toLowerCase());
 
   // Collectors work from the Flutter app; the web shell has nothing for them.
   if (isCollector) return <CollectorAppNotice />;
@@ -66,11 +68,24 @@ export const Layout = () => {
             <LayoutDashboard size={16} /> Dashboard
           </NavLink>
 
+          {isBuyer && (
+            <>
+              <div className={sectionLabel}>Buyer Portal</div>
+              <NavLink to="/material-requests" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <ClipboardList size={16} /> Material Requests
+              </NavLink>
+            </>
+          )}
+
+          
+
           {/* Component A — Submission */}
           <div className={sectionLabel}>Component A — Submission</div>
-          <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
-            <Send size={16} /> Submit Item
-          </NavLink>
+          {isGenerator && (
+            <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+              <Send size={16} /> Submit Item
+            </NavLink>
+          )}
           {isAdmin && (
             <NavLink to="/submissions/review" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
               <CheckSquare size={16} /> Submissions Review
@@ -114,6 +129,7 @@ export const Layout = () => {
               <NavLink to="/export-orders" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Ship size={16} /> Export Orders</NavLink>
               <NavLink to="/revenue" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><DollarSign size={16} /> Revenue</NavLink>
               <NavLink to="/plans" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Bot size={16} /> AI Plans</NavLink>
+              <NavLink to="/material-requests/manage" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><ClipboardList size={16} /> Buyer Demand</NavLink>
             </>
           )}
 

@@ -159,6 +159,29 @@ public class CommercialPlanService : ICommercialPlanService
         plan.Status = newStatus;
         plan.UpdatedAt = DateTime.UtcNow;
 
+        var materialRequest = await _db.MaterialRequests
+            .Include(row => row.SalesOrder)
+            .FirstOrDefaultAsync(row => row.CommercialPlanId == plan.CommercialPlanId, ct);
+        if (materialRequest is not null)
+        {
+            if (newStatus == CommercialPlanStatus.Approved)
+            {
+                materialRequest.Status = MaterialRequestStatus.OrderPlaced;
+                if (materialRequest.SalesOrder is not null)
+                    materialRequest.SalesOrder.Status = SalesOrderStatus.Draft;
+            }
+            else if (newStatus == CommercialPlanStatus.Rejected)
+            {
+                materialRequest.Status = MaterialRequestStatus.Cancelled;
+                if (materialRequest.SalesOrder is not null)
+                    materialRequest.SalesOrder.Status = SalesOrderStatus.Cancelled;
+            }
+
+            materialRequest.UpdatedAt = DateTime.UtcNow;
+            if (materialRequest.SalesOrder is not null)
+                materialRequest.SalesOrder.UpdatedAt = DateTime.UtcNow;
+        }
+
         _db.ApprovalActions.Add(new ApprovalAction
         {
             CommercialPlanId = plan.CommercialPlanId,

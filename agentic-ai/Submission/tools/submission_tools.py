@@ -23,7 +23,8 @@ async def _post(path: str, payload: dict):
     async with httpx.AsyncClient(base_url=settings.api_base_url, timeout=30.0) as client:
         r = await client.post(path, json=payload, headers=_headers())
         r.raise_for_status()
-        return r.json()
+        # Some endpoints (e.g. /api/agent/execution-logs) return 200 with no body.
+        return r.json() if r.content else None
 
 
 # ---------- Tool 1: getSubmission ----------

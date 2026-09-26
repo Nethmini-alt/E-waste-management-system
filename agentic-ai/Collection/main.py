@@ -49,7 +49,7 @@ async def run(req: MatcherRunRequest) -> MatcherRunResponse:
     try:
         state = decide_node(state)
     except Exception as exc:
-        await tools.log_execution(req.workflow_id, 4, req.model_dump(), None, False, str(exc))
+        await tools.log_execution(req.workflow_id, 4, req.model_dump(mode="json"), None, False, str(exc))
         log.exception("Matcher run failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -62,7 +62,7 @@ async def run(req: MatcherRunRequest) -> MatcherRunResponse:
     }
     await tools.submit_matching_result(req.workflow_id, result)
     await tools.log_execution(
-        req.workflow_id, 4, req.model_dump(),
+        req.workflow_id, 4, req.model_dump(mode="json"),
         {"recommended_collector_id": result["recommended_collector_id"], "auto_assign": result["auto_assign"]},
         True, None,
     )

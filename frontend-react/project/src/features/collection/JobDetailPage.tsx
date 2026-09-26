@@ -308,7 +308,7 @@ const JobDetailPage: React.FC = () => {
                     <p className="text-sm text-ink-600">
                       {job.status === 'Assigned' && 'Offered the job. Waiting for them to accept or decline in the app.'}
                       {job.status === 'Accepted' && `Accepted${job.respondedAt ? ` ${timeAgo(job.respondedAt)}` : ''}. Heading to the pickup.`}
-                      {job.status === 'InProgress' && 'On the way to the pickup.'}
+                      {job.status === 'InProgress' && `On the way to the pickup${job.startedAt ? `, set off ${timeAgo(job.startedAt)}` : ''}.`}
                       {job.status === 'Completed' && `Collected${job.completedAt ? ` ${timeAgo(job.completedAt)}` : ''}.`}
                       {job.status === 'Cancelled' && 'Was assigned before the job was cancelled.'}
                     </p>
@@ -381,6 +381,12 @@ const JobDetailPage: React.FC = () => {
                   <span className="tabular-nums">
                     {job.pickupLatitude!.toFixed(5)}, {job.pickupLongitude!.toFixed(5)}
                   </span>
+                </Field>
+              )}
+              {job.requiredCapacityKg != null && (
+                <Field label="Estimated load">
+                  <span className="tabular-nums">About {job.requiredCapacityKg} kg</span>
+                  <span className="block text-xs text-ink-600">Only vehicles that can carry this are matched.</span>
                 </Field>
               )}
               {(job.scheduledWindowStart || job.scheduledWindowEnd) && (

@@ -1280,6 +1280,65 @@ namespace EWasteManagement.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", b =>
+                {
+                    b.Property<Guid>("MaterialRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("material_request_id");
+
+                    b.Property<Guid>("BuyerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("buyer_id");
+
+                    b.Property<Guid?>("CommercialPlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("commercial_plan_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("MaterialType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("material_type");
+
+                    b.Property<decimal>("QuantityKg")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("quantity_kg");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("MaterialRequestId");
+
+                    b.HasIndex("BuyerId");
+
+                    b.HasIndex("CommercialPlanId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "MaterialType");
+
+                    b.ToTable("material_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_material_requests_quantity_positive", "quantity_kg > 0");
+
+                            t.HasCheckConstraint("ck_material_requests_status", "status IN ('waiting','generatingplan','plangenerated','plangenerationfailed','orderplaced','fulfilled','cancelled')");
+                        });
+                });
+
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.RevenueTransaction", b =>
                 {
                     b.Property<Guid>("RevenueId")
@@ -1355,6 +1414,10 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<Guid?>("MaterialRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("material_request_id");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text")
                         .HasColumnName("notes");
@@ -1364,6 +1427,16 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("order_date")
                         .HasDefaultValueSql("now()");
+
+                    b.Property<string>("PendingMaterialType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("pending_material_type");
+
+                    b.Property<decimal?>("PendingQuantityKg")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)")
+                        .HasColumnName("pending_quantity_kg");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1386,11 +1459,14 @@ namespace EWasteManagement.API.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
+                    b.HasIndex("MaterialRequestId")
+                        .IsUnique();
+
                     b.HasIndex("Status", "OrderDate");
 
                     b.ToTable("sales_orders", null, t =>
                         {
-                            t.HasCheckConstraint("CK_sales_orders_status", "status IN ('draft','confirmed','completed','cancelled')");
+                            t.HasCheckConstraint("CK_sales_orders_status", "status IN ('waitingforstock','pendingplanapproval','draft','confirmed','completed','cancelled')");
 
                             t.HasCheckConstraint("CK_sales_orders_total_non_negative", "total_amount >= 0");
                         });
@@ -1893,6 +1969,24 @@ namespace EWasteManagement.API.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", b =>
+                {
+                    b.HasOne("EWasteManagement.API.Features.Sales.Entities.Buyer", "Buyer")
+                        .WithMany()
+                        .HasForeignKey("BuyerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EWasteManagement.API.Features.Sales.Entities.CommercialPlan", "CommercialPlan")
+                        .WithMany()
+                        .HasForeignKey("CommercialPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Buyer");
+
+                    b.Navigation("CommercialPlan");
+                });
+
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.RevenueTransaction", b =>
                 {
                     b.HasOne("EWasteManagement.API.Features.Auth.Entities.User", "RecordedByUser")
@@ -1918,7 +2012,14 @@ namespace EWasteManagement.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", "MaterialRequest")
+                        .WithOne("SalesOrder")
+                        .HasForeignKey("EWasteManagement.API.Features.Sales.Entities.SalesOrder", "MaterialRequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Buyer");
+
+                    b.Navigation("MaterialRequest");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.SalesOrderItem", b =>
@@ -1987,6 +2088,11 @@ namespace EWasteManagement.API.Migrations
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.ExportOrder", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.MaterialRequest", b =>
+                {
+                    b.Navigation("SalesOrder");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Sales.Entities.SalesOrder", b =>
