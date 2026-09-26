@@ -26,6 +26,7 @@ export const Layout = () => {
   const isAdmin = user?.role.toLowerCase() === 'admin';
   const isBuyer = user?.role.toLowerCase() === 'corporate';
   const isCollector = user?.role.toLowerCase() === 'collector';
+  const isGenerator = user && ['household', 'corporate'].includes(user.role.toLowerCase());
 
   // Collectors work from the Flutter app; the web shell has nothing for them.
   if (isCollector) return <CollectorAppNotice />;
@@ -80,9 +81,11 @@ export const Layout = () => {
 
           {/* Component A — Submission */}
           <div className={sectionLabel}>Component A — Submission</div>
-          <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
-            <Send size={16} /> Submit Item
-          </NavLink>
+          {isGenerator && (
+            <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+              <Send size={16} /> Submit Item
+            </NavLink>
+          )}
           {isAdmin && (
             <NavLink to="/submissions/review" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
               <CheckSquare size={16} /> Submissions Review

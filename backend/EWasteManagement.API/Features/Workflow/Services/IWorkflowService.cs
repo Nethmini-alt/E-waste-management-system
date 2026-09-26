@@ -10,6 +10,11 @@ namespace EWasteManagement.API.Features.Workflow.Services;
 /// </summary>
 public interface IWorkflowService
 {
+    /// <summary>
+    /// Stages a new Planning workflow on the shared DbContext WITHOUT saving,
+    /// so the caller can commit it in the same SaveChanges as the submission.
+    /// </summary>
+    CollectionWorkflow Add(Guid submissionId);
     Task<CollectionWorkflow> CreateAsync(Guid submissionId, CancellationToken ct = default);
     Task<CollectionWorkflow?> GetAsync(Guid workflowId, CancellationToken ct = default);
     Task<List<CollectionWorkflow>> ListAsync(string? status, CancellationToken ct = default);

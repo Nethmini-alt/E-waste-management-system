@@ -10,7 +10,11 @@ namespace EWasteManagement.API.Features.Workflow.Services;
 /// </summary>
 public interface IWorkflowOrchestrationService
 {
-    Task StartAsync(Guid submissionId, CancellationToken ct = default);
+    /// <summary>
+    /// Queues an already-saved workflow for the background chain. Call only
+    /// after the workflow row has been committed (see IWorkflowService.Add).
+    /// </summary>
+    void Start(Guid workflowId);
     Task RunChainAsync(Guid workflowId, CancellationToken ct = default);
 
     /// <summary>
