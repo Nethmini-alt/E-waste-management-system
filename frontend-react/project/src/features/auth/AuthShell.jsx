@@ -9,7 +9,7 @@ import Hero3D from '../../components/Hero3D';
  * landing page: circuit texture, animated Hero3D e-waste field, glass card.
  */
 export const AuthShell = ({ title, icon: Icon, children, wide = false }) => (
-  <div className="relative min-h-screen flex items-center justify-center px-4 py-10 overflow-hidden">
+  <div className="relative min-h-screen flex items-center justify-center px-4 pt-10 pb-20 overflow-hidden">
     <div className="circuit-bg" />
     <div className="absolute inset-0 z-0">
       <Hero3D density="lite" />
@@ -33,6 +33,14 @@ export const AuthShell = ({ title, icon: Icon, children, wide = false }) => (
       </h2>
       {children}
     </div>
+
+    <footer className="fixed inset-x-0 bottom-4 z-10 flex justify-center px-4">
+      <div className="glass flex items-center gap-3 rounded-full px-4 py-1.5 text-[11px] text-ink-600">
+        <span>© {new Date().getFullYear()} E-Waste Management System</span>
+        <span className="text-mint-300">•</span>
+        <Link to="/impact" className="font-semibold text-mint-700 hover:underline">E-waste &amp; impact</Link>
+      </div>
+    </footer>
   </div>
 );
 

@@ -9,6 +9,10 @@ import type { MaterialPricing } from './types';
 import MaterialPricingFormModal, {
   type MaterialPricingFormValues,
 } from './MaterialPricingFormModal';
+import {
+  EmptyState, ErrorMessage, GlassCard, PageHeader,
+  btnPrimary, btnSecondary, inputClass, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const MaterialPricingListPage: React.FC = () => {
   const [rows, setRows] = useState<MaterialPricing[]>([]);
@@ -130,136 +134,106 @@ const MaterialPricingListPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Tag size={22} /> Material Pricing
-        </h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-          <button
-            onClick={handleExpireStale}
-            style={btnSecondary}
-            title="Mark every approved price whose expiry date has passed as Expired"
-          >
-            <Clock size={14} /> Expire past dates
-          </button>
-          <button
-            onClick={() => { setEditing(null); setModalOpen(true); }}
-            style={btnPrimary}
-          >
-            <Plus size={14} /> New Price
-          </button>
+      <PageHeader
+        title="Material pricing"
+        icon={Tag}
+        actions={
+          <>
+            <button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+            <button onClick={handleExpireStale} className={btnSecondary} title="Mark every approved price whose expiry date has passed as Expired">
+              <Clock size={14} /> Expire past dates
+            </button>
+            <button onClick={() => { setEditing(null); setModalOpen(true); }} className={btnPrimary}>
+              <Plus size={14} /> New price
+            </button>
+          </>
+        }
+      />
+
+      <GlassCard hover={false} className="mb-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-600" />
+            <input
+              placeholder="Search material or author…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
+            <option value="All">All statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="Approved">Approved</option>
+            <option value="Expired">Expired</option>
+          </select>
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-        <div style={searchBox}>
-          <Search size={16} color="#888" />
-          <input
-            placeholder="Search material or author…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={searchInput}
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          style={selectStyle}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Draft">Draft</option>
-          <option value="Approved">Approved</option>
-          <option value="Expired">Expired</option>
-        </select>
-      </div>
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
 
-      {loading && <p>Loading pricing…</p>}
-      {error && <div style={errorBox}>{error}</div>}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div style={emptyBox}>
-          <Tag size={40} color="#bbb" />
-          <p>No pricing rows found. Click <strong>New Price</strong> to add one.</p>
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              <th style={th}>Material</th>
-              <th style={th}>Price / kg</th>
-              <th style={th}>Effective</th>
-              <th style={th}>Expiry</th>
-              <th style={th}>Status</th>
-              <th style={th}>Created By</th>
-              <th style={th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.pricingId} style={{ borderTop: '1px solid #eee' }}>
-                <td style={{ ...td, fontWeight: 'bold' }}>{p.materialType}</td>
-                <td style={td}>Rs. {p.pricePerKg.toFixed(2)}</td>
-                <td style={td}>{p.effectiveDate}</td>
-                <td style={td}>{p.expiryDate ?? '—'}</td>
-                <td style={td}>
-                  <StatusPill status={p.status} />
-                  {p.status === 'Approved' && !p.isLive && (
-                    <div
-                      style={staleNote}
-                      title="The expiry date has passed, so orders cannot use this price. Mark it Expired (or let the background sweep do it)."
-                    >
-                      expiry passed
-                    </div>
-                  )}
-                </td>
-                <td style={{ ...td, fontSize: 13, color: '#666' }}>
-                  {p.createdByName || '—'}
-                </td>
-                <td style={td}>
-                  {p.status === 'Draft' && (
-                    <button
-                      onClick={() => handleStatusChange(p, 'Approved')}
-                      style={{ ...iconBtn, color: '#2e7d32' }}
-                      title="Approve"
-                    >
-                      <CheckCircle2 size={16} />
-                    </button>
-                  )}
-                  {p.status === 'Approved' && (
-                    <button
-                      onClick={() => handleStatusChange(p, 'Expired')}
-                      style={{ ...iconBtn, color: '#e65100' }}
-                      title="Mark Expired"
-                    >
-                      <Clock size={16} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => { setEditing(p); setModalOpen(true); }}
-                    style={iconBtn}
-                    title="Edit"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  {p.status === 'Draft' && (
-                    <button
-                      onClick={() => handleDelete(p)}
-                      style={{ ...iconBtn, color: '#c62828' }}
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <GlassCard hover={false} padded={false}>
+        {loading && !rows.length ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-600">Loading pricing…</p>
+        ) : !error && filtered.length === 0 ? (
+          <EmptyState icon={Tag} title="No pricing rows found" description='Click "New price" to add one.' />
+        ) : !error ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-mint-100">
+                  <th className={`${tableHeadClass} px-4 py-3`}>Material</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Price / kg</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Effective</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Expiry</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Created by</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.pricingId} className="border-b border-mint-50 last:border-0">
+                    <td className={`${tableCellClass} font-semibold text-ink-900`}>{p.materialType}</td>
+                    <td className={tableCellClass}>Rs. {p.pricePerKg.toFixed(2)}</td>
+                    <td className={tableCellClass}>{p.effectiveDate}</td>
+                    <td className={tableCellClass}>{p.expiryDate ?? '—'}</td>
+                    <td className={tableCellClass}>
+                      <StatusPill status={p.status} />
+                      {p.status === 'Approved' && !p.isLive && (
+                        <div className="mt-1 text-[11px] font-bold text-amber-700" title="The expiry date has passed, so orders cannot use this price. Mark it Expired (or let the background sweep do it).">
+                          expiry passed
+                        </div>
+                      )}
+                    </td>
+                    <td className={`${tableCellClass} text-ink-600`}>{p.createdByName || '—'}</td>
+                    <td className={tableCellClass}>
+                      {p.status === 'Draft' && (
+                        <button onClick={() => handleStatusChange(p, 'Approved')} className="mr-1 rounded-lg p-1.5 text-mint-700 hover:bg-mint-50" title="Approve">
+                          <CheckCircle2 size={16} />
+                        </button>
+                      )}
+                      {p.status === 'Approved' && (
+                        <button onClick={() => handleStatusChange(p, 'Expired')} className="mr-1 rounded-lg p-1.5 text-amber-700 hover:bg-amber-50" title="Mark expired">
+                          <Clock size={16} />
+                        </button>
+                      )}
+                      <button onClick={() => { setEditing(p); setModalOpen(true); }} className="mr-1 rounded-lg p-1.5 text-ink-700 hover:bg-mint-50" title="Edit">
+                        <Pencil size={16} />
+                      </button>
+                      {p.status === 'Draft' && (
+                        <button onClick={() => handleDelete(p)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </GlassCard>
 
       <MaterialPricingFormModal
         open={modalOpen}
@@ -282,56 +256,8 @@ const MaterialPricingListPage: React.FC = () => {
 };
 
 const StatusPill: React.FC<{ status: MaterialPricing['status'] }> = ({ status }) => {
-  const map = {
-    Draft: { bg: '#fff3e0', fg: '#e65100' },
-    Approved: { bg: '#e8f5e9', fg: '#2e7d32' },
-    Expired: { bg: '#eceff1', fg: '#546e7a' },
-  } as const;
-  const c = map[status];
-  return (
-    <span
-      style={{
-        background: c.bg, color: c.fg, fontWeight: 'bold',
-        fontSize: 12, padding: '4px 10px', borderRadius: 4,
-      }}
-    >
-      {status}
-    </span>
-  );
-};
-
-const staleNote: React.CSSProperties = {
-  marginTop: 4, fontSize: 11, fontWeight: 'bold', color: '#e65100',
-};
-const th: React.CSSProperties = { padding: 10, fontSize: 13, fontWeight: 'bold' };
-const td: React.CSSProperties = { padding: 10, fontSize: 14 };
-const btnPrimary: React.CSSProperties = {
-  background: '#1565c0', color: '#fff', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold',
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const iconBtn: React.CSSProperties = {
-  background: 'transparent', border: 'none', cursor: 'pointer',
-  padding: 6, marginRight: 4,
-};
-const searchBox: React.CSSProperties = {
-  flex: 1, display: 'flex', alignItems: 'center', gap: 6,
-  background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: '0 10px',
-};
-const searchInput: React.CSSProperties = { flex: 1, border: 'none', outline: 'none', padding: 8 };
-const selectStyle: React.CSSProperties = {
-  padding: 8, borderRadius: 6, border: '1px solid #ccc',
-};
-const errorBox: React.CSSProperties = {
-  padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6,
-};
-const emptyBox: React.CSSProperties = {
-  padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
-  border: '1px dashed #ccc',
+  const cls = status === 'Approved' ? 'bg-mint-100 text-mint-800' : status === 'Expired' ? 'bg-ink-100 text-ink-700' : 'bg-amber-100 text-amber-800';
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cls}`}>{status}</span>;
 };
 
 export default MaterialPricingListPage;
