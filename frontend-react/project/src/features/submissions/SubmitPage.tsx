@@ -1,60 +1,101 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  CheckCircle, AlertTriangle, Cpu, Loader, ShieldAlert,
-  Tag, Weight, DollarSign,
+  CheckCircle, AlertTriangle, Cpu, ShieldAlert,
+  Tag, Weight, DollarSign, Plus, Trash2, Clock,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
-import { IN_PROGRESS_STATUSES, type SubmissionResponse } from './types';
+import { extractFieldErrors, extractGeneralError, type SubmissionFieldErrors } from './submissionErrors';
+import { IN_PROGRESS_STATUSES, SUBMISSION_CATEGORIES, type SubmissionResponse } from './types';
+import { SubmissionProgress } from './SubmissionProgress';
+
+// Statuses SubmissionProgress can represent as a normal step reached along
+// the happy path (including the successful end states it marks "done").
+const PROGRESS_STATUSES = ['Analyzing', 'AwaitingReview', 'Scheduling', 'CollectorAssigned', 'AwaitingCollector', 'Collected', 'Closed'];
+
+const POLL_INTERVAL_MS = 1500;
+const POLL_TIMEOUT_MS = 2 * 60 * 1000;
+
+interface ItemDraft {
+  key: string;
+  itemName: string;
+  description: string;
+  imageUrl: string;
+}
+
+const newItem = (): ItemDraft => ({ key: crypto.randomUUID(), itemName: '', description: '', imageUrl: '' });
 
 const SubmitPage: React.FC = () => {
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [category, setCategory] = useState('');
   const [estimatedWeight, setEstimatedWeight] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [items, setItems] = useState<ItemDraft[]>([newItem()]);
+
   const [loading, setLoading] = useState(false);
   const [submission, setSubmission] = useState<SubmissionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<SubmissionFieldErrors | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
 
-  const polling = !!submission && IN_PROGRESS_STATUSES.includes(submission.status);
+  const polling = !!submission && IN_PROGRESS_STATUSES.includes(submission.status) && !timedOut;
+
+  const updateItem = (key: string, patch: Partial<ItemDraft>) =>
+    setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
+  const addItem = () => setItems((prev) => (prev.length >= 10 ? prev : [...prev, newItem()]));
+  const removeItem = (key: string) => setItems((prev) => (prev.length <= 1 ? prev : prev.filter((it) => it.key !== key)));
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setSubmission(null);
     setError(null);
+    setFieldErrors(null);
+    setTimedOut(false);
 
     try {
+      // Owner and user type come from the logged-in session on the backend
+      // (the JWT), never from this payload.
       const data = await submissionApi.create({
         category,
         estimatedWeight: Number(estimatedWeight),
         pickupAddress,
         phoneNumber,
-        items: [{ itemName: 'E-Waste Item', description, imageUrl }],
+        items: items.map(({ itemName, description, imageUrl }) => ({ itemName, description, imageUrl })),
       });
       setSubmission(data);
     } catch (err) {
       console.error(err);
-      setError('Failed to submit item. Make sure the .NET backend is running.');
+      const fields = extractFieldErrors(err);
+      if (fields) setFieldErrors(fields);
+      else setError(extractGeneralError(err));
     } finally {
       setLoading(false);
     }
   };
 
-  // Poll while the agent chain is still working on its own. It stops at
-  // AwaitingReview (a human has to act) and at every final status.
+  // Poll while the agent chain is still working on its own. Stops as soon as
+  // the derived status leaves Analyzing/Scheduling — that covers every pause
+  // (AwaitingReview) and every terminal outcome (CollectorAssigned, Rejected,
+  // Failed, Cancelled, Closed, ...) in one check, not a list of old values.
   const submissionId = submission?.id;
+  const pollStartedAt = useRef<number>(0);
   useEffect(() => {
     if (!polling || !submissionId) return;
+    pollStartedAt.current = Date.now();
     const timer = setInterval(async () => {
+      if (Date.now() - pollStartedAt.current >= POLL_TIMEOUT_MS) {
+        setTimedOut(true);
+        return;
+      }
       try {
         setSubmission(await submissionApi.getById(submissionId));
       } catch (err) {
         console.error('Polling error:', err);
       }
-    }, 1500);
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [polling, submissionId]);
 
   const ai = submission?.workflow?.analysis;
@@ -65,44 +106,24 @@ const SubmitPage: React.FC = () => {
         <Cpu /> Smart E-Waste Collector
       </h2>
       <p style={{ color: '#666' }}>
-        Upload e-waste items for instant AI assessment & hazard categorization.
+        Submit e-waste items for pickup — our AI assesses hazard level and category automatically.
       </p>
 
       <form onSubmit={handleSubmit} style={formStyle}>
         <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Item Description:</label>
-          <textarea
-            rows={3}
-            style={inputStyle}
-            placeholder="e.g. Swollen lithium battery leaking chemical liquid…"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Image URL:</label>
-          <input
-            type="url"
-            style={inputStyle}
-            placeholder="https://example.com/image.jpg"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: 15 }}>
           <label style={labelStyle}>Category:</label>
-          <input
-            type="text"
+          <select
             style={inputStyle}
-            placeholder="e.g. IT Equipment"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             required
-          />
+          >
+            <option value="" disabled>Select a category…</option>
+            {SUBMISSION_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <FieldError message={fieldErrors?.category} />
         </div>
 
         <div style={{ marginBottom: 15 }}>
@@ -116,6 +137,7 @@ const SubmitPage: React.FC = () => {
             onChange={(e) => setEstimatedWeight(e.target.value)}
             required
           />
+          <FieldError message={fieldErrors?.estimatedWeight} />
         </div>
 
         <div style={{ marginBottom: 15 }}>
@@ -128,6 +150,7 @@ const SubmitPage: React.FC = () => {
             onChange={(e) => setPickupAddress(e.target.value)}
             required
           />
+          <FieldError message={fieldErrors?.pickupAddress} />
         </div>
 
         <div style={{ marginBottom: 15 }}>
@@ -135,19 +158,67 @@ const SubmitPage: React.FC = () => {
           <input
             type="tel"
             style={inputStyle}
-            placeholder="e.g. 0771234567"
+            placeholder="e.g. 0771234567 or +94771234567"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             required
           />
+          <FieldError message={fieldErrors?.phoneNumber} />
+        </div>
+
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>Items ({items.length}/10):</label>
+          <FieldError message={fieldErrors?.itemsGeneral} />
+
+          {items.map((item, i) => (
+            <div key={item.key} style={itemCard}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong style={{ fontSize: 13 }}>Item {i + 1}</strong>
+                {items.length > 1 && (
+                  <button type="button" onClick={() => removeItem(item.key)} style={removeBtn} aria-label={`Remove item ${i + 1}`}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="text"
+                style={{ ...inputStyle, marginBottom: 6 }}
+                placeholder="Item name (e.g. Laptop)"
+                value={item.itemName}
+                onChange={(e) => updateItem(item.key, { itemName: e.target.value })}
+                required
+              />
+              <FieldError message={fieldErrors?.items[i]?.itemName} />
+
+              <textarea
+                rows={2}
+                style={{ ...inputStyle, marginBottom: 6 }}
+                placeholder="Description (e.g. Old laptop, screen cracked, still boots)"
+                value={item.description}
+                onChange={(e) => updateItem(item.key, { description: e.target.value })}
+                required
+              />
+              <FieldError message={fieldErrors?.items[i]?.description} />
+
+              <input
+                type="url"
+                style={inputStyle}
+                placeholder="Image URL (optional)"
+                value={item.imageUrl}
+                onChange={(e) => updateItem(item.key, { imageUrl: e.target.value })}
+              />
+              <FieldError message={fieldErrors?.items[i]?.imageUrl} />
+            </div>
+          ))}
+
+          <button type="button" onClick={addItem} disabled={items.length >= 10} style={addItemBtn}>
+            <Plus size={14} /> Add another item
+          </button>
         </div>
 
         <button type="submit" disabled={loading || polling} style={submitBtn}>
-          {loading
-            ? 'Submitting…'
-            : polling
-            ? 'Analyzing…'
-            : 'Submit E-Waste Item'}
+          {loading ? 'Submitting…' : polling ? 'Processing…' : 'Submit E-Waste Item'}
         </button>
       </form>
 
@@ -164,17 +235,38 @@ const SubmitPage: React.FC = () => {
           </h3>
           <p><strong>ID:</strong> <code>{submission.id}</code></p>
           <p><strong>Status:</strong> {submission.statusLabel}</p>
-          {submission.statusReason && (
-            <p><strong>Reason:</strong> {submission.statusReason}</p>
+
+          {PROGRESS_STATUSES.includes(submission.status) && (
+            <SubmissionProgress
+              status={submission.status}
+              approvalRequired={!!submission.workflow?.approvalRequired}
+            />
           )}
 
-          {polling ? (
+          {submission.status === 'Failed' && submission.statusReason && (
+            <div style={failureBox}>
+              <AlertTriangle size={16} /> <span><strong>Failure reason:</strong> {submission.statusReason}</span>
+            </div>
+          )}
+          {submission.status === 'Rejected' && (
+            <div style={failureBox}>
+              <AlertTriangle size={16} />
+              <span><strong>Rejected.</strong>{submission.statusReason ? ` ${submission.statusReason}` : ''}</span>
+            </div>
+          )}
+
+          {timedOut ? (
             <div style={pollingBox}>
-              <Loader
-                size={16}
-                style={{ animation: 'spin 1s linear infinite' }}
-              />
-              <span>AI is analyzing your image & description…</span>
+              <Clock size={16} />
+              <span>
+                Still processing after 2 minutes. Check{' '}
+                <Link to="/submissions/mine" style={{ color: '#e65100', fontWeight: 'bold' }}>My Submissions</Link>{' '}
+                for updates.
+              </span>
+            </div>
+          ) : polling ? (
+            <div style={pollingBox}>
+              <span>AI is analyzing your submission…</span>
             </div>
           ) : ai ? (
             <div style={aiResultBox}>
@@ -198,7 +290,7 @@ const SubmitPage: React.FC = () => {
                 <p><Weight size={14} /> <strong>Est. Weight:</strong> {ai.estimatedVolumeKg} kg</p>
                 <p><DollarSign size={14} /> <strong>Est. Value:</strong> ${ai.estimatedValueUsd}</p>
               </div>
-              {submission.workflow?.approvalRequired && (
+              {submission.workflow?.approvalRequired && submission.status === 'AwaitingReview' && (
                 <p style={{ marginTop: 10, fontWeight: 'bold', color: '#c62828' }}>
                   ⚠️ Requires Admin Approval
                 </p>
@@ -210,6 +302,9 @@ const SubmitPage: React.FC = () => {
     </div>
   );
 };
+
+const FieldError: React.FC<{ message?: string }> = ({ message }) =>
+  message ? <p style={fieldErrorStyle}>{message}</p> : null;
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
@@ -223,11 +318,43 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid #ccc',
   boxSizing: 'border-box',
 };
+const fieldErrorStyle: React.CSSProperties = {
+  margin: '4px 0 0 0',
+  color: '#c62828',
+  fontSize: 12,
+};
 const formStyle: React.CSSProperties = {
   background: '#f9f9f9',
   padding: 20,
   borderRadius: 8,
   border: '1px solid #ddd',
+};
+const itemCard: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #ddd',
+  borderRadius: 6,
+  padding: 12,
+  marginBottom: 10,
+};
+const removeBtn: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  color: '#c62828',
+  cursor: 'pointer',
+  padding: 4,
+  display: 'flex',
+};
+const addItemBtn: React.CSSProperties = {
+  background: '#eee',
+  color: '#333',
+  border: '1px dashed #999',
+  padding: '8px 14px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  fontSize: 13,
 };
 const submitBtn: React.CSSProperties = {
   background: '#2e7d32',
@@ -263,6 +390,16 @@ const pollingBox: React.CSSProperties = {
   background: '#fff3e0',
   padding: 12,
   borderRadius: 6,
+};
+const failureBox: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 8,
+  color: '#c62828',
+  background: '#ffebee',
+  padding: 12,
+  borderRadius: 6,
+  marginTop: 10,
 };
 const aiResultBox: React.CSSProperties = {
   marginTop: 15,

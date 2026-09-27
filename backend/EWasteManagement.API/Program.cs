@@ -107,6 +107,10 @@ builder.Services.AddHttpClient<IMatcherAgentClient, MatcherAgentClient>();
 // with the app and runs for the app's whole lifetime.
 builder.Services.AddSingleton<IWorkflowBackgroundQueue, WorkflowBackgroundQueue>();
 builder.Services.AddHostedService<WorkflowQueueProcessor>();
+
+// Runs once at startup: re-queues workflows a restart interrupted mid-chain
+// (the queue above is in memory). Leaves PendingApproval for the admin.
+builder.Services.AddHostedService<WorkflowStartupRecovery>();
 builder.Services.AddSingleton<IMaterialRestockQueue, MaterialRestockQueue>();
 builder.Services.AddHostedService<MaterialRestockQueueProcessor>();
 

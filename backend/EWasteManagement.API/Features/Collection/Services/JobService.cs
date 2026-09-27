@@ -9,6 +9,11 @@ namespace EWasteManagement.API.Features.Collection.Services;
 public interface IJobService
 {
     Task<JobResponseDto> CreateAndAssignAsync(CreateJobDto dto);
+
+    // The most recent job created for a submission, if any. Lets the workflow
+    // Finalize step reuse a job instead of creating a duplicate when it runs
+    // again for the same submission.
+    Task<Guid?> FindJobIdForSubmissionAsync(Guid submissionId);
     Task<JobResponseDto> AcceptAsync(Guid jobId, Guid requestingUserId);
     Task<JobResponseDto> RejectAsync(Guid jobId, Guid requestingUserId, RejectJobDto dto);
     Task<JobResponseDto> StartAsync(Guid jobId, Guid requestingUserId);
@@ -81,6 +86,13 @@ public class JobService : IJobService
 
         return await ToDtoAsync(job);
     }
+
+    public Task<Guid?> FindJobIdForSubmissionAsync(Guid submissionId) =>
+        _db.Jobs
+            .Where(j => j.SubmissionId == submissionId)
+            .OrderByDescending(j => j.CreatedAt)
+            .Select(j => (Guid?)j.JobId)
+            .FirstOrDefaultAsync();
 
     public async Task<JobResponseDto> AcceptAsync(Guid jobId, Guid requestingUserId)
     {
