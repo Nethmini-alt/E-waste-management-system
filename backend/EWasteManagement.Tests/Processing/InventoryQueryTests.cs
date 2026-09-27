@@ -26,7 +26,7 @@ public class InventoryQueryTests : IAsyncLifetime
         _db = new ApplicationDbContext(options, new NoOpDomainEventDispatcher());
         await _db.Database.EnsureCreatedAsync();
 
-        _inventory = new InventoryProcessingService(_db);
+        _inventory = new InventoryProcessingService(_db, new ItemTypeCatalogService(_db));
         _payments = new CollectorPaymentService(_db, Array.Empty<IPaymentCalculator>());
 
         var receiving = new WarehouseLocation { Name = "Receiving Bay" };

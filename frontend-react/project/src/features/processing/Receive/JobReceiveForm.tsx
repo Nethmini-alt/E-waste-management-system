@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, MapPin, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
 import { receiveApi } from './receiveApi';
 import type { ReceivableJob, ReceiveJobWasteResponse } from './types';
-import { useWarehouseLocations } from '../hooks/useLookups';
+import { useItemTypes, useWarehouseLocations } from '../hooks/useLookups';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDateTime, formatKg, formatSignedKg, shortId } from '../utils/format';
 import {
@@ -23,6 +23,7 @@ const collectorLabel = (job: ReceivableJob): string =>
 
 const JobReceiveForm: React.FC = () => {
   const locations = useWarehouseLocations();
+  const itemTypes = useItemTypes();
 
   // The server only returns completed jobs that have a collector and are not yet received, so a refresh
   // never brings a received job back. There is no client-side "already received" bookkeeping.
@@ -33,6 +34,7 @@ const JobReceiveForm: React.FC = () => {
 
   const [selected, setSelected] = useState<ReceivableJob | null>(null);
   const [weight, setWeight] = useState('');
+  const [itemType, setItemType] = useState('');
   const [locationId, setLocationId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -77,6 +79,8 @@ const JobReceiveForm: React.FC = () => {
   const selectJob = (job: ReceivableJob) => {
     setSelected(job);
     setWeight(job.reportedWeightKg !== null ? String(job.reportedWeightKg) : '');
+    // Pre-select the customer's category when it is on the list; otherwise staff must choose.
+    setItemType(job.suggestedItemType ?? '');
     setSubmitted(false);
     setError(null);
   };
@@ -84,6 +88,7 @@ const JobReceiveForm: React.FC = () => {
   const weightNum = Number(weight);
   const problems: string[] = [];
   if (selected) {
+    if (!itemType) problems.push('Choose what the collected waste is (item type).');
     if (!(weightNum > 0)) problems.push('Enter the verified weight (greater than 0).');
     if (!locationId) problems.push('Choose the warehouse location.');
   }
@@ -102,6 +107,7 @@ const JobReceiveForm: React.FC = () => {
         collectorId: selected.collectorId,
         warehouseLocationId: locationId,
         verifiedWeightKg: weightNum,
+        itemType,
       });
       setResult(res);
     } catch (err) {
@@ -117,6 +123,7 @@ const JobReceiveForm: React.FC = () => {
     setResult(null);
     setSelected(null);
     setWeight('');
+    setItemType('');
     setSubmitted(false);
     setError(null);
     loadJobs();
@@ -134,7 +141,9 @@ const JobReceiveForm: React.FC = () => {
           </span>
           <div>
             <h3 className="font-display text-lg font-bold text-ink-900">Job received into inventory</h3>
-            <p className="text-sm text-ink-600">A new inventory item was created and a pending payment was raised for the job's collector.</p>
+            <p className="text-sm text-ink-600">
+              A new <span className="font-semibold text-ink-900">{result.itemType}</span> inventory item was created and a pending payment was raised for the job's collector.
+            </p>
           </div>
         </div>
 
@@ -239,6 +248,7 @@ const JobReceiveForm: React.FC = () => {
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-600">
                         <span>{collectorLabel(job)}</span>
+                        {job.submissionCategory && <span>Category: {job.submissionCategory}</span>}
                         <span>Reported {job.reportedWeightKg !== null ? formatKg(job.reportedWeightKg) : 'n/a'}</span>
                         {job.estimatedDistanceKm !== null && <span>{job.estimatedDistanceKm} km</span>}
                         <span>Completed {formatDateTime(job.completedAt)}</span>
@@ -263,6 +273,26 @@ const JobReceiveForm: React.FC = () => {
               <p className="font-semibold text-ink-900">{selected.pickupAddress}</p>
               <p className="mt-0.5 text-ink-600">Collector: {collectorLabel(selected)}</p>
               <p className="mt-0.5 text-[11px] text-ink-600">The payment always goes to the job's own collector.</p>
+            </div>
+
+            <div>
+              <label className={labelClass} htmlFor="jr-type">
+                Item type
+              </label>
+              <select id="jr-type" value={itemType} onChange={(e) => setItemType(e.target.value)} className={inputClass} disabled={itemTypes.loading}>
+                <option value="">{itemTypes.loading ? 'Loading…' : 'Choose what was collected…'}</option>
+                {itemTypes.data.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+              {selected.submissionCategory && !selected.suggestedItemType && (
+                <p className="mt-1 text-xs text-amber-700">
+                  The customer's category “{selected.submissionCategory}” isn't a known item type — choose the closest match.
+                </p>
+              )}
+              {itemTypes.error && <ErrorMessage className="mt-2" message={itemTypes.error} onRetry={itemTypes.reload} />}
             </div>
 
             <div>

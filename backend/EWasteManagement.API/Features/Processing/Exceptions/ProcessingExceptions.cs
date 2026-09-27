@@ -39,3 +39,10 @@ public class PaymentAlreadyPaidException : Exception
     public PaymentAlreadyPaidException(Guid paymentId)
         : base($"Payment '{paymentId}' has already been marked paid.") { }
 }
+
+// Only one active rate per item type (compared ignoring case, which the database index does not do).
+public class DuplicateActiveRatePolicyException : Exception
+{
+    public DuplicateActiveRatePolicyException(string itemType)
+        : base($"'{itemType}' already has an active rate. Revise that rate instead of adding another.") { }
+}

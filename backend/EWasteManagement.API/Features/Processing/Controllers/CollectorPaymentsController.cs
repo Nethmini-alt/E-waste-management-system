@@ -31,7 +31,10 @@ public class CollectorPaymentsController : ControllerBase
     public async Task<IActionResult> GetPending([FromQuery] PendingPaymentsQuery query, CancellationToken cancellationToken)
         => Ok(await _service.GetPendingAsync(query, cancellationToken));
 
+    // Paying a collector is an Admin decision; Staff (warehouse workers) can view payments but not pay them.
+    // Both this and the class-level Staff,Admin rule must pass, so only Admin gets through.
     [HttpPut("{id}/pay")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> MarkPaid(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetStaffId(out var staffId)) return Unauthorized("Could not resolve the authenticated staff member's id.");

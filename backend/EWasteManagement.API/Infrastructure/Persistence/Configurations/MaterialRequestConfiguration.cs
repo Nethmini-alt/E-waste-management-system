@@ -11,7 +11,7 @@ public class MaterialRequestConfiguration : IEntityTypeConfiguration<MaterialReq
         builder.ToTable("material_requests", table =>
         {
             table.HasCheckConstraint("ck_material_requests_quantity_positive", "quantity_kg > 0");
-            table.HasCheckConstraint("ck_material_requests_status", "status IN ('waiting','generatingplan','plangenerated','plangenerationfailed','orderplaced','fulfilled','cancelled')");
+            table.HasCheckConstraint("ck_material_requests_status", "status IN ('waiting','waitingforprice','generatingplan','plangenerated','plangenerationfailed','orderplaced','fulfilled','cancelled')");
         });
 
         builder.HasKey(request => request.MaterialRequestId);
@@ -27,6 +27,7 @@ public class MaterialRequestConfiguration : IEntityTypeConfiguration<MaterialReq
         builder.Property(request => request.CommercialPlanId).HasColumnName("commercial_plan_id");
         builder.Property(request => request.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
         builder.Property(request => request.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(request => request.LastMatchingNote).HasColumnName("last_matching_note").HasMaxLength(500);
 
         builder.HasOne(request => request.Buyer)
             .WithMany()

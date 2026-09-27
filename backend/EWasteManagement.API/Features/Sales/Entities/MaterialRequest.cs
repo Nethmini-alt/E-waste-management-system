@@ -10,6 +10,7 @@ public class MaterialRequest
     public Guid? CommercialPlanId { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public string? LastMatchingNote { get; set; }
 
     public Buyer Buyer { get; set; } = null!;
     public CommercialPlan? CommercialPlan { get; set; }
@@ -19,6 +20,7 @@ public class MaterialRequest
 public enum MaterialRequestStatus
 {
     Waiting,
+    WaitingForPrice,
     GeneratingPlan,
     PlanGenerated,
     PlanGenerationFailed,

@@ -6,6 +6,7 @@ import MarkPaidModal from './MarkPaidModal';
 import type { ExtraWasteLineSnapshot, JobCalculationSnapshot, PaymentDetail } from './types';
 import ReceiptDetailModal from '../Receive/ReceiptDetailModal';
 import { PAYMENT_SOURCE_TYPE_LABELS } from '../processingEnums';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDateTime, formatKg, formatMoney, formatSignedKg, shortId } from '../utils/format';
 import {
@@ -185,6 +186,8 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({ paymentId, onCl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingPay, setConfirmingPay] = useState(false);
+  // Only an Admin may mark a payment paid (the server enforces it).
+  const isAdmin = useCurrentUser()?.role.toLowerCase() === 'admin';
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -222,7 +225,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({ paymentId, onCl
             <button type="button" className={btnSecondary} onClick={onClose}>
               Close
             </button>
-            {payment?.status === 'Pending' && (
+            {payment?.status === 'Pending' && isAdmin && (
               <button type="button" className={btnPrimary} onClick={() => setConfirmingPay(true)}>
                 Mark as paid
               </button>

@@ -11,6 +11,10 @@ export interface ReceivableJob {
   reportedWeightKg: number | null;
   estimatedDistanceKm: number | null;
   completedAt: string | null;
+  /** The category the customer chose, as they wrote it. */
+  submissionCategory: string | null;
+  /** That category matched to the item-type list; null when staff must choose the type. */
+  suggestedItemType: string | null;
 }
 
 // POST /api/v1/inventory/job-collection/receive
@@ -20,11 +24,14 @@ export interface ReceiveJobWasteInput {
   collectorId: string;
   warehouseLocationId: string;
   verifiedWeightKg: number;
+  /** From the item-type list. The server falls back to the submission category when omitted. */
+  itemType: string;
 }
 
 export interface ReceiveJobWasteResponse {
   inventoryItemId: string;
   jobId: string;
+  itemType: string;
   verifiedWeightKg: number;
   reportedWeightKg: number | null;
   discrepancyKg: number | null;

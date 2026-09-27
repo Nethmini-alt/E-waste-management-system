@@ -12,6 +12,7 @@ import {
   type PaymentStatus,
 } from '../processingEnums';
 import { useCollectors } from '../hooks/useLookups';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useSearchParams } from 'react-router-dom';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatDateTime, formatMoney, shortId } from '../utils/format';
@@ -63,6 +64,8 @@ const PaymentsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [paying, setPaying] = useState<PaymentListItem | null>(null);
+  // Only an Admin may mark a payment paid (the server enforces it); Staff see payments read-only.
+  const isAdmin = useCurrentUser()?.role.toLowerCase() === 'admin';
   const requestId = useRef(0);
 
   const updateParams = useCallback(
@@ -287,7 +290,7 @@ const PaymentsPage: React.FC = () => {
                           >
                             Details
                           </button>
-                          {p.status === 'Pending' && (
+                          {p.status === 'Pending' && isAdmin && (
                             <button
                               type="button"
                               className={`${btnPrimary} ${btnSmall}`}
