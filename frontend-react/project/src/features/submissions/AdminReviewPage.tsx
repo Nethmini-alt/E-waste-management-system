@@ -217,8 +217,8 @@ const AdminReviewPage: React.FC = () => {
                 <div style={actionsCol}>
                   <span style={statusBadge(sub.status)}>{sub.statusLabel}</span>
 
-                  {sub.status === 'AwaitingReview' && (
-                    <Link to="/processing/agentic-review" style={btnReview}>
+                  {sub.status === 'AwaitingReview' && sub.workflow && (
+                    <Link to={`/processing/agentic-review?workflowId=${sub.workflow.workflowId}`} style={btnReview}>
                       <ExternalLink size={14} /> Review in Agentic Review
                     </Link>
                   )}

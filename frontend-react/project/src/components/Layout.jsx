@@ -91,7 +91,7 @@ export const Layout = () => {
               </NavLink>
             </>
           )}
-          {isAdmin && (
+          {isStaff && (
             <NavLink to="/submissions/review" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
               <CheckSquare size={16} /> Submissions Review
             </NavLink>

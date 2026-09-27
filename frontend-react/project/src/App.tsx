@@ -117,7 +117,7 @@ const App: React.FC = () => (
           <Route
             path="/submissions/review"
             element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['staff', 'admin']}>
                 <AdminReviewPage />
               </ProtectedRoute>
             }
