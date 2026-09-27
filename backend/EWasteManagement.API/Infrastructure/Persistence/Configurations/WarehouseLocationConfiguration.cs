@@ -20,7 +20,10 @@ public class WarehouseLocationConfiguration : IEntityTypeConfiguration<Warehouse
             new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111101"), Name = "Receiving Bay", Description = "Where collector deliveries and extra-waste drop-offs are first received and weighed.", CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
             new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111102"), Name = "Sorting Area", Description = "Items are sorted by category before dismantling or direct classification.", CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
             new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111103"), Name = "Dismantling Area", Description = "Items are broken down into separately trackable child components.", CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
-            new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111104"), Name = "Ready-for-Sale Storage", Description = "Classified items awaiting handoff to Component D.", CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) }
+            new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111104"), Name = "Ready-for-Sale Storage", Description = "Classified items awaiting handoff to Component D.", CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, DateTimeKind.Utc) },
+            // One place per remaining outcome, so every final status has somewhere physical to go.
+            new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111105"), Name = "Hazardous Hold Area", Description = "Quarantine for items on hold, including everything classified Hazardous.", CreatedAt = new DateTime(2026, 9, 26, 0, 0, 0, DateTimeKind.Utc) },
+            new WarehouseLocation { Id = Guid.Parse("11111111-1111-1111-1111-111111111106"), Name = "Export Storage", Description = "Export-grade items reserved for export channels.", CreatedAt = new DateTime(2026, 9, 26, 0, 0, 0, DateTimeKind.Utc) }
         );
     }
 }

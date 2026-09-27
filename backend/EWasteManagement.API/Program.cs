@@ -75,6 +75,8 @@ builder.Services.AddScoped<ICollectorPaymentService, CollectorPaymentService>();
 builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingService>();
 builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
 builder.Services.AddScoped<IProcessingLookupService, ProcessingLookupService>();
+builder.Services.AddScoped<IItemTypeCatalogService, ItemTypeCatalogService>();
+builder.Services.AddScoped<IRatePolicyService, RatePolicyService>();
 builder.Services.AddScoped<IWorkflowApprovalHistoryService, WorkflowApprovalHistoryService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 

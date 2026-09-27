@@ -17,10 +17,10 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { ErrorMessage, Modal, Notice, btnDanger, btnPrimary, btnSecondary, inputClass, labelClass } from '../components';
 
 const CATEGORY_HELP: Record<ClassificationCategory, string> = {
-  Reusable: 'Can be refurbished or reused as it is.',
-  LocalRecyclable: 'Can be recycled through local partners.',
+  Reusable: 'Can be refurbished or reused as it is. Next step: ready for sale.',
+  LocalRecyclable: 'Can be recycled through local partners. Next step: ready for sale.',
   Hazardous: 'Contains hazardous material (batteries, CRT glass, mercury, lead…). Quarantined automatically.',
-  ExportOnly: 'Can only be handled through export channels.',
+  ExportOnly: 'Can only be handled through export channels. Next step: reserved for export.',
 };
 
 interface ClassifyModalProps {

@@ -88,7 +88,8 @@ export const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
   Dismantling: 'Dismantling',
   Classified: 'Classified',
   ReadyForSale: 'Ready for sale',
-  ExportOnly: 'Export only',
+  // Named differently from the "Export-grade" category so the two are never confused.
+  ExportOnly: 'Reserved for export',
   OnHold: 'On hold',
 };
 
@@ -96,7 +97,7 @@ export const CLASSIFICATION_CATEGORY_LABELS: Record<ClassificationCategory, stri
   Reusable: 'Reusable',
   LocalRecyclable: 'Local recyclable',
   Hazardous: 'Hazardous',
-  ExportOnly: 'Export only',
+  ExportOnly: 'Export-grade',
 };
 
 export const CLASSIFICATION_SOURCE_LABELS: Record<ClassificationSource, string> = {
@@ -138,6 +139,17 @@ export const ALLOWED_TRANSITIONS: Record<InventoryStatus, readonly InventoryStat
 
 export const isTerminalStatus = (s: InventoryStatus): boolean => ALLOWED_TRANSITIONS[s].length === 0;
 
+/**
+ * The warehouse area each status normally lives in (seeded location names). Used only to pre-select
+ * the location when changing status; staff can always pick another one.
+ */
+export const SUGGESTED_LOCATION_FOR_STATUS: Partial<Record<InventoryStatus, string>> = {
+  Sorting: 'Sorting Area',
+  ReadyForSale: 'Ready-for-Sale Storage',
+  ExportOnly: 'Export Storage',
+  OnHold: 'Hazardous Hold Area',
+};
+
 /** Dismantle steps are only accepted while an item is being sorted or dismantled. */
 export const canAddDismantleStep = (s: InventoryStatus): boolean => s === 'Sorting' || s === 'Dismantling';
 
@@ -145,12 +157,31 @@ export const canAddDismantleStep = (s: InventoryStatus): boolean => s === 'Sorti
 export const canClassify = (s: InventoryStatus): boolean => s === 'Sorting' || s === 'Dismantling';
 
 /**
+ * Mirror of ClassificationOutcomeRules on the backend: the category decides a classified item's
+ * outcome. Hazardous has none of its own — it is put on hold automatically when classified.
+ * On hold is always allowed as a manual hold.
+ */
+export const OUTCOME_FOR_CATEGORY: Record<ClassificationCategory, InventoryStatus | null> = {
+  Reusable: 'ReadyForSale',
+  LocalRecyclable: 'ReadyForSale',
+  ExportOnly: 'ExportOnly',
+  Hazardous: null,
+};
+
+/**
  * Transitions the plain status endpoint may perform. Classified is reachable only through
  * PUT /classify (the backend rejects it here), and Dismantling is entered by logging the first
- * dismantle step, so both are excluded.
+ * dismantle step, so both are excluded. From Classified, only the category's outcome and On hold.
  */
-export const getManualTransitions = (s: InventoryStatus): InventoryStatus[] =>
-  ALLOWED_TRANSITIONS[s].filter((next) => next !== 'Classified' && next !== 'Dismantling');
+export const getManualTransitions = (s: InventoryStatus, category?: string | null): InventoryStatus[] =>
+  ALLOWED_TRANSITIONS[s]
+    .filter((next) => next !== 'Classified' && next !== 'Dismantling')
+    .filter(
+      (next) =>
+        s !== 'Classified' ||
+        next === 'OnHold' ||
+        (isClassificationCategory(category) && OUTCOME_FOR_CATEGORY[category] === next),
+    );
 
 /**
  * "GeneralCollection" is the rate-policy key that prices the weight part of a JOB-collection

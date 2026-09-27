@@ -10,5 +10,6 @@ public class ReceiveJobWasteRequestValidator : AbstractValidator<ReceiveJobWaste
         RuleFor(x => x.CollectorId).NotEmpty();
         RuleFor(x => x.WarehouseLocationId).NotEmpty();
         RuleFor(x => x.VerifiedWeightKg).GreaterThan(0);
+        RuleFor(x => x.ItemType).MaximumLength(50);
     }
 }

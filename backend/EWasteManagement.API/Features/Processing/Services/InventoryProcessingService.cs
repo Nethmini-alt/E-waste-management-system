@@ -10,7 +10,13 @@ namespace EWasteManagement.API.Features.Processing.Services;
 public class InventoryProcessingService : IInventoryProcessingService
 {
     private readonly ApplicationDbContext _db;
-    public InventoryProcessingService(ApplicationDbContext db) => _db = db;
+    private readonly IItemTypeCatalogService _itemTypes;
+
+    public InventoryProcessingService(ApplicationDbContext db, IItemTypeCatalogService itemTypes)
+    {
+        _db = db;
+        _itemTypes = itemTypes;
+    }
 
     private async Task<InventoryItem> LoadItemAsync(Guid id, CancellationToken cancellationToken)
         => await _db.InventoryItems.FirstOrDefaultAsync(i => i.Id == id, cancellationToken)
@@ -28,6 +34,25 @@ public class InventoryProcessingService : IInventoryProcessingService
             && item.Status is InventoryStatus.Sorting or InventoryStatus.Dismantling)
             throw new ArgumentException(
                 "An item can only become Classified through PUT /api/v1/inventory/{id}/classify, so that it receives a category.");
+
+        // The category decides the outcome (see ClassificationOutcomeRules); OnHold is always allowed.
+        if (item.Status == InventoryStatus.Classified
+            && nextStatus is InventoryStatus.ReadyForSale or InventoryStatus.ExportOnly)
+        {
+            var category = await _db.ClassificationRecords.AsNoTracking()
+                .Where(c => c.InventoryItemId == item.Id)
+                .OrderByDescending(c => c.ClassifiedAt)
+                .Select(c => (ClassificationCategory?)c.Category)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (category is null || !ClassificationOutcomeRules.Allows(category.Value, nextStatus))
+            {
+                var allowed = category is null ? null : ClassificationOutcomeRules.OutcomeFor(category.Value);
+                throw new ArgumentException(
+                    $"An item classified {category?.ToString() ?? "(no category)"} cannot become {nextStatus}. " +
+                    (allowed is null ? "It can only be put on hold." : $"Allowed outcomes: {allowed} or OnHold."));
+            }
+        }
 
         item.TransitionTo(nextStatus, staffId, notes);
 
@@ -47,29 +72,58 @@ public class InventoryProcessingService : IInventoryProcessingService
         if (item.Status != InventoryStatus.Sorting && item.Status != InventoryStatus.Dismantling)
             throw new InvalidStatusTransitionException(item.Status.ToString(), InventoryStatus.Dismantling.ToString());
 
+        // Components must use a type from the item-type list, so they can be priced and sold later.
+        var childTypes = new List<string>();
+        foreach (var child in request.ChildItems)
+        {
+            childTypes.Add(await _itemTypes.ResolveAsync(child.ItemType, cancellationToken)
+                ?? throw new ArgumentException(
+                    $"'{child.ItemType.Trim()}' is not a known item type. Choose a component type from the item-type list."));
+        }
+
+        // Weight is conserved: components + what is left of this item can never be more than it weighed.
+        // Without a remaining weight, the components are taken off automatically, so the same kilos are
+        // never counted twice (once on the parent, once on the children). Any gap is recorded as a loss.
+        var currentWeight = item.VerifiedWeightKg;
+        var componentsWeight = request.ChildItems.Sum(c => c.WeightKg);
+        if (componentsWeight > currentWeight)
+            throw new ArgumentException(
+                $"The components weigh {componentsWeight:0.###} kg, more than this item's current {currentWeight:0.###} kg.");
+
+        var newWeight = request.RemainingWeightKg ?? currentWeight - componentsWeight;
+        if (componentsWeight + newWeight > currentWeight)
+            throw new ArgumentException(
+                $"Components ({componentsWeight:0.###} kg) plus the remaining weight ({newWeight:0.###} kg) " +
+                $"come to more than this item's current {currentWeight:0.###} kg.");
+        var lossKg = currentWeight - componentsWeight - newWeight;
+
         // The first dismantle action moves the item into Dismantling; later ones just add to the log.
         if (item.Status == InventoryStatus.Sorting)
             item.TransitionTo(InventoryStatus.Dismantling, staffId, "Dismantling started");
+
+        var weightNote = componentsWeight == 0 && newWeight == currentWeight
+            ? string.Empty
+            : $" Weight {currentWeight:0.###} kg → {newWeight:0.###} kg; components {componentsWeight:0.###} kg" +
+              (lossKg > 0 ? $"; loss {lossKg:0.###} kg." : ".");
 
         _db.ProcessingLogs.Add(new ProcessingLog
         {
             InventoryItemId = item.Id,
             Action = "DismantleStep",
             PerformedByStaffId = staffId,
-            Notes = request.Description
+            Notes = request.Description + weightNote
         });
 
-        if (request.RemainingWeightKg.HasValue)
-            item.VerifiedWeightKg = request.RemainingWeightKg.Value;
+        item.VerifiedWeightKg = newWeight;
 
         var childIds = new List<Guid>();
-        foreach (var child in request.ChildItems)
+        foreach (var (child, childType) in request.ChildItems.Zip(childTypes))
         {
             var childItem = new InventoryItem
             {
                 OriginType = item.OriginType,
                 ParentInventoryItemId = item.Id,
-                ItemType = child.ItemType,
+                ItemType = childType,
                 VerifiedWeightKg = child.WeightKg,
                 CurrentLocationId = item.CurrentLocationId
             };
@@ -83,7 +137,8 @@ public class InventoryProcessingService : IInventoryProcessingService
         return new DismantleLogResponse
         {
             InventoryItemId = item.Id,
-            UpdatedWeightKg = request.RemainingWeightKg,
+            UpdatedWeightKg = newWeight,
+            LossKg = lossKg,
             ChildInventoryItemIds = childIds
         };
     }

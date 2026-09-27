@@ -46,6 +46,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             JobCollectorMismatchException => (StatusCodes.Status409Conflict, "Collector does not match the job"),
             DuplicatePaymentException => (StatusCodes.Status409Conflict, "Payment already exists"),
             PaymentAlreadyPaidException => (StatusCodes.Status409Conflict, "Payment already paid"),
+            DuplicateActiveRatePolicyException => (StatusCodes.Status409Conflict, "Active rate already exists"),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred"),
         };
 

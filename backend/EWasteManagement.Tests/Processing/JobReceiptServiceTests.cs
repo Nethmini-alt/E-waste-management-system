@@ -1,3 +1,4 @@
+using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.DTOs;
@@ -55,7 +56,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var rates = new RatePolicyLookupService(_db);
         var calculators = new IPaymentCalculator[] { new JobPaymentCalculator(rates), new ExtraWastePaymentCalculator(rates) };
         var paymentService = new CollectorPaymentService(_db, calculators);
-        return new JobReceiptService(_db, new FakeJobVerificationService(verification), paymentService);
+        return new JobReceiptService(_db, new FakeJobVerificationService(verification), paymentService, new ItemTypeCatalogService(_db));
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var result = await service.ReceiveAsync(new ReceiveJobWasteRequest
         {
             JobId = Guid.NewGuid(), CollectorId = collectorId,
-            WarehouseLocationId = locationId, VerifiedWeightKg = 9.5m
+            ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 9.5m
         }, Guid.NewGuid());
 
         Assert.Equal(-0.5m, result.DiscrepancyKg);
@@ -88,7 +89,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var request = new ReceiveJobWasteRequest
         {
             JobId = Guid.NewGuid(), CollectorId = collectorId,
-            WarehouseLocationId = locationId, VerifiedWeightKg = 5m
+            ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 5m
         };
 
         await Assert.ThrowsAsync<JobNotCompletedException>(() => service.ReceiveAsync(request, Guid.NewGuid()));
@@ -105,7 +106,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var request = new ReceiveJobWasteRequest
         {
             JobId = Guid.NewGuid(), CollectorId = collectorId,
-            WarehouseLocationId = locationId, VerifiedWeightKg = 5m
+            ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 5m
         };
 
         await service.ReceiveAsync(request, Guid.NewGuid());
@@ -122,7 +123,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var request = new ReceiveJobWasteRequest
         {
             JobId = Guid.NewGuid(), CollectorId = Guid.NewGuid(),
-            WarehouseLocationId = locationId, VerifiedWeightKg = 5m
+            ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 5m
         };
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ReceiveAsync(request, Guid.NewGuid()));
@@ -141,7 +142,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
 
         var result = await service.ReceiveAsync(new ReceiveJobWasteRequest
         {
-            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId, VerifiedWeightKg = 10m
+            JobId = Guid.NewGuid(), CollectorId = collectorId, ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 10m
         }, Guid.NewGuid());
 
         Assert.Equal(1, await _db.InventoryItems.CountAsync());
@@ -159,7 +160,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
 
         var ex = await Assert.ThrowsAsync<JobCollectorMismatchException>(() => service.ReceiveAsync(new ReceiveJobWasteRequest
         {
-            JobId = Guid.NewGuid(), CollectorId = otherCollector, WarehouseLocationId = locationId, VerifiedWeightKg = 10m
+            JobId = Guid.NewGuid(), CollectorId = otherCollector, ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 10m
         }, Guid.NewGuid()));
 
         Assert.Contains("not the collector assigned", ex.Message);
@@ -176,7 +177,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
 
         var ex = await Assert.ThrowsAsync<JobCollectorMismatchException>(() => service.ReceiveAsync(new ReceiveJobWasteRequest
         {
-            JobId = Guid.NewGuid(), CollectorId = someCollector, WarehouseLocationId = locationId, VerifiedWeightKg = 10m
+            JobId = Guid.NewGuid(), CollectorId = someCollector, ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 10m
         }, Guid.NewGuid()));
 
         Assert.Contains("no assigned collector", ex.Message);
@@ -196,7 +197,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
 
         var result = await service.ReceiveAsync(new ReceiveJobWasteRequest
         {
-            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId, VerifiedWeightKg = 9.5m
+            JobId = Guid.NewGuid(), CollectorId = collectorId, ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 9.5m
         }, staffId);
 
         var payment = await _db.CollectorPayments.SingleAsync(p => p.SourceId == result.JobId);
@@ -258,7 +259,7 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var service = CreateService(new JobVerificationResult(true, true, ReportedWeightKg: 12m, DistanceKm: 4m, CollectorId: collectorId));
         await service.ReceiveAsync(new ReceiveJobWasteRequest
         {
-            JobId = received.JobId, CollectorId = collectorId, WarehouseLocationId = locationId, VerifiedWeightKg = 12m
+            JobId = received.JobId, CollectorId = collectorId, ItemType = "Laptop", WarehouseLocationId = locationId, VerifiedWeightKg = 12m
         }, Guid.NewGuid());
 
         // A brand-new service instance is what a page refresh does: nothing is remembered in memory.
@@ -277,5 +278,106 @@ public class JobReceiptServiceTests : IAsyncLifetime
         var result = await CreateService(new JobVerificationResult(true, true, null)).GetReceivableJobsAsync();
 
         Assert.Equal(new[] { newer.JobId, older.JobId }, result.Select(j => j.JobId));
+    }
+
+    // ---------------------------------------------------------------- item type (no more "Mixed Job Collection")
+
+    private async Task<Guid> SeedSubmissionAsync(string category)
+    {
+        var submission = new Submission { UserId = Guid.NewGuid(), Category = category, PickupAddress = "1 Test Street" };
+        _db.Submissions.Add(submission);
+        await _db.SaveChangesAsync();
+        return submission.Id;
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_ChosenItemType_IsStoredWithTheListsSpelling()
+    {
+        var locationId = await SeedLocationAsync();
+        var collectorId = await SeedCollectorAsync();
+        var service = CreateService(new JobVerificationResult(true, true, 5m, 2m, collectorId));
+
+        var result = await service.ReceiveAsync(new ReceiveJobWasteRequest
+        {
+            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId,
+            VerifiedWeightKg = 5m, ItemType = "  mobile phone "
+        }, Guid.NewGuid());
+
+        Assert.Equal("Mobile Phone", result.ItemType);
+        var item = await _db.InventoryItems.SingleAsync();
+        Assert.Equal("Mobile Phone", item.ItemType);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_NoItemType_UsesTheSubmissionCategory()
+    {
+        var locationId = await SeedLocationAsync();
+        var collectorId = await SeedCollectorAsync();
+        var submissionId = await SeedSubmissionAsync("laptop");
+        var service = CreateService(new JobVerificationResult(true, true, 5m, 2m, collectorId, submissionId));
+
+        var result = await service.ReceiveAsync(new ReceiveJobWasteRequest
+        {
+            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId, VerifiedWeightKg = 5m
+        }, Guid.NewGuid());
+
+        Assert.Equal("Laptop", result.ItemType);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_NoItemTypeAndCategoryNotOnTheList_IsRejectedAndCreatesNothing()
+    {
+        var locationId = await SeedLocationAsync();
+        var collectorId = await SeedCollectorAsync();
+        var submissionId = await SeedSubmissionAsync("Assorted junk");
+        var service = CreateService(new JobVerificationResult(true, true, 5m, 2m, collectorId, submissionId));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReceiveAsync(new ReceiveJobWasteRequest
+        {
+            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId, VerifiedWeightKg = 5m
+        }, Guid.NewGuid()));
+
+        Assert.Equal(0, await _db.InventoryItems.CountAsync());
+        Assert.Equal(0, await _db.CollectorPayments.CountAsync());
+    }
+
+    [Theory]
+    [InlineData("Unicorn Parts")]
+    [InlineData("GeneralCollection")]
+    public async Task ReceiveAsync_ItemTypeNotOnTheList_IsRejectedAndCreatesNothing(string itemType)
+    {
+        var locationId = await SeedLocationAsync();
+        var collectorId = await SeedCollectorAsync();
+        var service = CreateService(new JobVerificationResult(true, true, 5m, 2m, collectorId));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReceiveAsync(new ReceiveJobWasteRequest
+        {
+            JobId = Guid.NewGuid(), CollectorId = collectorId, WarehouseLocationId = locationId,
+            VerifiedWeightKg = 5m, ItemType = itemType
+        }, Guid.NewGuid()));
+
+        Assert.Equal(0, await _db.InventoryItems.CountAsync());
+        Assert.Equal(0, await _db.CollectorPayments.CountAsync());
+    }
+
+    [Fact]
+    public async Task GetReceivableJobsAsync_SuggestsTheItemTypeFromTheSubmissionCategory()
+    {
+        var collectorId = await SeedCollectorAsync();
+        var matching = await SeedJobAsync(collectorId, completedAt: DateTime.UtcNow);
+        matching.SubmissionId = await SeedSubmissionAsync("battery");
+        var unmatched = await SeedJobAsync(collectorId, completedAt: DateTime.UtcNow.AddMinutes(-1));
+        unmatched.SubmissionId = await SeedSubmissionAsync("Assorted junk");
+        await _db.SaveChangesAsync();
+
+        var result = await CreateService(new JobVerificationResult(true, true, null)).GetReceivableJobsAsync();
+
+        var first = result.Single(j => j.JobId == matching.JobId);
+        Assert.Equal("battery", first.SubmissionCategory);
+        Assert.Equal("Battery", first.SuggestedItemType);
+
+        var second = result.Single(j => j.JobId == unmatched.JobId);
+        Assert.Equal("Assorted junk", second.SubmissionCategory);
+        Assert.Null(second.SuggestedItemType);
     }
 }
