@@ -1,7 +1,7 @@
 databases:
   - name: ewaste-db
-    plan: starter
-    postgresMajorVersion: "16"
+    plan: basic-256mb
+    postgresMajorVersion: "18"
 
 services:
   # ---------- Backend (ASP.NET Core API) ----------
