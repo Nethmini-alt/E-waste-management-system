@@ -28,9 +28,10 @@ var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
     var uri = new Uri(databaseUrl);
+    var port = uri.Port == -1 ? 5432 : uri.Port;
     var userInfo = uri.UserInfo.Split(':', 2);
     var npgsqlConnectionString =
-        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};" +
         $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
     builder.Configuration["ConnectionStrings:DefaultConnection"] = npgsqlConnectionString;
 }
