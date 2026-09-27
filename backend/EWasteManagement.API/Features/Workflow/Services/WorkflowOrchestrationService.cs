@@ -42,11 +42,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         _logger = logger;
     }
 
-    public async Task StartAsync(Guid submissionId, CancellationToken ct = default)
-    {
-        var workflow = await _workflows.CreateAsync(submissionId, ct);
-        _queue.Enqueue(workflow.WorkflowId);
-    }
+    public void Start(Guid workflowId) => _queue.Enqueue(workflowId);
 
     public async Task RunChainAsync(Guid workflowId, CancellationToken ct = default)
     {

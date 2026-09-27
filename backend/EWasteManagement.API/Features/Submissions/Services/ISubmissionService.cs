@@ -1,14 +1,12 @@
 using EWasteManagement.Api.Dtos;
-using EWasteManagement.Api.Entities;
 
 namespace EWasteManagement.Api.Services
 {
     public interface ISubmissionService
     {
-        Task<Submission> CreateSubmissionAsync(CreateSubmissionDto dto);
-        Task<Submission?> GetSubmissionByIdAsync(Guid id);
-        Task ProcessAICallbackAsync(Guid id, AIAnalysisDto aiDto);
-        Task<IEnumerable<Submission>> GetAllSubmissionsAsync();
-Task<Submission?> UpdateStatusAsync(Guid id, string status);
+        Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionDto dto, Guid userId, string userType, CancellationToken ct = default);
+        Task<SubmissionResponseDto?> GetSubmissionByIdAsync(Guid id, CancellationToken ct = default);
+        Task<List<SubmissionResponseDto>> GetAllSubmissionsAsync(CancellationToken ct = default);
+        Task<List<SubmissionResponseDto>> GetSubmissionsForUserAsync(Guid userId, CancellationToken ct = default);
     }
 }

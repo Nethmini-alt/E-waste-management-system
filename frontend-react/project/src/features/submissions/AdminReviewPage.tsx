@@ -1,8 +1,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  LayoutDashboard, Search, Filter, Check, XCircle, RefreshCw,
+  LayoutDashboard, Search, Filter, RefreshCw, ExternalLink,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import type { SubmissionResponse } from './types';
@@ -35,41 +35,25 @@ const AdminReviewPage: React.FC = () => {
     load();
   }, []);
 
-  // ---- Approve / Reject ----
-  const handleDecision = async (id: string, status: 'Approved' | 'Rejected') => {
-    try {
-      await submissionApi.updateStatus(id, status);
-      await load();
-    } catch (e) {
-      console.error(e);
-      alert('Failed to update status.');
-      await load();
-    }
-  };
-
   // ---- Filter ----
+  // Approve/reject happens in Agentic Review (it resumes or stops the agent
+  // chain); this page only shows where each submission is.
   const filtered = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return submissions.filter((sub) => {
-      const item = sub.items?.[0] || (sub as any).Items?.[0];
-      const ai =
-        sub.aiAnalysis ||
-        (sub as any).aIAnalysis ||
-        (sub as any).AiAnalysis;
-
-      const desc = (item?.description || item?.Description || '').toLowerCase();
-      const itemName = (item?.itemName || item?.ItemName || '').toLowerCase();
-      const category = (ai?.wasteCategory || ai?.WasteCategory || '').toLowerCase();
+      const item = sub.items[0];
+      const ai = sub.workflow?.analysis;
 
       const matchesSearch =
-        desc.includes(searchTerm.toLowerCase()) ||
-        itemName.includes(searchTerm.toLowerCase()) ||
-        category.includes(searchTerm.toLowerCase()) ||
-        sub.id.toLowerCase().includes(searchTerm.toLowerCase());
+        (item?.description ?? '').toLowerCase().includes(term) ||
+        (item?.itemName ?? '').toLowerCase().includes(term) ||
+        (ai?.wasteCategory ?? '').toLowerCase().includes(term) ||
+        sub.id.toLowerCase().includes(term);
 
       const matchesStatus =
         selectedStatus === 'All' || sub.status === selectedStatus;
 
-      const hazard = ai?.hazardLevel || ai?.HazardLevel || 'Unknown';
+      const hazard = ai?.hazardLevel ?? 'Unknown';
       const matchesHazard =
         selectedHazard === 'All' || hazard === selectedHazard;
 
@@ -86,7 +70,7 @@ const AdminReviewPage: React.FC = () => {
             <LayoutDashboard size={22} /> E-Waste Review Panel
           </h2>
           <p style={{ color: '#666', margin: '4px 0 0 0' }}>
-            Review hazardous items flagged by the AI and approve/reject collection requests.
+            Track every submission. Items flagged by the AI are approved or rejected in Agentic Review.
           </p>
         </div>
         <button onClick={load} style={btnSecondary}>
@@ -115,9 +99,17 @@ const AdminReviewPage: React.FC = () => {
             style={select}
           >
             <option value="All">All Statuses</option>
-            <option value="Pending_Approval">Pending Approval</option>
-            <option value="Approved">Approved</option>
+            <option value="Analyzing">Analyzing</option>
+            <option value="AwaitingReview">Awaiting review</option>
+            <option value="Scheduling">Scheduling</option>
+            <option value="CollectorAssigned">Collector assigned</option>
+            <option value="AwaitingCollector">Awaiting collector</option>
+            <option value="Collected">Collected</option>
             <option value="Rejected">Rejected</option>
+            <option value="Failed">Failed</option>
+            <option value="Closed">Closed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="NotProcessed">Not processed</option>
           </select>
         </div>
 
@@ -149,16 +141,13 @@ const AdminReviewPage: React.FC = () => {
       {!loading && !error && filtered.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
           {filtered.map((sub) => {
-            const item = sub.items?.[0] || (sub as any).Items?.[0];
-            const ai =
-              sub.aiAnalysis ||
-              (sub as any).aIAnalysis ||
-              (sub as any).AiAnalysis;
+            const item = sub.items[0];
+            const ai = sub.workflow?.analysis;
 
-            const imgUrl = item?.imageUrl || item?.ImageUrl || item?.image_url;
-            const hazard = ai?.hazardLevel || ai?.HazardLevel;
-            const category = ai?.wasteCategory || ai?.WasteCategory;
-            const value = ai?.estimatedValueUsd ?? ai?.EstimatedValueUsd;
+            const imgUrl = item?.imageUrl;
+            const hazard = ai?.hazardLevel;
+            const category = ai?.wasteCategory;
+            const value = ai?.estimatedValueUsd;
 
             return (
               <div key={sub.id} style={card}>
@@ -184,14 +173,19 @@ const AdminReviewPage: React.FC = () => {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <h4 style={{ margin: '0 0 5px 0' }}>
-                      {item?.itemName || item?.ItemName || 'E-Waste Item'}
+                      {item?.itemName || 'E-Waste Item'}
                     </h4>
                     <span style={idBadge}>ID: {sub.id.substring(0, 8)}…</span>
                   </div>
 
                   <p style={{ margin: '0 0 8px 0', color: '#555', fontSize: 14 }}>
-                    "{item?.description || item?.Description}"
+                    "{item?.description}"
                   </p>
+                  {sub.statusReason && (
+                    <p style={{ margin: '0 0 8px 0', color: '#c62828', fontSize: 13 }}>
+                      {sub.statusReason}
+                    </p>
+                  )}
 
                   {ai ? (
                     <div style={aiBox}>
@@ -212,31 +206,22 @@ const AdminReviewPage: React.FC = () => {
                       </span>
                       <span><strong>Value:</strong> ${value}</span>
                     </div>
-                  ) : (
+                  ) : sub.status === 'Analyzing' ? (
                     <span style={{ fontSize: 12, color: '#e65100' }}>
                       Pending AI Analysis…
                     </span>
-                  )}
+                  ) : null}
                 </div>
 
-                {/* Actions */}
+                {/* Status */}
                 <div style={actionsCol}>
-                  <span style={statusBadge(sub.status)}>{sub.status}</span>
+                  <span style={statusBadge(sub.status)}>{sub.statusLabel}</span>
 
-                  <div style={{ display: 'flex', gap: 5 }}>
-                    <button
-                      onClick={() => handleDecision(sub.id, 'Approved')}
-                      style={btnApprove}
-                    >
-                      <Check size={14} /> Approve
-                    </button>
-                    <button
-                      onClick={() => handleDecision(sub.id, 'Rejected')}
-                      style={btnReject}
-                    >
-                      <XCircle size={14} /> Reject
-                    </button>
-                  </div>
+                  {sub.status === 'AwaitingReview' && (
+                    <Link to="/processing/agentic-review" style={btnReview}>
+                      <ExternalLink size={14} /> Review in Agentic Review
+                    </Link>
+                  )}
                 </div>
               </div>
             );
@@ -350,7 +335,7 @@ const btnSecondary: React.CSSProperties = {
   gap: 6,
 };
 
-const btnApprove: React.CSSProperties = {
+const btnReview: React.CSSProperties = {
   background: '#2e7d32',
   color: '#fff',
   border: 'none',
@@ -361,19 +346,7 @@ const btnApprove: React.CSSProperties = {
   alignItems: 'center',
   gap: 4,
   fontSize: 12,
-};
-
-const btnReject: React.CSSProperties = {
-  background: '#c62828',
-  color: '#fff',
-  border: 'none',
-  padding: '6px 12px',
-  borderRadius: 4,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 4,
-  fontSize: 12,
+  textDecoration: 'none',
 };
 
 const errorBox: React.CSSProperties = {
@@ -392,23 +365,24 @@ const emptyBox: React.CSSProperties = {
   border: '1px dashed #ccc',
 };
 
+const GOOD_STATUSES = ['CollectorAssigned', 'Collected'];
+const BAD_STATUSES = ['Rejected', 'Failed', 'Cancelled'];
+
 const statusBadge = (status: string): React.CSSProperties => ({
   fontWeight: 'bold',
   padding: '4px 10px',
   borderRadius: 4,
   fontSize: 12,
-  background:
-    status === 'Approved'
-      ? '#e8f5e9'
-      : status === 'Rejected'
-      ? '#ffebee'
-      : '#fff3e0',
-  color:
-    status === 'Approved'
-      ? '#2e7d32'
-      : status === 'Rejected'
-      ? '#c62828'
-      : '#e65100',
+  background: GOOD_STATUSES.includes(status)
+    ? '#e8f5e9'
+    : BAD_STATUSES.includes(status)
+    ? '#ffebee'
+    : '#fff3e0',
+  color: GOOD_STATUSES.includes(status)
+    ? '#2e7d32'
+    : BAD_STATUSES.includes(status)
+    ? '#c62828'
+    : '#e65100',
 });
 
 export default AdminReviewPage;
