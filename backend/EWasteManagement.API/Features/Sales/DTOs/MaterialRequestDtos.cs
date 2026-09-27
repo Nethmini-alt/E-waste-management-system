@@ -16,6 +16,7 @@ public class MaterialRequestResponse
     public string Status { get; set; } = string.Empty;
     public Guid? CommercialPlanId { get; set; }
     public Guid? SalesOrderId { get; set; }
+    public string? LastMatchingNote { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }

@@ -58,7 +58,8 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
             .Include(request => request.Buyer)
             .Include(request => request.SalesOrder)
                 .ThenInclude(order => order!.Items)
-            .Where(request => (request.Status == MaterialRequestStatus.Waiting
+                .Where(request => (request.Status == MaterialRequestStatus.Waiting
+                    || request.Status == MaterialRequestStatus.WaitingForPrice
                     || request.Status == MaterialRequestStatus.PlanGenerationFailed)
                 && request.MaterialType.ToLower() == inventory.ItemType.ToLower()
                 && request.Buyer.Status == BuyerStatus.Active)
@@ -80,6 +81,41 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
             .ToListAsync(ct);
         var reservedKg = existingReservations.Sum();
 
+        var availableCapacityKg = availableKg - reservedKg;
+        if (availableCapacityKg <= 0)
+            return;
+
+        var rankingPrice = await _db.MaterialPricings
+            .CurrentForAsync(inventory.ItemType, MaterialPricingPolicy.Today, ct);
+        if (rankingPrice is null)
+        {
+            var changed = false;
+            foreach (var request in waiting.Where(request => request.QuantityKg <= availableCapacityKg
+                && (request.Buyer.BuyerType != BuyerType.Export || request.QuantityKg >= 20m)))
+            {
+                request.Status = MaterialRequestStatus.WaitingForPrice;
+                request.LastMatchingNote = $"No live approved price for {inventory.ItemType}; matching will retry after pricing is approved.";
+                request.UpdatedAt = DateTime.UtcNow;
+                if (request.SalesOrder is not null)
+                {
+                    request.SalesOrder.Status = SalesOrderStatus.WaitingForPrice;
+                    request.SalesOrder.UpdatedAt = DateTime.UtcNow;
+                }
+                changed = true;
+            }
+
+            if (changed)
+                await _db.SaveChangesAsync(ct);
+            return;
+        }
+
+        waiting = waiting
+            .Where(request => request.Buyer.BuyerType != BuyerType.Export || request.QuantityKg >= 20m)
+            .OrderByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg))
+            .ThenByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg) / request.QuantityKg)
+            .ThenBy(request => request.CreatedAt)
+            .ToList();
+
         foreach (var request in waiting)
         {
             if (request.QuantityKg > availableKg - reservedKg)
@@ -88,6 +124,7 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
             var claimed = await _db.MaterialRequests
                 .Where(row => row.MaterialRequestId == request.MaterialRequestId
                     && (row.Status == MaterialRequestStatus.Waiting
+                        || row.Status == MaterialRequestStatus.WaitingForPrice
                         || row.Status == MaterialRequestStatus.PlanGenerationFailed))
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(row => row.Status, MaterialRequestStatus.GeneratingPlan)
@@ -174,6 +211,7 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
 
                 request.Status = MaterialRequestStatus.PlanGenerated;
                 request.CommercialPlanId = planId;
+                request.LastMatchingNote = null;
                 request.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync(ct);
             }
@@ -183,6 +221,7 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
                 if (plan?.Status == CommercialPlanStatus.PendingApproval)
                     plan.Status = CommercialPlanStatus.Rejected;
                 request.Status = MaterialRequestStatus.PlanGenerationFailed;
+                request.LastMatchingNote = ex.Message.Length <= 500 ? ex.Message : ex.Message[..500];
                 request.UpdatedAt = DateTime.UtcNow;
                 if (request.SalesOrder is not null)
                 {
@@ -202,12 +241,19 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
         }
     }
 
+    private static decimal EstimateNetValue(MaterialRequest request, decimal pricePerKg)
+    {
+        var costRate = request.Buyer.BuyerType == BuyerType.Export ? 0.12m : 0.05m;
+        return Math.Round(request.QuantityKg * pricePerKg * (1m - costRate), 2);
+    }
+
     private async Task EnsureBackordersExistAsync(CancellationToken ct)
     {
         var openRequests = await _db.MaterialRequests
             .Include(request => request.Buyer)
             .Include(request => request.SalesOrder)
             .Where(request => request.Status == MaterialRequestStatus.Waiting
+                || request.Status == MaterialRequestStatus.WaitingForPrice
                 || request.Status == MaterialRequestStatus.GeneratingPlan
                 || request.Status == MaterialRequestStatus.PlanGenerationFailed)
             .ToListAsync(ct);
@@ -218,6 +264,7 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
             if (request.Status == MaterialRequestStatus.GeneratingPlan)
             {
                 request.Status = MaterialRequestStatus.PlanGenerationFailed;
+                request.LastMatchingNote = "Previous plan generation was interrupted; retrying.";
                 request.UpdatedAt = DateTime.UtcNow;
                 changed = true;
             }
@@ -231,7 +278,9 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
                 MaterialRequest = request,
                 PendingMaterialType = request.MaterialType,
                 PendingQuantityKg = request.QuantityKg,
-                Status = SalesOrderStatus.WaitingForStock,
+                Status = request.Status == MaterialRequestStatus.WaitingForPrice
+                    ? SalesOrderStatus.WaitingForPrice
+                    : SalesOrderStatus.WaitingForStock,
                 CreatedByUserId = request.Buyer.UserId,
                 Notes = "Backorder created from buyer material request."
             };

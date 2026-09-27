@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926114158_AddMaterialRequestPriceWait")]
+    partial class AddMaterialRequestPriceWait
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -833,20 +836,6 @@ namespace EWasteManagement.API.Migrations
                             CreatedAt = new DateTime(2026, 9, 16, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Classified items awaiting handoff to Component D.",
                             Name = "Ready-for-Sale Storage"
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111105"),
-                            CreatedAt = new DateTime(2026, 9, 26, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Quarantine for items on hold, including everything classified Hazardous.",
-                            Name = "Hazardous Hold Area"
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111106"),
-                            CreatedAt = new DateTime(2026, 9, 26, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Export-grade items reserved for export channels.",
-                            Name = "Export Storage"
                         });
                 });
 

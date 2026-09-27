@@ -37,6 +37,7 @@ public class SalesOrder
 public enum SalesOrderStatus
 {
     WaitingForStock,
+    WaitingForPrice,
     PendingPlanApproval,
     Draft,
     Confirmed,

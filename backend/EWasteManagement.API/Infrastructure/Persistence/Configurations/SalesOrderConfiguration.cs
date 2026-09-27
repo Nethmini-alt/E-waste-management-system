@@ -12,7 +12,7 @@ public class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrder>
         {
             t.HasCheckConstraint(
                 "CK_sales_orders_status",
-                "status IN ('waitingforstock','pendingplanapproval','draft','confirmed','completed','cancelled')");
+                "status IN ('waitingforstock','waitingforprice','pendingplanapproval','draft','confirmed','completed','cancelled')");
 
             t.HasCheckConstraint(
                 "CK_sales_orders_total_non_negative",

@@ -12,13 +12,14 @@ export interface SalesOrder {
   buyerId: string;
   materialRequestId?: string | null;
   commercialPlanId?: string | null;
-  materialRequestStatus?: 'Waiting' | 'GeneratingPlan' | 'PlanGenerated' | 'PlanGenerationFailed' | 'OrderPlaced' | 'Fulfilled' | 'Cancelled' | null;
+  materialRequestStatus?: 'Waiting' | 'WaitingForPrice' | 'GeneratingPlan' | 'PlanGenerated' | 'PlanGenerationFailed' | 'OrderPlaced' | 'Fulfilled' | 'Cancelled' | null;
   buyerCompanyName: string;
   pendingMaterialType?: string | null;
   pendingQuantityKg?: number | null;
+  materialRequestNote?: string | null;
   orderDate: string;
   totalAmount: number;
-  status: 'WaitingForStock' | 'PendingPlanApproval' | 'Draft' | 'Confirmed' | 'Completed' | 'Cancelled';
+  status: 'WaitingForStock' | 'WaitingForPrice' | 'PendingPlanApproval' | 'Draft' | 'Confirmed' | 'Completed' | 'Cancelled';
   notes?: string | null;
   createdByUserId: string;
   createdAt: string;

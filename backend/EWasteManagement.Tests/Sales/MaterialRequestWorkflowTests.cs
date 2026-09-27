@@ -12,6 +12,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 
 namespace EWasteManagement.Tests.Sales;
 
@@ -194,6 +195,83 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MatchInventoryAsync_CompetingRequests_PrioritizesHighestExpectedNetValue()
+    {
+        var item = await SeedReadyInventoryAsync("Copper", 100m);
+        var exportUser = new User
+        {
+            Email = "export@example.test",
+            FullName = "Export Buyer",
+            PasswordHash = "test-hash",
+            Role = UserRole.Corporate
+        };
+        var exportBuyer = new Buyer
+        {
+            UserId = exportUser.UserId,
+            CompanyName = "Export Buyer Ltd",
+            ContactPerson = "Export Buyer",
+            Email = exportUser.Email,
+            BuyerType = BuyerType.Export,
+            Status = BuyerStatus.Active
+        };
+        _db.AddRange(exportUser, exportBuyer);
+        _db.MaterialRequests.AddRange(
+            NewRequest("Copper", 20m),
+            NewRequest("Copper", 40m, exportBuyer));
+        await _db.SaveChangesAsync();
+
+        var agent = new RecordingSalesAgent(_connection, item.Id);
+        var matcher = CreateMatcher(agent, AvailableMaterial("Copper", 50m, item.Id));
+        await matcher.MatchInventoryAsync(item.Id);
+
+        var assignedGoal = Assert.Single(agent.Goals);
+        Assert.Equal(exportBuyer.BuyerId, assignedGoal.Goal!.TargetBuyerId);
+        Assert.Equal(40m, assignedGoal.Goal.MaxQuantityKg);
+        var exportRequest = await _db.MaterialRequests.SingleAsync(request => request.BuyerId == exportBuyer.BuyerId);
+        var localRequest = await _db.MaterialRequests.SingleAsync(request => request.BuyerId == _buyer.BuyerId);
+        Assert.Equal(MaterialRequestStatus.PlanGenerated, exportRequest.Status);
+        Assert.Equal(MaterialRequestStatus.Waiting, localRequest.Status);
+    }
+
+    [Fact]
+    public async Task MatchInventoryAsync_StockWithoutLivePrice_WaitsForPriceThenRetries()
+    {
+        var item = await SeedReadyInventoryAsync("Copper", 100m);
+        var request = NewRequest("Copper", 25m);
+        _db.MaterialRequests.Add(request);
+        var price = await _db.MaterialPricings.SingleAsync();
+        _db.MaterialPricings.Remove(price);
+        await _db.SaveChangesAsync();
+
+        var agent = new RecordingSalesAgent(_connection, item.Id);
+        var matcher = CreateMatcher(agent, AvailableMaterial("Copper", 100m, item.Id));
+        await matcher.MatchInventoryAsync(item.Id);
+
+        Assert.Equal(MaterialRequestStatus.WaitingForPrice, request.Status);
+        Assert.Equal(SalesOrderStatus.WaitingForPrice, request.SalesOrder!.Status);
+        Assert.Contains("No live approved price", request.LastMatchingNote);
+        Assert.Empty(agent.Goals);
+
+        _db.MaterialPricings.Add(new MaterialPricing
+        {
+            MaterialType = "Copper",
+            PricePerKg = 100m,
+            EffectiveDate = MaterialPricingPolicy.Today,
+            Status = PricingStatus.Approved,
+            CreatedByUserId = _buyer.UserId
+        });
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        Assert.NotNull(await _db.MaterialPricings.CurrentForAsync("Copper", MaterialPricingPolicy.Today));
+
+        await matcher.MatchInventoryAsync(item.Id);
+
+        Assert.Equal(MaterialRequestStatus.PlanGenerated,
+            await _db.MaterialRequests.Select(row => row.Status).SingleAsync());
+        Assert.Single(agent.Goals);
+    }
+
+    [Fact]
     public async Task ApprovePlan_ConvertsLinkedBackorderToDraftSalesOrder()
     {
         var request = NewRequest("Copper", 75m);
@@ -226,22 +304,23 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
     private MaterialRestockMatcher CreateMatcher(RecordingSalesAgent agent, params RecoveredMaterialResponse[] available)
         => new(_db, new FixedRecoveredMaterialsProvider(available), agent, NullLogger<MaterialRestockMatcher>.Instance);
 
-    private MaterialRequest NewRequest(string materialType, decimal quantityKg)
+    private MaterialRequest NewRequest(string materialType, decimal quantityKg, Buyer? buyer = null)
     {
+        buyer ??= _buyer;
         var request = new MaterialRequest
         {
-            BuyerId = _buyer.BuyerId,
+            BuyerId = buyer.BuyerId,
             MaterialType = materialType,
             QuantityKg = quantityKg
         };
         request.SalesOrder = new SalesOrder
         {
-            BuyerId = _buyer.BuyerId,
+            BuyerId = buyer.BuyerId,
             MaterialRequest = request,
             PendingMaterialType = materialType,
             PendingQuantityKg = quantityKg,
             Status = SalesOrderStatus.WaitingForStock,
-            CreatedByUserId = _buyer.UserId
+            CreatedByUserId = buyer.UserId
         };
         return request;
     }
@@ -314,7 +393,10 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
                 WorkflowId = Guid.NewGuid(),
                 SelectedBuyerId = goal?.TargetBuyerId,
                 ReasoningSummary = "Test generated plan",
-                MaterialsJson = $"[{{\"materialType\":\"Copper\",\"quantityKg\":75,\"recoveredMaterialId\":\"{_inventoryItemId}\"}}]"
+                MaterialsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { materialType = "Copper", quantityKg = goal?.MaxQuantityKg ?? 0m, recoveredMaterialId = _inventoryItemId }
+                })
             };
             var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlite(_connection).Options;
             await using var agentDb = new ApplicationDbContext(options, new NoOpDomainEventDispatcher());

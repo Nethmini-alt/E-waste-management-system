@@ -162,6 +162,7 @@ public class SalesOrderService : ISalesOrderService
         var allowedTransition = order.Status switch
         {
             SalesOrderStatus.WaitingForStock => newStatus is SalesOrderStatus.WaitingForStock or SalesOrderStatus.Cancelled,
+            SalesOrderStatus.WaitingForPrice => newStatus is SalesOrderStatus.WaitingForPrice or SalesOrderStatus.Cancelled,
             SalesOrderStatus.PendingPlanApproval => newStatus is SalesOrderStatus.PendingPlanApproval or SalesOrderStatus.Cancelled,
             SalesOrderStatus.Draft => newStatus is SalesOrderStatus.Draft or SalesOrderStatus.Confirmed or SalesOrderStatus.Cancelled,
             SalesOrderStatus.Confirmed => newStatus is SalesOrderStatus.Confirmed or SalesOrderStatus.Completed or SalesOrderStatus.Cancelled,
@@ -239,6 +240,7 @@ public class SalesOrderService : ISalesOrderService
         MaterialRequestId = o.MaterialRequestId,
         CommercialPlanId = o.MaterialRequest?.CommercialPlanId,
         MaterialRequestStatus = o.MaterialRequest?.Status.ToString(),
+        MaterialRequestNote = o.MaterialRequest?.LastMatchingNote,
         BuyerCompanyName = o.Buyer?.CompanyName ?? string.Empty,
         PendingMaterialType = o.PendingMaterialType,
         PendingQuantityKg = o.PendingQuantityKg,

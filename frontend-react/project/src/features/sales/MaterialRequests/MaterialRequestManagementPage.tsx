@@ -37,7 +37,7 @@ const MaterialRequestManagementPage: React.FC = () => {
       {loading ? <p>Loading requests…</p> : requests.length === 0 ? <div style={emptyStyle}>No buyer requests have been submitted.</div> : (
         <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #dce7e0', borderRadius: 8 }}>
           <table style={tableStyle}>
-            <thead><tr><th style={thStyle}>Buyer</th><th style={thStyle}>Material</th><th style={thStyle}>Quantity</th><th style={thStyle}>Status</th><th style={thStyle}>Submitted</th><th style={thStyle}>Plan review</th></tr></thead>
+            <thead><tr><th style={thStyle}>Buyer</th><th style={thStyle}>Material</th><th style={thStyle}>Quantity</th><th style={thStyle}>Status</th><th style={thStyle}>Submitted</th><th style={thStyle}>Matching note</th><th style={thStyle}>Plan review</th></tr></thead>
             <tbody>{requests.map((request) => (
               <tr key={request.materialRequestId}>
                 <td style={tdStyle}>{request.buyerCompanyName}</td>
@@ -45,6 +45,7 @@ const MaterialRequestManagementPage: React.FC = () => {
                 <td style={tdStyle}>{request.quantityKg.toLocaleString()} kg</td>
                 <td style={tdStyle}><span style={statusStyle}>{statusLabel(request.status)}</span></td>
                 <td style={tdStyle}>{new Date(request.createdAt).toLocaleString()}</td>
+                <td style={tdStyle}>{request.lastMatchingNote ?? '—'}</td>
                 <td style={tdStyle}>{request.commercialPlanId ? <Link to={`/plans/${request.commercialPlanId}`}>Review plan</Link> : '—'}</td>
               </tr>
             ))}</tbody>
@@ -64,6 +65,7 @@ const emptyStyle: React.CSSProperties = { padding: 28, background: '#fff', borde
 
 const statusLabel = (status: MaterialRequest['status']) => ({
   Waiting: 'Waiting for stock',
+  WaitingForPrice: 'Waiting for approved price',
   GeneratingPlan: 'Preparing plan',
   PlanGenerated: 'Awaiting admin approval',
   PlanGenerationFailed: 'Plan generation retrying',

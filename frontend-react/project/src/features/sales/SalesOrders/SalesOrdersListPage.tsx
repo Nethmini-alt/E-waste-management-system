@@ -112,6 +112,7 @@ const SalesOrdersListPage: React.FC = () => {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={selectStyle}>
           <option value="All">All Statuses</option>
           <option value="WaitingForStock">Waiting for stock</option>
+          <option value="WaitingForPrice">Waiting for price</option>
           <option value="PendingPlanApproval">Plan approval</option>
           <option value="Draft">Draft</option>
           <option value="Confirmed">Confirmed</option>
@@ -178,7 +179,9 @@ const SalesOrdersListPage: React.FC = () => {
                 <td style={td}>
                   {o.commercialPlanId
                     ? <Link to={`/plans/${o.commercialPlanId}`}>Review plan</Link>
-                    : o.status === 'WaitingForStock' ? 'Waiting for stock' : '—'}
+                    : o.materialRequestNote ?? (o.status === 'WaitingForStock'
+                      ? 'Waiting for stock'
+                      : o.status === 'WaitingForPrice' ? 'Waiting for approved price' : '—')}
                 </td>
                 <td style={td}>
                   <button onClick={() => setDetailOrder(o)} style={iconBtn} title="View">
@@ -219,6 +222,7 @@ const StatusDropdown: React.FC<{
 }> = ({ status, materialRequestStatus, onChange }) => {
   const colors: Record<SalesOrder['status'], { bg: string; fg: string }> = {
     WaitingForStock: { bg: '#fff3e0', fg: '#a45b00' },
+    WaitingForPrice: { bg: '#ffebee', fg: '#a33' },
     PendingPlanApproval: { bg: '#e3f2fd', fg: '#1565c0' },
     Draft: { bg: '#fff3e0', fg: '#e65100' },
     Confirmed: { bg: '#e3f2fd', fg: '#1565c0' },
@@ -229,6 +233,7 @@ const StatusDropdown: React.FC<{
 
   const requestStatusLabels: Partial<Record<NonNullable<SalesOrder['materialRequestStatus']>, string>> = {
     Waiting: 'Waiting for stock',
+    WaitingForPrice: 'Waiting for approved price',
     GeneratingPlan: 'Generating plan',
     PlanGenerated: 'Awaiting admin approval',
     PlanGenerationFailed: 'Plan retrying',
@@ -241,7 +246,7 @@ const StatusDropdown: React.FC<{
     : status;
 
   // Terminal states: render as a static pill
-  if (status === 'WaitingForStock' || status === 'PendingPlanApproval' || status === 'Completed' || status === 'Cancelled') {
+  if (status === 'WaitingForStock' || status === 'WaitingForPrice' || status === 'PendingPlanApproval' || status === 'Completed' || status === 'Cancelled') {
     return (
       <span
         style={{
