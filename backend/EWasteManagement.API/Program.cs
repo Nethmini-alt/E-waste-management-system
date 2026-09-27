@@ -23,6 +23,18 @@ using EWasteManagement.API.Infrastructure.BackgroundTasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//render database connection string from DATABASE_URL environment variable if it exists
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var npgsqlConnectionString =
+        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = npgsqlConnectionString;
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -152,6 +164,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
+
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider
+        .GetRequiredService<EWasteManagement.API.Infrastructure.Persistence.ApplicationDbContext>()
+        .Database.Migrate();
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseExceptionHandler();
