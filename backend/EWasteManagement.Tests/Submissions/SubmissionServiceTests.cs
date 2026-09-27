@@ -223,6 +223,24 @@ public class SubmissionServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Staff_and_admin_see_submissions_from_every_user()
+    {
+        var alices = await SeedAsync(_alice, WorkflowStatus.Analyzing);
+        var bobs = await SeedAsync(_bob, WorkflowStatus.Completed, JobStatus.Assigned);
+
+        var asStaff = await new SubmissionsController(_service).WithUser(Guid.NewGuid(), "Staff")
+            .GetAllSubmissions(CancellationToken.None);
+        var asAdmin = await new SubmissionsController(_service).WithUser(Guid.NewGuid(), "Admin")
+            .GetAllSubmissions(CancellationToken.None);
+
+        var expected = new[] { alices.SubmissionId, bobs.SubmissionId }.OrderBy(x => x);
+        var staffIds = ControllerTestExtensions.ValueOf(asStaff).Select(s => s.Id).OrderBy(x => x);
+        var adminIds = ControllerTestExtensions.ValueOf(asAdmin).Select(s => s.Id).OrderBy(x => x);
+        Assert.Equal(expected, staffIds);
+        Assert.Equal(expected, adminIds);
+    }
+
+    [Fact]
     public async Task Create_takes_owner_and_user_type_from_the_token()
     {
         var controller = new SubmissionsController(_service).WithUser(_bob, "Corporate");
