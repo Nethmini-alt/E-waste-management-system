@@ -1,3 +1,13 @@
+// Must match backend/EWasteManagement.API/Features/Submissions/DTOs/SubmissionCategories.cs
+// (SubmissionCategories.All) — keep both lists in sync by hand.
+export const SUBMISSION_CATEGORIES = [
+  'Household Electronics',
+  'IT Equipment',
+  'Batteries',
+  'Heavy Appliances',
+  'Other',
+] as const;
+
 // Mirrors SubmissionResponseDto on the backend. `status` is derived there
 // from the job (once one exists) or the workflow — never set directly.
 export type SubmissionStatus =

@@ -10,6 +10,7 @@ import RegisterPage from './features/auth/RegisterPage';
 import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
 
 import SubmitPage from './features/submissions/SubmitPage';
+import MySubmissionsPage from './features/submissions/MySubmissionsPage';
 import AdminReviewPage from './features/submissions/AdminReviewPage';
 
 import JobsDashboardPage from './features/collection/JobsDashboardPage';
@@ -102,6 +103,14 @@ const App: React.FC = () => (
             element={
               <ProtectedRoute roles={['household', 'corporate']}>
                 <SubmitPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/submissions/mine"
+            element={
+              <ProtectedRoute roles={['household', 'corporate']}>
+                <MySubmissionsPage />
               </ProtectedRoute>
             }
           />
