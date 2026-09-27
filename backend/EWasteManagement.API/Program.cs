@@ -19,9 +19,17 @@ using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Processing.Services;
 using EWasteManagement.API.Features.Workflow.Services;
 using EWasteManagement.API.Infrastructure.BackgroundTasks;
+using EWasteManagement.API.Shared.Storage;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+// wwwroot/uploads must exist before Build() — ASP.NET Core snapshots
+// IWebHostEnvironment.WebRootFileProvider (what UseStaticFiles() serves from)
+// at build time, and falls back to a provider that never sees files created
+// afterwards if wwwroot didn't exist yet. LocalFileStorage also creates this
+// directory itself, defensively, for callers that construct it directly.
+Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads"));
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -77,6 +85,11 @@ builder.Services.AddScoped<IClassificationValidationService, ClassificationValid
 builder.Services.AddScoped<IProcessingLookupService, ProcessingLookupService>();
 builder.Services.AddScoped<IWorkflowApprovalHistoryService, WorkflowApprovalHistoryService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
+
+// Shared image upload (Submission items today, Collection completion photos
+// later). Singleton: holds no per-request state, and constructing it once
+// creates wwwroot/uploads up front.
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
@@ -168,6 +181,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Serves wwwroot/uploads with no authentication check — the Analyzer agent
+// downloads submitted images by URL and has no login token of its own.
+app.UseStaticFiles();
 
 app.UseCors("AllowClients");
 

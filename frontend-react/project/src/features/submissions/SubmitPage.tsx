@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, Cpu, ShieldAlert,
-  Tag, Weight, DollarSign, Plus, Trash2, Clock,
+  Tag, Weight, DollarSign, Plus, Trash2, Clock, Image as ImageIcon, Loader2, X,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import { extractFieldErrors, extractGeneralError, type SubmissionFieldErrors } from './submissionErrors';
 import { IN_PROGRESS_STATUSES, SUBMISSION_CATEGORIES, type SubmissionResponse } from './types';
 import { SubmissionProgress } from './SubmissionProgress';
+import { uploadApi } from '../../api/uploadApi';
 
 // Statuses SubmissionProgress can represent as a normal step reached along
 // the happy path (including the successful end states it marks "done").
@@ -16,14 +17,23 @@ const PROGRESS_STATUSES = ['Analyzing', 'AwaitingReview', 'Scheduling', 'Collect
 const POLL_INTERVAL_MS = 1500;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 
+// Must match UploadRequestValidator on the backend — checked here too so a
+// bad file is rejected instantly, without a round trip.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
 interface ItemDraft {
   key: string;
   itemName: string;
   description: string;
   imageUrl: string;
+  imageUploading: boolean;
+  imageError: string | null;
 }
 
-const newItem = (): ItemDraft => ({ key: crypto.randomUUID(), itemName: '', description: '', imageUrl: '' });
+const newItem = (): ItemDraft => ({
+  key: crypto.randomUUID(), itemName: '', description: '', imageUrl: '', imageUploading: false, imageError: null,
+});
 
 const SubmitPage: React.FC = () => {
   const [category, setCategory] = useState('');
@@ -44,6 +54,30 @@ const SubmitPage: React.FC = () => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
   const addItem = () => setItems((prev) => (prev.length >= 10 ? prev : [...prev, newItem()]));
   const removeItem = (key: string) => setItems((prev) => (prev.length <= 1 ? prev : prev.filter((it) => it.key !== key)));
+
+  const handleImageSelect = async (key: string, file: File | undefined) => {
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      updateItem(key, { imageError: 'Image must be JPEG, PNG, or WEBP.' });
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      updateItem(key, { imageError: 'Image must be 5 MB or smaller.' });
+      return;
+    }
+
+    updateItem(key, { imageUploading: true, imageError: null });
+    try {
+      const url = await uploadApi.uploadImage(file);
+      updateItem(key, { imageUrl: url, imageUploading: false });
+    } catch (err) {
+      console.error(err);
+      updateItem(key, { imageUploading: false, imageError: extractGeneralError(err) });
+    }
+  };
+
+  const anyImageUploading = items.some((it) => it.imageUploading);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -201,13 +235,38 @@ const SubmitPage: React.FC = () => {
               />
               <FieldError message={fieldErrors?.items[i]?.description} />
 
-              <input
-                type="url"
-                style={inputStyle}
-                placeholder="Image URL (optional)"
-                value={item.imageUrl}
-                onChange={(e) => updateItem(item.key, { imageUrl: e.target.value })}
-              />
+              <label style={imagePickerLabel}>
+                <ImageIcon size={14} /> {item.imageUrl ? 'Change photo' : 'Add photo (optional)'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => {
+                    void handleImageSelect(item.key, e.target.files?.[0]);
+                    e.target.value = ''; // lets the same file be re-picked after an error
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </label>
+
+              {item.imageUploading && (
+                <span style={imageStatusRow}>
+                  <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading…
+                </span>
+              )}
+              {item.imageUrl && !item.imageUploading && (
+                <div style={imagePreviewRow}>
+                  <img src={item.imageUrl} alt="" style={imagePreview} />
+                  <button
+                    type="button"
+                    onClick={() => updateItem(item.key, { imageUrl: '' })}
+                    style={removeBtn}
+                    aria-label="Remove photo"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+              {item.imageError && <p style={fieldErrorStyle}>{item.imageError}</p>}
               <FieldError message={fieldErrors?.items[i]?.imageUrl} />
             </div>
           ))}
@@ -217,8 +276,8 @@ const SubmitPage: React.FC = () => {
           </button>
         </div>
 
-        <button type="submit" disabled={loading || polling} style={submitBtn}>
-          {loading ? 'Submitting…' : polling ? 'Processing…' : 'Submit E-Waste Item'}
+        <button type="submit" disabled={loading || polling || anyImageUploading} style={submitBtn}>
+          {loading ? 'Submitting…' : polling ? 'Processing…' : anyImageUploading ? 'Uploading photo…' : 'Submit E-Waste Item'}
         </button>
       </form>
 
@@ -343,6 +402,39 @@ const removeBtn: React.CSSProperties = {
   cursor: 'pointer',
   padding: 4,
   display: 'flex',
+};
+const imagePickerLabel: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  background: '#eee',
+  color: '#333',
+  border: '1px dashed #999',
+  padding: '8px 12px',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 13,
+};
+const imageStatusRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  marginTop: 8,
+  fontSize: 12,
+  color: '#e65100',
+};
+const imagePreviewRow: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  marginTop: 8,
+};
+const imagePreview: React.CSSProperties = {
+  width: 60,
+  height: 60,
+  objectFit: 'cover',
+  borderRadius: 4,
+  border: '1px solid #ddd',
 };
 const addItemBtn: React.CSSProperties = {
   background: '#eee',
