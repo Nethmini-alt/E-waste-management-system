@@ -33,6 +33,12 @@ const SalesOrderDetailModal: React.FC<Props> = ({ order, onClose }) => {
           </div>
         )}
 
+        {order.materialRequestNote && (
+          <div style={{ marginTop: 12, padding: 10, background: '#fff6e5', borderRadius: 6, fontSize: 13 }}>
+            <strong>Matching status:</strong> {order.materialRequestNote}
+          </div>
+        )}
+
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>Line Items</h4>
         {order.items.length === 0 && order.pendingMaterialType && (
           <p style={{ color: '#7a4b00', background: '#fff6e5', padding: 10, borderRadius: 5 }}>

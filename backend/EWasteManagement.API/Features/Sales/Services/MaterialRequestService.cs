@@ -106,8 +106,8 @@ public class MaterialRequestService : IMaterialRequestService
             item => item.MaterialRequestId == requestId && item.BuyerId == buyer.BuyerId, ct)
             ?? throw new KeyNotFoundException("Material request not found.");
 
-        if (request.Status is not (MaterialRequestStatus.Waiting or MaterialRequestStatus.PlanGenerationFailed))
-            throw new InvalidOperationException("Only requests waiting for stock or plan generation can be cancelled.");
+        if (request.Status is not (MaterialRequestStatus.Waiting or MaterialRequestStatus.WaitingForPrice or MaterialRequestStatus.PlanGenerationFailed))
+            throw new InvalidOperationException("Only open requests can be cancelled.");
 
         request.Status = MaterialRequestStatus.Cancelled;
         request.UpdatedAt = DateTime.UtcNow;
@@ -130,6 +130,7 @@ public class MaterialRequestService : IMaterialRequestService
         Status = request.Status.ToString(),
         CommercialPlanId = request.CommercialPlanId,
         SalesOrderId = request.SalesOrder?.SalesOrderId,
+        LastMatchingNote = request.LastMatchingNote,
         CreatedAt = request.CreatedAt,
         UpdatedAt = request.UpdatedAt
     };

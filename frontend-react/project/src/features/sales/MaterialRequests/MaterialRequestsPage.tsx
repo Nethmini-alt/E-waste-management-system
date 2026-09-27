@@ -85,15 +85,15 @@ const MaterialRequestsPage: React.FC = () => {
       ) : (
         <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #dce7e0', borderRadius: 8 }}>
           <table style={tableStyle}>
-            <thead><tr><th style={thStyle}>Material</th><th style={thStyle}>Quantity</th><th style={thStyle}>Status</th><th style={thStyle}>Requested</th><th style={thStyle}>Plan</th><th style={thStyle}></th></tr></thead>
+            <thead><tr><th style={thStyle}>Material</th><th style={thStyle}>Quantity</th><th style={thStyle}>Status</th><th style={thStyle}>Requested</th><th style={thStyle}>Plan / matching note</th><th style={thStyle}></th></tr></thead>
             <tbody>{requests.map((request) => (
               <tr key={request.materialRequestId}>
                 <td style={tdStyle}><strong>{request.materialType}</strong></td>
                 <td style={tdStyle}>{request.quantityKg.toLocaleString()} kg</td>
                 <td style={tdStyle}><Status status={request.status} /></td>
                 <td style={tdStyle}>{new Date(request.createdAt).toLocaleDateString()}</td>
-                <td style={tdStyle}>{request.commercialPlanId ? 'Awaiting admin review' : request.status === 'PlanGenerationFailed' ? 'Retry scheduled' : '—'}</td>
-                <td style={tdStyle}>{['Waiting', 'PlanGenerationFailed'].includes(request.status) && <button onClick={() => void cancel(request)} style={iconButton} title="Cancel request" aria-label="Cancel request"><X size={16} /></button>}</td>
+                <td style={tdStyle}>{request.lastMatchingNote ?? (request.commercialPlanId ? 'Awaiting admin review' : request.status === 'PlanGenerationFailed' ? 'Retry scheduled' : '—')}</td>
+                <td style={tdStyle}>{['Waiting', 'WaitingForPrice', 'PlanGenerationFailed'].includes(request.status) && <button onClick={() => void cancel(request)} style={iconButton} title="Cancel request" aria-label="Cancel request"><X size={16} /></button>}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -106,6 +106,7 @@ const MaterialRequestsPage: React.FC = () => {
 const Status: React.FC<{ status: MaterialRequest['status'] }> = ({ status }) => {
   const tones: Record<MaterialRequest['status'], [string, string]> = {
     Waiting: ['#fff5dc', '#805b00'],
+    WaitingForPrice: ['#fff0ef', '#9d322a'],
     GeneratingPlan: ['#e8f2ff', '#175d9b'],
     PlanGenerated: ['#e5f5eb', '#21683a'],
     PlanGenerationFailed: ['#fff0ef', '#9d322a'],
@@ -115,6 +116,8 @@ const Status: React.FC<{ status: MaterialRequest['status'] }> = ({ status }) => 
   };
   const label = status === 'GeneratingPlan'
     ? 'Preparing plan'
+    : status === 'WaitingForPrice'
+      ? 'Waiting for approved price'
     : status === 'PlanGenerationFailed'
       ? 'Plan generation retrying'
       : status === 'PlanGenerated'
