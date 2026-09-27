@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Loader } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import type { SubmissionStatus } from './types';
 
 interface Props {
@@ -32,29 +32,30 @@ export const SubmissionProgress: React.FC<Props> = ({ status, approvalRequired }
   const isDoneAtCurrent = FINAL_SUCCESS.includes(status);
 
   return (
-    <ol style={{ display: 'flex', alignItems: 'center', listStyle: 'none', padding: 0, margin: '15px 0' }} aria-label="Submission progress">
+    <ol className="my-4 flex items-center" aria-label="Submission progress">
       {steps.map((label, i) => {
         const done = i < currentIndex || (i === currentIndex && isDoneAtCurrent);
         const active = i === currentIndex && !isDoneAtCurrent;
         return (
-          <li key={label} style={{ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : undefined }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <li key={label} className={`flex items-center ${i < steps.length - 1 ? 'flex-1' : ''}`}>
+            <div className="flex flex-col items-center gap-1">
               <span
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 26, height: 26, borderRadius: '50%', fontSize: 12, fontWeight: 'bold',
-                  background: done ? '#2e7d32' : active ? '#e65100' : '#e0e0e0',
-                  color: done || active ? '#fff' : '#666',
-                }}
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold shadow-sm ${
+                  done
+                    ? 'bg-mint-600 text-white shadow-mint-500/30'
+                    : active
+                      ? 'bg-amber-500 text-white shadow-amber-500/30'
+                      : 'bg-ink-100 text-ink-600'
+                }`}
               >
-                {done ? <Check size={14} /> : active ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : i + 1}
+                {done ? <Check size={14} /> : active ? <Loader2 size={13} className="animate-spin" /> : i + 1}
               </span>
-              <span style={{ fontSize: 11, whiteSpace: 'nowrap', color: active ? '#e65100' : '#666', fontWeight: active ? 'bold' : 'normal' }}>
+              <span className={`whitespace-nowrap text-[11px] ${active ? 'font-bold text-amber-700' : 'text-ink-600'}`}>
                 {label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <span style={{ flex: 1, height: 2, margin: '0 6px 18px', background: i < currentIndex ? '#2e7d32' : '#e0e0e0' }} />
+              <span className={`mx-1.5 mb-[18px] h-0.5 flex-1 rounded-full ${i < currentIndex ? 'bg-mint-600' : 'bg-ink-100'}`} />
             )}
           </li>
         );

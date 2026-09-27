@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 
 import LandingPage from './features/landing/LandingPage';
+import ImpactPage from './features/landing/ImpactPage';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import RegisterBuyerPage from './features/auth/RegisterBuyerPage';
@@ -17,7 +18,7 @@ import JobsDashboardPage from './features/collection/JobsDashboardPage';
 import JobDetailPage from './features/collection/JobDetailPage';
 import CollectorsPage from './features/collection/CollectorsPage';
 
-import DashboardPage from './features/sales/Dashboard/DashboardPage';
+import HomePage from './features/home/HomePage';
 import BuyersListPage from './features/sales/Buyers/BuyersListPage';
 import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
 import MaterialsListPage from './features/sales/Materials/MaterialsListPage';
@@ -39,6 +40,7 @@ const App: React.FC = () => (
       <Routes>
         {/* Public marketing / auth pages */}
         <Route path="/welcome" element={<LandingPage />} />
+        <Route path="/impact" element={<ImpactPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register/buyer" element={<RegisterBuyerPage />} />
@@ -51,7 +53,7 @@ const App: React.FC = () => (
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<HomePage />} />
 
           {/* Buyer Portal */}
           <Route

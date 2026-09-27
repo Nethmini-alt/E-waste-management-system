@@ -4,11 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckSquare, RefreshCw, Eye, CheckCircle2, XCircle,
-  AlertTriangle, Clock, Bot,
+  AlertTriangle, Clock, Bot, Globe, Package,
 } from 'lucide-react';
 import { planApi } from './planApi';
 import type { CommercialPlan } from './types';
 import PlanStatusPill from './PlanStatusPill';
+import {
+  EmptyState, ErrorMessage, GlassCard, PageHeader,
+  btnPrimary, btnSecondary,
+} from '../../../components/ui';
 
 const ApprovalsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,157 +55,103 @@ const ApprovalsPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CheckSquare size={22} /> Commercial Approvals
-          </h2>
-          <p style={{ color: '#666', marginTop: 4 }}>
-            AI-generated plans awaiting your decision (human-in-the-loop)
-          </p>
-        </div>
-        <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-      </div>
+      <PageHeader
+        title="Commercial approvals"
+        subtitle="AI-generated plans awaiting your decision (human-in-the-loop)."
+        icon={CheckSquare}
+        actions={<button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>}
+      />
 
-      {loading && <p>Loading approvals…</p>}
-      {error && <div style={errorBox}>{error}</div>}
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
 
-      {!loading && !error && plans.length === 0 && (
-        <div style={emptyBox}>
-          <CheckCircle2 size={40} color="#bbb" />
-          <p>All clear! No plans awaiting approval.</p>
-        </div>
-      )}
+      <GlassCard hover={false} padded={false}>
+        {loading && !plans.length ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-600">Loading approvals…</p>
+        ) : !error && plans.length === 0 ? (
+          <EmptyState icon={CheckCircle2} title="All clear!" description="No plans awaiting approval." />
+        ) : !error ? (
+          <div className="divide-y divide-mint-50">
+            {plans.map((plan) => {
+              const riskCount = (() => {
+                try {
+                  const parsed = JSON.parse(plan.riskFlags ?? '[]');
+                  return Array.isArray(parsed) ? parsed.length : 0;
+                } catch { return 0; }
+              })();
 
-      {!loading && plans.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-          {plans.map((plan) => {
-            const riskCount = (() => {
-              try {
-                const parsed = JSON.parse(plan.riskFlags ?? '[]');
-                return Array.isArray(parsed) ? parsed.length : 0;
-              } catch { return 0; }
-            })();
+              const busy = quickActionId === plan.commercialPlanId;
 
-            const busy = quickActionId === plan.commercialPlanId;
-
-            return (
-              <div key={plan.commercialPlanId} style={approvalCard}>
-                {/* Left: main info */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <Bot size={16} color="#1565c0" />
-                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#666' }}>
-                      {plan.commercialPlanId.slice(0, 8)}…
-                    </span>
-                    <PlanStatusPill status={plan.status} />
-                    {riskCount > 0 && (
-                      <span style={riskBadge}>
-                        <AlertTriangle size={11} /> {riskCount} risk{riskCount > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 20, marginBottom: 8, fontSize: 13 }}>
-                    <div>
-                      <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase' }}>Route</div>
-                      <div style={{ fontWeight: 'bold' }}>
-                        {plan.recommendedRoute === 'Export' ? '🌍 Export' : '📦 Local Sale'}
-                      </div>
+              return (
+                <div key={plan.commercialPlanId} className="flex flex-wrap gap-5 p-5">
+                  {/* Left: main info */}
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                      <Bot size={16} className="text-sky-700" />
+                      <span className="font-mono text-xs text-ink-600">{plan.commercialPlanId.slice(0, 8)}…</span>
+                      <PlanStatusPill status={plan.status} />
+                      {riskCount > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                          <AlertTriangle size={11} /> {riskCount} risk{riskCount > 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase' }}>Buyer</div>
-                      <div style={{ fontWeight: 'bold' }}>{plan.selectedBuyerName ?? '—'}</div>
-                    </div>
-                    {plan.destinationCountry && (
+
+                    <div className="mb-2 flex flex-wrap gap-5 text-sm">
                       <div>
-                        <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase' }}>Destination</div>
-                        <div style={{ fontWeight: 'bold' }}>{plan.destinationCountry}</div>
+                        <div className="text-[11px] uppercase text-ink-600">Route</div>
+                        <div className="flex items-center gap-1.5 font-semibold text-ink-900">
+                          {plan.recommendedRoute === 'Export' ? <Globe size={14} /> : <Package size={14} />}
+                          {plan.recommendedRoute === 'Export' ? 'Export' : 'Local sale'}
+                        </div>
                       </div>
-                    )}
-                    <div>
-                      <div style={{ color: '#888', fontSize: 11, textTransform: 'uppercase' }}>Net Value</div>
-                      <div style={{ fontWeight: 'bold', color: '#2e7d32' }}>
-                        Rs. {plan.estimatedNetValue.toFixed(2)}
+                      <div>
+                        <div className="text-[11px] uppercase text-ink-600">Buyer</div>
+                        <div className="font-semibold text-ink-900">{plan.selectedBuyerName ?? '—'}</div>
                       </div>
+                      {plan.destinationCountry && (
+                        <div>
+                          <div className="text-[11px] uppercase text-ink-600">Destination</div>
+                          <div className="font-semibold text-ink-900">{plan.destinationCountry}</div>
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-[11px] uppercase text-ink-600">Net value</div>
+                        <div className="font-bold text-mint-700">Rs. {plan.estimatedNetValue.toFixed(2)}</div>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[60px] overflow-hidden rounded-xl bg-sky-50/70 p-2.5 text-xs italic text-ink-700">
+                      &ldquo;{plan.reasoningSummary}&rdquo;
+                    </div>
+
+                    <div className="mt-1.5 flex items-center gap-1 text-[11px] text-ink-600">
+                      <Clock size={11} /> Submitted {new Date(plan.createdAt).toLocaleString()}
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: 12, color: '#555', fontStyle: 'italic',
-                      padding: 8, background: '#f5f9ff', borderRadius: 4,
-                      maxHeight: 60, overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}
-                  >
-                    "{plan.reasoningSummary}"
-                  </div>
-
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Clock size={11} />
-                    Submitted {new Date(plan.createdAt).toLocaleString()}
+                  {/* Right: actions */}
+                  <div className="flex min-w-[170px] flex-col gap-2">
+                    <button onClick={() => navigate(`/plans/${plan.commercialPlanId}`)} className={btnSecondary}>
+                      <Eye size={14} /> Review details
+                    </button>
+                    <button onClick={() => quickApprove(plan)} disabled={busy} className={btnPrimary}>
+                      <CheckCircle2 size={14} /> {busy ? 'Approving…' : 'Quick approve'}
+                    </button>
+                    <button
+                      onClick={() => navigate(`/plans/${plan.commercialPlanId}`)}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-red-300 bg-white/70 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      <XCircle size={14} /> Reject / revise
+                    </button>
                   </div>
                 </div>
-
-                {/* Right: actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 160 }}>
-                  <button
-                    onClick={() => navigate(`/plans/${plan.commercialPlanId}`)}
-                    style={btnSecondary}
-                  >
-                    <Eye size={14} /> Review Details
-                  </button>
-                  <button
-                    onClick={() => quickApprove(plan)}
-                    disabled={busy}
-                    style={btnApprove}
-                  >
-                    <CheckCircle2 size={14} /> {busy ? 'Approving…' : 'Quick Approve'}
-                  </button>
-                  <button
-                    onClick={() => navigate(`/plans/${plan.commercialPlanId}`)}
-                    style={btnRejectOutline}
-                  >
-                    <XCircle size={14} /> Reject / Revise
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        ) : null}
+      </GlassCard>
     </div>
   );
-};
-
-const approvalCard: React.CSSProperties = {
-  display: 'flex', gap: 20, background: '#fff', padding: 16,
-  borderRadius: 10, border: '1px solid #eee',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-};
-const riskBadge: React.CSSProperties = {
-  background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: 4,
-  fontSize: 11, fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: 3,
-};
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-  fontWeight: 'bold', fontSize: 13,
-};
-const btnApprove: React.CSSProperties = {
-  background: '#2e7d32', color: '#fff', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-  fontWeight: 'bold', fontSize: 13,
-};
-const btnRejectOutline: React.CSSProperties = {
-  background: '#fff', color: '#c62828', border: '1px solid #c62828', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-  fontWeight: 'bold', fontSize: 13,
-};
-const errorBox: React.CSSProperties = { padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6 };
-const emptyBox: React.CSSProperties = {
-  padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
-  border: '1px dashed #ccc',
 };
 
 export default ApprovalsPage;

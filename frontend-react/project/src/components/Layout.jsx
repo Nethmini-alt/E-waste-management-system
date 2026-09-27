@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../features/auth/AuthContext';
 import Hero3D from './Hero3D';
 import CollectorAppNotice from '../features/collection/CollectorAppNotice';
+import SiteFooter from './SiteFooter';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
   Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, ClipboardList, IdCard, Boxes,
@@ -79,8 +80,8 @@ export const Layout = () => {
 
           
 
-          {/* Component A — Submission */}
-          <div className={sectionLabel}>Component A — Submission</div>
+          {/* Submission */}
+          <div className={sectionLabel}>Submission</div>
           {isGenerator && (
             <>
               <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
@@ -97,10 +98,10 @@ export const Layout = () => {
             </NavLink>
           )}
 
-          {/* Component B — Collection & Logistics (staff side) */}
+          {/* Collection & Logistics (staff side) */}
           {isStaff && (
             <>
-              <div className={sectionLabel}>Component B — Collection</div>
+              <div className={sectionLabel}>Collection</div>
               <NavLink to="/collection/jobs" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
                 <Truck size={16} /> Collection Jobs
               </NavLink>
@@ -110,10 +111,10 @@ export const Layout = () => {
             </>
           )}
 
-          {/* Component C — Processing (staff / admin) */}
+          {/* Processing (staff / admin) */}
           {isStaff && (
             <>
-              <div className={sectionLabel}>Component C — Processing</div>
+              <div className={sectionLabel}>Processing</div>
               <NavLink to="/processing" end className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Recycle size={16} /> Overview</NavLink>
               <NavLink to="/processing/receive" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><PackagePlus size={16} /> Receive Waste</NavLink>
               <NavLink to="/processing/inventory" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Boxes size={16} /> Inventory</NavLink>
@@ -123,10 +124,10 @@ export const Layout = () => {
             </>
           )}
 
-          {/* Component D — Sales (my part) */}
+          {/* Sales */}
           {isStaff && (
             <>
-              <div className={sectionLabel}>Component D — Sales</div>
+              <div className={sectionLabel}>Sales</div>
               <NavLink to="/materials" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Package size={16} /> Recovered Materials</NavLink>
               <NavLink to="/pricing" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Tag size={16} /> Pricing</NavLink>
               <NavLink to="/buyers" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}><Users size={16} /> Buyers</NavLink>
@@ -176,6 +177,30 @@ export const Layout = () => {
             <Outlet />
           </motion.div>
         </AnimatePresence>
+
+        {!isStaff && (
+          <SiteFooter
+            inApp
+            columns={[
+              {
+                title: 'Your account',
+                links: [
+                  { label: 'Dashboard', to: '/' },
+                  { label: 'Submit an item', to: '/submissions/new' },
+                  { label: 'My submissions', to: '/submissions/mine' },
+                  ...(isBuyer ? [{ label: 'Material requests', to: '/material-requests' }] : []),
+                ],
+              },
+              {
+                title: 'Learn',
+                links: [
+                  { label: 'How it works', href: '/welcome#how-it-works' },
+                  { label: 'E-waste & impact', to: '/impact' },
+                ],
+              },
+            ]}
+          />
+        )}
       </main>
     </div>
   );
