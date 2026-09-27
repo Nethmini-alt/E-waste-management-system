@@ -195,7 +195,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
         Guid? resultingJobId = null;
 
+        // A workflow re-queued at startup (WorkflowStartupRecovery) can re-run
+        // Finalize after it already created the job but before the workflow
+        // was marked Completed. Reuse that job instead of creating a second one.
         if (finalizeResult.ReadyForJobCreation)
+            resultingJobId = await _jobService.FindJobIdForSubmissionAsync(workflow.SubmissionId);
+
+        if (finalizeResult.ReadyForJobCreation && resultingJobId is null)
         {
             var snapshot = await _workflows.GetSubmissionSnapshotAsync(workflow.SubmissionId, ct);
             var job = await _jobService.CreateAndAssignAsync(new CreateJobDto
