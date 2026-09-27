@@ -11,6 +11,11 @@ class AuthUser {
 
   bool get isAdmin => role.toLowerCase() == 'admin';
   bool get isStaffOrAdmin => const {'staff', 'admin'}.contains(role.toLowerCase());
+
+  /// Household or Corporate — the two roles that submit e-waste.
+  bool get isGenerator => const {'household', 'corporate'}.contains(role.toLowerCase());
+  bool get isCollector => role.toLowerCase() == 'collector';
+
   String get firstName => fullName.trim().split(RegExp(r'\s+')).first;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(

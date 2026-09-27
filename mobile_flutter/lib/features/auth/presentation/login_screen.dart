@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/auth/auth_controller.dart';
@@ -85,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                const Text('Warehouse staff and admins', style: AppText.small),
+                                const Text('Generators, collectors, warehouse staff and admins', style: AppText.small),
                                 if (reason != null && _error == null) ...[
                                   const SizedBox(height: 16),
                                   _InlineMessage(text: reason, icon: LucideIcons.clock, color: AppColors.amber800, background: AppColors.amber50),
@@ -131,10 +132,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   onPressed: _submit,
                                 ),
                                 const SizedBox(height: 20),
-                                const Text(
-                                  "Don't have an account? Sign up on the web portal.",
-                                  textAlign: TextAlign.center,
-                                  style: AppText.small,
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text("Don't have an account?", style: AppText.small),
+                                    TextButton(
+                                      onPressed: _loading ? null : () => context.go('/register'),
+                                      child: const Text('Create one'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
