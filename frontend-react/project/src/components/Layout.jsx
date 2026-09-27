@@ -8,7 +8,7 @@ import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import {
   LayoutDashboard, Users, Tag, ShoppingCart, Ship, DollarSign,
   Bot, CheckSquare, Package, LogOut, Send, Truck, Recycle, Lock, ClipboardList, IdCard, Boxes,
-  PackagePlus, Wallet, Cpu,
+  PackagePlus, Wallet, Cpu, PackageSearch,
 } from 'lucide-react';
 
 const navItem =
@@ -82,11 +82,16 @@ export const Layout = () => {
           {/* Component A — Submission */}
           <div className={sectionLabel}>Component A — Submission</div>
           {isGenerator && (
-            <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
-              <Send size={16} /> Submit Item
-            </NavLink>
+            <>
+              <NavLink to="/submissions/new" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <Send size={16} /> Submit Item
+              </NavLink>
+              <NavLink to="/submissions/mine" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
+                <PackageSearch size={16} /> My Submissions
+              </NavLink>
+            </>
           )}
-          {isAdmin && (
+          {isStaff && (
             <NavLink to="/submissions/review" className={({ isActive }) => `${navItem} ${isActive ? navItemActive : navItemInactive}`}>
               <CheckSquare size={16} /> Submissions Review
             </NavLink>

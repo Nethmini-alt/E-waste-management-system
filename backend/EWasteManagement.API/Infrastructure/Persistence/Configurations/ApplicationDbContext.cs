@@ -24,7 +24,6 @@ public class ApplicationDbContext : DbContext
     // Generator & Submission Manager Tables
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<SubmissionItem> SubmissionItems => Set<SubmissionItem>();
-    public DbSet<AIAnalysisResult> AIAnalysisResults => Set<AIAnalysisResult>();
     public DbSet<WarehouseLocation> WarehouseLocations => Set<WarehouseLocation>();
     public DbSet<RatePolicy> RatePolicies => Set<RatePolicy>();
     public DbSet<ExtraWasteReceipt> ExtraWasteReceipts => Set<ExtraWasteReceipt>();

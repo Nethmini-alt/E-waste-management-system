@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Bot, RefreshCw } from 'lucide-react';
 import { agenticReviewApi } from './agenticReviewApi';
 import { parseAnalyzerResult } from './parseWorkflow';
@@ -42,6 +43,12 @@ const AgenticReviewPage: React.FC = () => {
   const user = useCurrentUser();
   const isAdmin = user?.role.toLowerCase() === 'admin';
 
+  // Deep link from Submissions Review (?workflowId=...): open that
+  // workflow's modal as soon as the list has loaded, then drop the param so
+  // a refresh or the back button doesn't keep reopening it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedWorkflowId = searchParams.get('workflowId');
+
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +71,20 @@ const AgenticReviewPage: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!linkedWorkflowId || workflows.length === 0) return;
+    if (workflows.some((w) => w.workflowId === linkedWorkflowId)) {
+      setOpenId(linkedWorkflowId);
+      setTab('all'); // the linked workflow may not be in the default "Needs review" tab
+    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('workflowId');
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedWorkflowId, workflows]);
 
   const counts = useMemo(() => Object.fromEntries(TABS.map((t) => [t.id, workflows.filter(t.match).length])) as Record<Tab, number>, [workflows]);
   const activeTab = TABS.find((t) => t.id === tab)!;
