@@ -5,6 +5,10 @@ import { Plus, Search, Pencil, Trash2, RefreshCw, Users } from 'lucide-react';
 import { buyerApi } from './buyerApi';
 import type { Buyer, CreateBuyerRequest } from './types';
 import BuyerFormModal from './BuyerFormModal';
+import {
+  EmptyState, ErrorMessage, GlassCard, PageHeader,
+  btnPrimary, btnSecondary, inputClass, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const BuyersListPage: React.FC = () => {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
@@ -94,108 +98,96 @@ const BuyersListPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={22} /> Buyers
-        </h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-          <button
-            onClick={() => { setEditing(null); setModalOpen(true); }}
-            style={btnPrimary}
+      <PageHeader
+        title="Buyers"
+        icon={Users}
+        actions={
+          <>
+            <button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+            <button onClick={() => { setEditing(null); setModalOpen(true); }} className={btnPrimary}>
+              <Plus size={14} /> New buyer
+            </button>
+          </>
+        }
+      />
+
+      <GlassCard hover={false} className="mb-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-600" />
+            <input
+              placeholder="Search company, contact or email…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className={`${inputClass} !w-auto`}
           >
-            <Plus size={14} /> New Buyer
-          </button>
+            <option value="All">All statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Active">Active</option>
+            <option value="Suspended">Suspended</option>
+          </select>
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-        <div style={searchBox}>
-          <Search size={16} color="#888" />
-          <input
-            placeholder="Search company, contact or email…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={searchInput}
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          style={{ padding: 8, borderRadius: 6, border: '1px solid #ccc' }}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Pending">Pending</option>
-          <option value="Active">Active</option>
-          <option value="Suspended">Suspended</option>
-        </select>
-      </div>
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
 
-      {loading && <p>Loading buyers…</p>}
-      {error && <div style={errorBox}>{error}</div>}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div style={emptyBox}>
-          <Users size={40} color="#bbb" />
-          <p>No buyers found. Click <strong>New Buyer</strong> to add one.</p>
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              <th style={th}>Company</th>
-              <th style={th}>Contact</th>
-              <th style={th}>Email</th>
-              <th style={th}>Type</th>
-              <th style={th}>Status</th>
-              <th style={th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((b) => (
-              <tr key={b.buyerId} style={{ borderTop: '1px solid #eee' }}>
-                <td style={td}>{b.companyName}</td>
-                <td style={td}>{b.contactPerson}</td>
-                <td style={td}>{b.email}</td>
-                <td style={td}>{b.buyerType}</td>
-                <td style={td}>
-                  <select
-                    value={b.status}
-                    onChange={(e) => changeStatus(b, e.target.value as any)}
-                    style={{
-                      padding: 4, borderRadius: 4, border: '1px solid #ccc',
-                      background: statusBg(b.status), fontWeight: 'bold', fontSize: 12,
-                    }}
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="Active">Active</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
-                </td>
-                <td style={td}>
-                  <button
-                    onClick={() => { setEditing(b); setModalOpen(true); }}
-                    style={iconBtn}
-                    title="Edit"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(b)}
-                    style={{ ...iconBtn, color: '#c62828' }}
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <GlassCard hover={false} padded={false}>
+        {loading && !buyers.length ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-600">Loading buyers…</p>
+        ) : !error && filtered.length === 0 ? (
+          <EmptyState icon={Users} title="No buyers found" description='Click "New buyer" to add one.' />
+        ) : !error ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-mint-100">
+                  <th className={`${tableHeadClass} px-4 py-3`}>Company</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Contact</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Email</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Type</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((b) => (
+                  <tr key={b.buyerId} className="border-b border-mint-50 last:border-0">
+                    <td className={`${tableCellClass} font-semibold text-ink-900`}>{b.companyName}</td>
+                    <td className={tableCellClass}>{b.contactPerson}</td>
+                    <td className={tableCellClass}>{b.email}</td>
+                    <td className={tableCellClass}>{b.buyerType}</td>
+                    <td className={tableCellClass}>
+                      <select
+                        value={b.status}
+                        onChange={(e) => changeStatus(b, e.target.value as any)}
+                        className={`rounded-lg border-0 px-2.5 py-1 text-xs font-bold ${statusPillClass(b.status)}`}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Active">Active</option>
+                        <option value="Suspended">Suspended</option>
+                      </select>
+                    </td>
+                    <td className={tableCellClass}>
+                      <button onClick={() => { setEditing(b); setModalOpen(true); }} className="mr-1 rounded-lg p-1.5 text-ink-700 hover:bg-mint-50" title="Edit">
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(b)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </GlassCard>
 
       <BuyerFormModal
         open={modalOpen}
@@ -216,37 +208,7 @@ const BuyersListPage: React.FC = () => {
   );
 };
 
-const statusBg = (s: Buyer['status']) =>
-  s === 'Active' ? '#e8f5e9' : s === 'Suspended' ? '#ffebee' : '#fff3e0';
-
-const th: React.CSSProperties = { padding: 10, fontSize: 13, fontWeight: 'bold' };
-const td: React.CSSProperties = { padding: 10, fontSize: 14 };
-const btnPrimary: React.CSSProperties = {
-  background: '#1565c0', color: '#fff', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold',
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const iconBtn: React.CSSProperties = {
-  background: 'transparent', border: 'none', cursor: 'pointer',
-  padding: 6, marginRight: 4,
-};
-const searchBox: React.CSSProperties = {
-  flex: 1, display: 'flex', alignItems: 'center', gap: 6,
-  background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: '0 10px',
-};
-const searchInput: React.CSSProperties = {
-  flex: 1, border: 'none', outline: 'none', padding: 8,
-};
-const errorBox: React.CSSProperties = {
-  padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6,
-};
-const emptyBox: React.CSSProperties = {
-  padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
-  border: '1px dashed #ccc',
-};
+const statusPillClass = (s: Buyer['status']) =>
+  s === 'Active' ? 'bg-mint-100 text-mint-800' : s === 'Suspended' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800';
 
 export default BuyersListPage;

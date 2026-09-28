@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom';
 import { ClipboardList, RefreshCw } from 'lucide-react';
 import { materialRequestApi } from './materialRequestApi';
 import type { MaterialRequest } from './types';
+import {
+  EmptyState, ErrorMessage, GlassCard, LoadingState, PageHeader,
+  btnSecondary, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const MaterialRequestManagementPage: React.FC = () => {
   const [requests, setRequests] = useState<MaterialRequest[]>([]);
@@ -26,42 +30,58 @@ const MaterialRequestManagementPage: React.FC = () => {
 
   return (
     <div>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
-        <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}><ClipboardList size={22} /> Buyer material demand</h2>
-          <p style={{ color: '#65716b', margin: '6px 0 0' }}>Track backordered demand and open generated plans for admin review.</p>
-        </div>
-        <button onClick={() => void load()} style={refreshButton} title="Refresh requests" aria-label="Refresh requests"><RefreshCw size={15} /></button>
-      </header>
-      {error && <p role="alert" style={{ color: '#a33' }}>{error}</p>}
-      {loading ? <p>Loading requests…</p> : requests.length === 0 ? <div style={emptyStyle}>No buyer requests have been submitted.</div> : (
-        <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #dce7e0', borderRadius: 8 }}>
-          <table style={tableStyle}>
-            <thead><tr><th style={thStyle}>Buyer</th><th style={thStyle}>Material</th><th style={thStyle}>Quantity</th><th style={thStyle}>Status</th><th style={thStyle}>Submitted</th><th style={thStyle}>Matching note</th><th style={thStyle}>Plan review</th></tr></thead>
-            <tbody>{requests.map((request) => (
-              <tr key={request.materialRequestId}>
-                <td style={tdStyle}>{request.buyerCompanyName}</td>
-                <td style={tdStyle}><strong>{request.materialType}</strong></td>
-                <td style={tdStyle}>{request.quantityKg.toLocaleString()} kg</td>
-                <td style={tdStyle}><span style={statusStyle}>{statusLabel(request.status)}</span></td>
-                <td style={tdStyle}>{new Date(request.createdAt).toLocaleString()}</td>
-                <td style={tdStyle}>{request.lastMatchingNote ?? '—'}</td>
-                <td style={tdStyle}>{request.commercialPlanId ? <Link to={`/plans/${request.commercialPlanId}`}>Review plan</Link> : '—'}</td>
-              </tr>
-            ))}</tbody>
-          </table>
-        </div>
-      )}
+      <PageHeader
+        title="Buyer material demand"
+        subtitle="Track backordered demand and open generated plans for admin review."
+        icon={ClipboardList}
+        actions={<button onClick={() => void load()} className={btnSecondary} title="Refresh requests" aria-label="Refresh requests"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /></button>}
+      />
+
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
+
+      <GlassCard hover={false} padded={false}>
+        {loading && !requests.length ? (
+          <LoadingState label="Loading requests…" />
+        ) : !error && requests.length === 0 ? (
+          <EmptyState icon={ClipboardList} title="No buyer requests have been submitted" />
+        ) : !error ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-mint-100">
+                  <th className={`${tableHeadClass} px-4 py-3`}>Buyer</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Material</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Quantity</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Submitted</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Matching note</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Plan review</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((request) => (
+                  <tr key={request.materialRequestId} className="border-b border-mint-50 last:border-0">
+                    <td className={tableCellClass}>{request.buyerCompanyName}</td>
+                    <td className={`${tableCellClass} font-semibold text-ink-900`}>{request.materialType}</td>
+                    <td className={tableCellClass}>{request.quantityKg.toLocaleString()} kg</td>
+                    <td className={tableCellClass}>
+                      <span className="rounded-full bg-mint-50 px-2.5 py-1 text-xs font-bold text-mint-800 whitespace-nowrap">{statusLabel(request.status)}</span>
+                    </td>
+                    <td className={`${tableCellClass} text-ink-600`}>{new Date(request.createdAt).toLocaleString()}</td>
+                    <td className={tableCellClass}>{request.lastMatchingNote ?? '—'}</td>
+                    <td className={tableCellClass}>
+                      {request.commercialPlanId ? <Link to={`/plans/${request.commercialPlanId}`} className="font-semibold text-mint-700 hover:underline">Review plan</Link> : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </GlassCard>
     </div>
   );
 };
-
-const refreshButton: React.CSSProperties = { display: 'inline-grid', placeItems: 'center', width: 36, height: 36, border: '1px solid #cbd8d0', borderRadius: 5, background: '#fff', cursor: 'pointer' };
-const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 };
-const thStyle: React.CSSProperties = { padding: '11px 12px', background: '#f4f8f5', color: '#58645d', fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #dce7e0' };
-const tdStyle: React.CSSProperties = { padding: 12, borderBottom: '1px solid #edf1ee' };
-const statusStyle: React.CSSProperties = { padding: '4px 7px', background: '#edf3ef', borderRadius: 4, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' };
-const emptyStyle: React.CSSProperties = { padding: 28, background: '#fff', border: '1px dashed #cbd8d0', borderRadius: 8, color: '#65716b', textAlign: 'center' };
 
 const statusLabel = (status: MaterialRequest['status']) => ({
   Waiting: 'Waiting for stock',

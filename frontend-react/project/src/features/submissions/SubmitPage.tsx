@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, Cpu, ShieldAlert,
-  Tag, Weight, DollarSign, Plus, Trash2, Clock, Image as ImageIcon, Loader2, X,
+  Tag, Weight, DollarSign, Plus, Trash2, Clock, Send, Image as ImageIcon, Loader2, X,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import { extractFieldErrors, extractGeneralError, type SubmissionFieldErrors } from './submissionErrors';
 import { IN_PROGRESS_STATUSES, SUBMISSION_CATEGORIES, type SubmissionResponse } from './types';
 import { SubmissionProgress } from './SubmissionProgress';
+import { GlassCard, Notice, PageHeader, StatusPill, btnPrimary, inputClass, labelClass } from '../../components/ui';
+import type { StatusTone } from '../../components/ui/StatusPill';
 import { uploadApi } from '../../api/uploadApi';
 
 // Statuses SubmissionProgress can represent as a normal step reached along
@@ -21,6 +23,16 @@ const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 // bad file is rejected instantly, without a round trip.
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const STATUS_TONE: Record<string, StatusTone> = {
+  CollectorAssigned: 'success',
+  AwaitingCollector: 'success',
+  Collected: 'success',
+  Closed: 'success',
+  Rejected: 'error',
+  Failed: 'error',
+  Cancelled: 'error',
+};
 
 interface ItemDraft {
   key: string;
@@ -135,165 +147,180 @@ const SubmitPage: React.FC = () => {
   const ai = submission?.workflow?.analysis;
 
   return (
-    <div>
-      <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Cpu /> Smart E-Waste Collector
-      </h2>
-      <p style={{ color: '#666' }}>
-        Submit e-waste items for pickup — our AI assesses hazard level and category automatically.
-      </p>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title="Smart e-waste collector"
+        subtitle="Submit e-waste items for pickup — our AI assesses hazard level and category automatically."
+        icon={Cpu}
+      />
 
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Category:</label>
-          <select
-            style={inputStyle}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          >
-            <option value="" disabled>Select a category…</option>
-            {SUBMISSION_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          <FieldError message={fieldErrors?.category} />
-        </div>
+      <GlassCard hover={false} className="p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className={labelClass}>Category</label>
+            <select
+              className={inputClass}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              <option value="" disabled>Select a category…</option>
+              {SUBMISSION_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <FieldError message={fieldErrors?.category} />
+          </div>
 
-        <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Estimated Weight (kg):</label>
-          <input
-            type="number"
-            min="0.1"
-            step="0.1"
-            style={inputStyle}
-            value={estimatedWeight}
-            onChange={(e) => setEstimatedWeight(e.target.value)}
-            required
-          />
-          <FieldError message={fieldErrors?.estimatedWeight} />
-        </div>
+          <div>
+            <label className={labelClass}>Estimated weight (kg)</label>
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              className={inputClass}
+              value={estimatedWeight}
+              onChange={(e) => setEstimatedWeight(e.target.value)}
+              required
+            />
+            <FieldError message={fieldErrors?.estimatedWeight} />
+          </div>
 
-        <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Pickup Address:</label>
-          <input
-            type="text"
-            style={inputStyle}
-            placeholder="e.g. 12 Main Street, Colombo 03"
-            value={pickupAddress}
-            onChange={(e) => setPickupAddress(e.target.value)}
-            required
-          />
-          <FieldError message={fieldErrors?.pickupAddress} />
-        </div>
+          <div>
+            <label className={labelClass}>Pickup address</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="e.g. 12 Main Street, Colombo 03"
+              value={pickupAddress}
+              onChange={(e) => setPickupAddress(e.target.value)}
+              required
+            />
+            <FieldError message={fieldErrors?.pickupAddress} />
+          </div>
 
-        <div style={{ marginBottom: 15 }}>
-          <label style={labelStyle}>Phone Number:</label>
-          <input
-            type="tel"
-            style={inputStyle}
-            placeholder="e.g. 0771234567 or +94771234567"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            required
-          />
-          <FieldError message={fieldErrors?.phoneNumber} />
-        </div>
+          <div>
+            <label className={labelClass}>Phone number</label>
+            <input
+              type="tel"
+              className={inputClass}
+              placeholder="e.g. 0771234567 or +94771234567"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              required
+            />
+            <FieldError message={fieldErrors?.phoneNumber} />
+          </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <label style={labelStyle}>Items ({items.length}/10):</label>
-          <FieldError message={fieldErrors?.itemsGeneral} />
+          <div>
+            <label className={labelClass}>Items ({items.length}/10)</label>
+            <FieldError message={fieldErrors?.itemsGeneral} />
 
-          {items.map((item, i) => (
-            <div key={item.key} style={itemCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong style={{ fontSize: 13 }}>Item {i + 1}</strong>
-                {items.length > 1 && (
-                  <button type="button" onClick={() => removeItem(item.key)} style={removeBtn} aria-label={`Remove item ${i + 1}`}>
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
+            <div className="flex flex-col gap-3 mt-1">
+              {items.map((item, i) => (
+                <div key={item.key} className="rounded-2xl border border-mint-100 bg-white/60 p-4">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-mono uppercase tracking-wide text-ink-600">Item {i + 1}</span>
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.key)}
+                        className="flex items-center rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                        aria-label={`Remove item ${i + 1}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
 
-              <input
-                type="text"
-                style={{ ...inputStyle, marginBottom: 6 }}
-                placeholder="Item name (e.g. Laptop)"
-                value={item.itemName}
-                onChange={(e) => updateItem(item.key, { itemName: e.target.value })}
-                required
-              />
-              <FieldError message={fieldErrors?.items[i]?.itemName} />
+                  <input
+                    type="text"
+                    className={`${inputClass} mb-2`}
+                    placeholder="Item name (e.g. Laptop)"
+                    value={item.itemName}
+                    onChange={(e) => updateItem(item.key, { itemName: e.target.value })}
+                    required
+                  />
+                  <FieldError message={fieldErrors?.items[i]?.itemName} />
 
-              <textarea
-                rows={2}
-                style={{ ...inputStyle, marginBottom: 6 }}
-                placeholder="Description (e.g. Old laptop, screen cracked, still boots)"
-                value={item.description}
-                onChange={(e) => updateItem(item.key, { description: e.target.value })}
-                required
-              />
-              <FieldError message={fieldErrors?.items[i]?.description} />
+                  <textarea
+                    rows={2}
+                    className={`${inputClass} mb-2`}
+                    placeholder="Description (e.g. Old laptop, screen cracked, still boots)"
+                    value={item.description}
+                    onChange={(e) => updateItem(item.key, { description: e.target.value })}
+                    required
+                  />
+                  <FieldError message={fieldErrors?.items[i]?.description} />
 
-              <label style={imagePickerLabel}>
-                <ImageIcon size={14} /> {item.imageUrl ? 'Change photo' : 'Add photo (optional)'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => {
-                    void handleImageSelect(item.key, e.target.files?.[0]);
-                    e.target.value = ''; // lets the same file be re-picked after an error
-                  }}
-                  style={{ display: 'none' }}
-                />
-              </label>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-mint-300 px-3.5 py-2 text-xs font-semibold text-mint-700 hover:bg-mint-50 focus-within:ring-2 focus-within:ring-mint-500">
+                    <ImageIcon size={14} /> {item.imageUrl ? 'Change photo' : 'Add photo (optional)'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        void handleImageSelect(item.key, e.target.files?.[0]);
+                        e.target.value = ''; // lets the same file be re-picked after an error
+                      }}
+                    />
+                  </label>
 
-              {item.imageUploading && (
-                <span style={imageStatusRow}>
-                  <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading…
-                </span>
-              )}
-              {item.imageUrl && !item.imageUploading && (
-                <div style={imagePreviewRow}>
-                  <img src={item.imageUrl} alt="" style={imagePreview} />
-                  <button
-                    type="button"
-                    onClick={() => updateItem(item.key, { imageUrl: '' })}
-                    style={removeBtn}
-                    aria-label="Remove photo"
-                  >
-                    <X size={14} />
-                  </button>
+                  {item.imageUploading && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700">
+                      <Loader2 size={13} className="animate-spin motion-reduce:animate-none" /> Uploading…
+                    </p>
+                  )}
+                  {item.imageUrl && !item.imageUploading && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={item.imageUrl} alt="" className="h-16 w-16 rounded-xl border border-mint-100 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => updateItem(item.key, { imageUrl: '' })}
+                        className="flex items-center rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                        aria-label="Remove photo"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  <FieldError message={item.imageError ?? undefined} />
+                  <FieldError message={fieldErrors?.items[i]?.imageUrl} />
                 </div>
-              )}
-              {item.imageError && <p style={fieldErrorStyle}>{item.imageError}</p>}
-              <FieldError message={fieldErrors?.items[i]?.imageUrl} />
+              ))}
             </div>
-          ))}
 
-          <button type="button" onClick={addItem} disabled={items.length >= 10} style={addItemBtn}>
-            <Plus size={14} /> Add another item
+            <button
+              type="button"
+              onClick={addItem}
+              disabled={items.length >= 10}
+              className="mt-3 flex items-center gap-1.5 rounded-xl border border-dashed border-mint-300 px-3.5 py-2 text-xs font-semibold text-mint-700 hover:bg-mint-50 disabled:opacity-50"
+            >
+              <Plus size={14} /> Add another item
+            </button>
+          </div>
+
+          <button type="submit" disabled={loading || polling || anyImageUploading} className={`${btnPrimary} self-start`}>
+            <Send size={14} /> {loading ? 'Submitting…' : polling ? 'Processing…' : anyImageUploading ? 'Uploading photo…' : 'Submit e-waste item'}
           </button>
-        </div>
-
-        <button type="submit" disabled={loading || polling || anyImageUploading} style={submitBtn}>
-          {loading ? 'Submitting…' : polling ? 'Processing…' : anyImageUploading ? 'Uploading photo…' : 'Submit E-Waste Item'}
-        </button>
-      </form>
+        </form>
+      </GlassCard>
 
       {error && (
-        <div style={errorBanner}>
-          <AlertTriangle size={16} /> {error}
-        </div>
+        <Notice tone="error" className="mt-5">
+          <AlertTriangle size={16} className="inline -mt-0.5 mr-1" /> {error}
+        </Notice>
       )}
 
       {submission && (
-        <div style={resultCard}>
-          <h3 style={{ color: '#2e7d32', marginTop: 0 }}>
-            <CheckCircle size={18} /> Submission Recorded
+        <GlassCard hover={false} className="mt-5 p-6">
+          <h3 className="flex items-center gap-2 font-display font-bold text-mint-700 mb-3">
+            <CheckCircle size={18} /> Submission recorded
           </h3>
-          <p><strong>ID:</strong> <code>{submission.id}</code></p>
-          <p><strong>Status:</strong> {submission.statusLabel}</p>
+          <p className="text-sm text-ink-800 mb-1"><strong>ID:</strong> <code className="text-xs">{submission.id}</code></p>
+          <div className="mb-2 flex items-center gap-2 text-sm text-ink-800">
+            <strong>Status:</strong> <StatusPill label={submission.statusLabel} tone={STATUS_TONE[submission.status] ?? 'info'} />
+          </div>
 
           {PROGRESS_STATUSES.includes(submission.status) && (
             <SubmissionProgress
@@ -303,202 +330,51 @@ const SubmitPage: React.FC = () => {
           )}
 
           {submission.status === 'Failed' && submission.statusReason && (
-            <div style={failureBox}>
-              <AlertTriangle size={16} /> <span><strong>Failure reason:</strong> {submission.statusReason}</span>
-            </div>
+            <Notice tone="error" className="mt-2" title="Failure reason">{submission.statusReason}</Notice>
           )}
           {submission.status === 'Rejected' && (
-            <div style={failureBox}>
-              <AlertTriangle size={16} />
-              <span><strong>Rejected.</strong>{submission.statusReason ? ` ${submission.statusReason}` : ''}</span>
-            </div>
+            <Notice tone="error" className="mt-2" title="Rejected">{submission.statusReason ?? undefined}</Notice>
           )}
 
           {timedOut ? (
-            <div style={pollingBox}>
-              <Clock size={16} />
-              <span>
-                Still processing after 2 minutes. Check{' '}
-                <Link to="/submissions/mine" style={{ color: '#e65100', fontWeight: 'bold' }}>My Submissions</Link>{' '}
-                for updates.
-              </span>
-            </div>
+            <Notice tone="warning" className="mt-4">
+              <Clock size={14} className="inline -mt-0.5 mr-1" /> Still processing after 2 minutes. Check{' '}
+              <Link to="/submissions/mine" className="font-semibold underline underline-offset-2">My Submissions</Link>{' '}
+              for updates.
+            </Notice>
           ) : polling ? (
-            <div style={pollingBox}>
-              <span>AI is analyzing your submission…</span>
-            </div>
+            <Notice tone="info" className="mt-4">AI is analyzing your submission…</Notice>
           ) : ai ? (
-            <div style={aiResultBox}>
-              <h4 style={{ margin: '0 0 10px 0' }}>🤖 AI Assessment</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <p><Tag size={14} /> <strong>Category:</strong> {ai.wasteCategory}</p>
-                <p>
-                  <ShieldAlert size={14} /> <strong>Hazard:</strong>{' '}
-                  <span
-                    style={{
-                      color:
-                        ai.hazardLevel === 'Critical' || ai.hazardLevel === 'High'
-                          ? 'red'
-                          : 'green',
-                      fontWeight: 'bold',
-                    }}
-                  >
+            <div className="mt-4 rounded-2xl border border-mint-100 bg-mint-50/60 p-4">
+              <h4 className="font-display font-bold text-ink-900 mb-3 flex items-center gap-2">
+                <Cpu size={16} className="text-mint-700" /> AI assessment
+              </h4>
+              <div className="grid grid-cols-2 gap-3 text-sm text-ink-800">
+                <p className="flex items-center gap-1.5"><Tag size={14} className="text-mint-700" /> <strong>Category:</strong> {ai.wasteCategory}</p>
+                <p className="flex items-center gap-1.5">
+                  <ShieldAlert size={14} className={ai.hazardLevel === 'Critical' || ai.hazardLevel === 'High' ? 'text-red-600' : 'text-mint-700'} />
+                  <strong>Hazard:</strong>{' '}
+                  <span className={`font-bold ${ai.hazardLevel === 'Critical' || ai.hazardLevel === 'High' ? 'text-red-600' : 'text-mint-700'}`}>
                     {ai.hazardLevel}
                   </span>
                 </p>
-                <p><Weight size={14} /> <strong>Est. Weight:</strong> {ai.estimatedVolumeKg} kg</p>
-                <p><DollarSign size={14} /> <strong>Est. Value:</strong> ${ai.estimatedValueUsd}</p>
+                <p className="flex items-center gap-1.5"><Weight size={14} className="text-mint-700" /> <strong>Est. weight:</strong> {ai.estimatedVolumeKg} kg</p>
+                <p className="flex items-center gap-1.5"><DollarSign size={14} className="text-mint-700" /> <strong>Est. value:</strong> ${ai.estimatedValueUsd}</p>
               </div>
               {submission.workflow?.approvalRequired && submission.status === 'AwaitingReview' && (
-                <p style={{ marginTop: 10, fontWeight: 'bold', color: '#c62828' }}>
-                  ⚠️ Requires Admin Approval
+                <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-amber-700">
+                  <AlertTriangle size={14} /> Requires admin approval
                 </p>
               )}
             </div>
           ) : null}
-        </div>
+        </GlassCard>
       )}
     </div>
   );
 };
 
 const FieldError: React.FC<{ message?: string }> = ({ message }) =>
-  message ? <p style={fieldErrorStyle}>{message}</p> : null;
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontWeight: 'bold',
-  marginBottom: 5,
-};
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 10,
-  borderRadius: 4,
-  border: '1px solid #ccc',
-  boxSizing: 'border-box',
-};
-const fieldErrorStyle: React.CSSProperties = {
-  margin: '4px 0 0 0',
-  color: '#c62828',
-  fontSize: 12,
-};
-const formStyle: React.CSSProperties = {
-  background: '#f9f9f9',
-  padding: 20,
-  borderRadius: 8,
-  border: '1px solid #ddd',
-};
-const itemCard: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #ddd',
-  borderRadius: 6,
-  padding: 12,
-  marginBottom: 10,
-};
-const removeBtn: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#c62828',
-  cursor: 'pointer',
-  padding: 4,
-  display: 'flex',
-};
-const imagePickerLabel: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  background: '#eee',
-  color: '#333',
-  border: '1px dashed #999',
-  padding: '8px 12px',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontSize: 13,
-};
-const imageStatusRow: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  marginTop: 8,
-  fontSize: 12,
-  color: '#e65100',
-};
-const imagePreviewRow: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  marginTop: 8,
-};
-const imagePreview: React.CSSProperties = {
-  width: 60,
-  height: 60,
-  objectFit: 'cover',
-  borderRadius: 4,
-  border: '1px solid #ddd',
-};
-const addItemBtn: React.CSSProperties = {
-  background: '#eee',
-  color: '#333',
-  border: '1px dashed #999',
-  padding: '8px 14px',
-  borderRadius: 4,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  fontSize: 13,
-};
-const submitBtn: React.CSSProperties = {
-  background: '#2e7d32',
-  color: '#fff',
-  border: 'none',
-  padding: '12px 20px',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-const errorBanner: React.CSSProperties = {
-  marginTop: 20,
-  padding: 15,
-  background: '#ffebee',
-  color: '#c62828',
-  borderRadius: 4,
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-};
-const resultCard: React.CSSProperties = {
-  marginTop: 20,
-  padding: 20,
-  background: '#fff',
-  border: '1px solid #ddd',
-  borderRadius: 8,
-};
-const pollingBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 10,
-  color: '#e65100',
-  background: '#fff3e0',
-  padding: 12,
-  borderRadius: 6,
-};
-const failureBox: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-start',
-  gap: 8,
-  color: '#c62828',
-  background: '#ffebee',
-  padding: 12,
-  borderRadius: 6,
-  marginTop: 10,
-};
-const aiResultBox: React.CSSProperties = {
-  marginTop: 15,
-  background: '#f1f8e9',
-  padding: 15,
-  borderRadius: 6,
-  border: '1px solid #c8e6c9',
-};
+  message ? <p className="mt-1 text-xs font-medium text-red-600">{message}</p> : null;
 
 export default SubmitPage;

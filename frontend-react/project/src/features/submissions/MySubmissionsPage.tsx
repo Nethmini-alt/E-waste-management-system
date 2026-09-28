@@ -4,9 +4,19 @@ import { PackageSearch, RefreshCw, Send, Truck } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import { extractGeneralError } from './submissionErrors';
 import type { SubmissionResponse } from './types';
+import {
+  EmptyState, ErrorMessage, GlassCard, LoadingState, PageHeader, StatusPill,
+  btnPrimary, btnSecondary,
+} from '../../components/ui';
+import type { StatusTone } from '../../components/ui/StatusPill';
 
-const GOOD_STATUSES = ['CollectorAssigned', 'Collected'];
-const BAD_STATUSES = ['Rejected', 'Failed', 'Cancelled'];
+const STATUS_TONE: Record<string, StatusTone> = {
+  CollectorAssigned: 'success',
+  Collected: 'success',
+  Rejected: 'error',
+  Failed: 'error',
+  Cancelled: 'error',
+};
 
 const MySubmissionsPage: React.FC = () => {
   const [submissions, setSubmissions] = useState<SubmissionResponse[]>([]);
@@ -31,165 +41,78 @@ const MySubmissionsPage: React.FC = () => {
   }, []);
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-        <div>
-          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <PackageSearch size={22} /> My Submissions
-          </h2>
-          <p style={{ color: '#666', margin: '4px 0 0 0' }}>
-            Track the e-waste items you've submitted for collection.
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={load} style={btnSecondary}>
-            <RefreshCw size={14} /> Refresh
-          </button>
-          <Link to="/submissions/new" style={btnPrimary}>
-            <Send size={14} /> Submit New Item
-          </Link>
-        </div>
-      </div>
+    <div className="mx-auto max-w-4xl">
+      <PageHeader
+        title="My submissions"
+        subtitle="Track the e-waste items you've submitted for collection."
+        icon={PackageSearch}
+        actions={
+          <>
+            <button onClick={load} className={btnSecondary}>
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
+            <Link to="/submissions/new" className={btnPrimary}>
+              <Send size={14} /> Submit new item
+            </Link>
+          </>
+        }
+      />
 
-      {loading && <p>Loading…</p>}
-      {error && <div style={errorBox}>{error}</div>}
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
 
-      {!loading && !error && submissions.length === 0 && (
-        <div style={emptyBox}>
-          <PackageSearch size={36} color="#bbb" />
-          <p>You haven't submitted any items yet.</p>
-          <Link to="/submissions/new" style={btnPrimary}>
-            <Send size={14} /> Submit your first item
-          </Link>
-        </div>
-      )}
-
-      {!loading && !error && submissions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {submissions.map((sub) => (
-            <div key={sub.id} style={card}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: '0 0 5px 0' }}>{sub.category}</h4>
-                  <span style={idBadge}>ID: {sub.id.substring(0, 8)}…</span>
+      <GlassCard hover={false} padded={false}>
+        {loading && !submissions.length ? (
+          <LoadingState label="Loading submissions…" />
+        ) : !error && submissions.length === 0 ? (
+          <EmptyState
+            icon={PackageSearch}
+            title="No submissions yet"
+            description="You haven't submitted any items yet."
+            action={
+              <Link to="/submissions/new" className={btnPrimary}>
+                <Send size={14} /> Submit your first item
+              </Link>
+            }
+          />
+        ) : !error && submissions.length > 0 ? (
+          <div className="divide-y divide-mint-50">
+            {submissions.map((sub) => (
+              <div key={sub.id} className="flex flex-wrap items-center gap-4 p-5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="font-display font-bold text-ink-900">{sub.category}</h4>
+                    <span className="flex-shrink-0 rounded-full bg-ink-100 px-2.5 py-0.5 font-mono text-[11px] text-ink-600">
+                      {sub.id.substring(0, 8)}…
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-sm text-ink-600">{sub.pickupAddress}</p>
+                  <p className="mt-1 text-xs text-ink-600/80">
+                    {sub.items.length} item{sub.items.length === 1 ? '' : 's'} · Submitted{' '}
+                    {new Date(sub.createdAt).toLocaleDateString()}
+                  </p>
+                  {sub.statusReason && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">{sub.statusReason}</p>
+                  )}
                 </div>
-                <p style={{ margin: '0 0 6px 0', color: '#555', fontSize: 14 }}>{sub.pickupAddress}</p>
-                <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
-                  {sub.items.length} item{sub.items.length === 1 ? '' : 's'} · Submitted{' '}
-                  {new Date(sub.createdAt).toLocaleDateString()}
-                </p>
-                {sub.statusReason && (
-                  <p style={{ margin: '6px 0 0 0', fontSize: 13, color: '#c62828' }}>{sub.statusReason}</p>
-                )}
-              </div>
 
-              <div style={actionsCol}>
-                <span style={statusBadge(sub.status)}>{sub.statusLabel}</span>
-                {/* No submitter-facing job detail page exists yet (job detail
-                    is Staff/Admin-only), so the job is surfaced as info here
-                    rather than a link that would just redirect away. */}
-                {sub.jobId && (
-                  <span style={jobInfo}>
-                    <Truck size={13} /> Job #{sub.jobId.substring(0, 8)}… — {sub.jobStatus}
-                  </span>
-                )}
+                <div className="flex flex-col items-end gap-2">
+                  <StatusPill label={sub.statusLabel} tone={STATUS_TONE[sub.status] ?? 'info'} />
+                  {/* No submitter-facing job detail page exists yet (job detail
+                      is Staff/Admin-only), so the job is surfaced as info here
+                      rather than a link that would just redirect away. */}
+                  {sub.jobId && (
+                    <span className="flex items-center gap-1 text-xs text-ink-600">
+                      <Truck size={12} /> Job #{sub.jobId.substring(0, 8)}… — {sub.jobStatus}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : null}
+      </GlassCard>
     </div>
   );
 };
-
-const card: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #ddd',
-  borderRadius: 8,
-  padding: 15,
-  display: 'flex',
-  gap: 15,
-  alignItems: 'center',
-};
-
-const idBadge: React.CSSProperties = {
-  fontSize: 12,
-  background: '#eee',
-  padding: '3px 8px',
-  borderRadius: 4,
-};
-
-const actionsCol: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-  alignItems: 'flex-end',
-};
-
-const jobInfo: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 5,
-  fontSize: 12,
-  color: '#555',
-};
-
-const btnSecondary: React.CSSProperties = {
-  background: '#eee',
-  color: '#333',
-  border: 'none',
-  padding: '8px 14px',
-  borderRadius: 6,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-};
-
-const btnPrimary: React.CSSProperties = {
-  background: '#2e7d32',
-  color: '#fff',
-  border: 'none',
-  padding: '8px 14px',
-  borderRadius: 6,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-  textDecoration: 'none',
-  fontSize: 14,
-};
-
-const errorBox: React.CSSProperties = {
-  padding: 12,
-  background: '#ffebee',
-  color: '#c62828',
-  borderRadius: 6,
-};
-
-const emptyBox: React.CSSProperties = {
-  padding: 40,
-  background: '#fff',
-  borderRadius: 8,
-  textAlign: 'center',
-  color: '#888',
-  border: '1px dashed #ccc',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: 10,
-};
-
-const GOOD_BG = '#e8f5e9', GOOD_FG = '#2e7d32', BAD_BG = '#ffebee', BAD_FG = '#c62828', NEUTRAL_BG = '#fff3e0', NEUTRAL_FG = '#e65100';
-
-const statusBadge = (status: string): React.CSSProperties => ({
-  fontWeight: 'bold',
-  padding: '4px 10px',
-  borderRadius: 4,
-  fontSize: 12,
-  whiteSpace: 'nowrap',
-  background: GOOD_STATUSES.includes(status) ? GOOD_BG : BAD_STATUSES.includes(status) ? BAD_BG : NEUTRAL_BG,
-  color: GOOD_STATUSES.includes(status) ? GOOD_FG : BAD_STATUSES.includes(status) ? BAD_FG : NEUTRAL_FG,
-});
 
 export default MySubmissionsPage;

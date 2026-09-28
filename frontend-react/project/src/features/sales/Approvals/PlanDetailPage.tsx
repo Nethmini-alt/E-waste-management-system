@@ -13,6 +13,10 @@ import type { CommercialPlan, PlanMaterial } from './types';
 import PlanStatusPill from './PlanStatusPill';
 import PlanTimeline from './PlanTimeline';
 import { useAuth } from '../../auth/AuthContext';
+import {
+  ErrorMessage, GlassCard, LoadingState, PageHeader,
+  btnSecondary, inputClass, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const PlanDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -113,8 +117,8 @@ const PlanDetailPage: React.FC = () => {
     }
   };
 
-  if (loading) return <p>Loading plan…</p>;
-  if (error) return <div style={errorBox}>{error}</div>;
+  if (loading && !plan) return <LoadingState label="Loading plan…" />;
+  if (error) return <ErrorMessage message={error} onRetry={load} />;
   if (!plan) return null;
 
   const canDecide =
@@ -123,89 +127,60 @@ const PlanDetailPage: React.FC = () => {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate(-1)} style={iconBtn}><ArrowLeft size={20} /></button>
-          <div>
-            <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Bot size={22} /> Commercial Plan
-            </h2>
-            <div style={{ fontSize: 12, color: '#666', fontFamily: 'monospace', marginTop: 2 }}>
-              {plan.commercialPlanId}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <PlanStatusPill status={plan.status} />
-          <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-        </div>
-      </div>
+      <PageHeader
+        title="Commercial plan"
+        subtitle={plan.commercialPlanId}
+        icon={Bot}
+        actions={
+          <>
+            <button onClick={() => navigate(-1)} className="rounded-lg p-2 text-ink-700 hover:bg-mint-50"><ArrowLeft size={18} /></button>
+            <PlanStatusPill status={plan.status} />
+            <button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+          </>
+        }
+      />
 
       {/* Awaiting approval banner */}
       {plan.status === 'PendingApproval' && (
-        <div style={awaitingBanner}>
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
           ⏳ This plan is awaiting {isAdmin ? 'your' : 'admin'} approval.
           {!isAdmin && ' Only admins can approve or reject.'}
         </div>
       )}
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 15, marginBottom: 20 }}>
-        <SummaryBox
-          icon={plan.recommendedRoute === 'Export' ? <Globe size={16} /> : <Package size={16} />}
-          label="Route"
-          value={plan.recommendedRoute === 'Export' ? 'Export' : 'Local Sale'}
-        />
-        <SummaryBox
-          icon={<Truck size={16} />}
-          label="Buyer"
-          value={plan.selectedBuyerName ?? '—'}
-          sub={plan.destinationCountry ?? undefined}
-        />
-        <SummaryBox
-          icon={<TrendingUp size={16} />}
-          label="Expected Revenue"
-          value={`Rs. ${plan.expectedRevenue.toFixed(2)}`}
-        />
-        <SummaryBox
-          icon={<TrendingUp size={16} />}
-          label="Estimated Costs"
-          value={`Rs. ${plan.estimatedCosts.toFixed(2)}`}
-        />
-        <SummaryBox
-          icon={<CheckCircle2 size={16} />}
-          label="Net Value"
-          value={`Rs. ${plan.estimatedNetValue.toFixed(2)}`}
-          sub={`${margin}% margin`}
-          highlight="#2e7d32"
-        />
+      <div className="mb-5 grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        <SummaryBox icon={plan.recommendedRoute === 'Export' ? <Globe size={16} /> : <Package size={16} />} label="Route" value={plan.recommendedRoute === 'Export' ? 'Export' : 'Local sale'} />
+        <SummaryBox icon={<Truck size={16} />} label="Buyer" value={plan.selectedBuyerName ?? '—'} sub={plan.destinationCountry ?? undefined} />
+        <SummaryBox icon={<TrendingUp size={16} />} label="Expected revenue" value={`Rs. ${plan.expectedRevenue.toFixed(2)}`} />
+        <SummaryBox icon={<TrendingUp size={16} />} label="Estimated costs" value={`Rs. ${plan.estimatedCosts.toFixed(2)}`} />
+        <SummaryBox icon={<CheckCircle2 size={16} />} label="Net value" value={`Rs. ${plan.estimatedNetValue.toFixed(2)}`} sub={`${margin}% margin`} highlight />
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+      <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
         {/* Left column */}
         <div>
           {/* Materials */}
           <Section title="Materials">
             {materials.length === 0 ? (
-              <p style={{ color: '#888', fontSize: 13 }}>No materials in this plan.</p>
+              <p className="text-sm text-ink-600">No materials in this plan.</p>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr style={{ background: '#fafafa', textAlign: 'left' }}>
-                    <th style={th}>Material</th>
-                    <th style={th}>Quantity</th>
-                    {materials.some((m) => m.qualityGrade) && <th style={th}>Grade</th>}
+                  <tr className="border-b border-mint-100">
+                    <th className={`${tableHeadClass} py-2`}>Material</th>
+                    <th className={`${tableHeadClass} py-2`}>Quantity</th>
+                    {materials.some((m) => m.qualityGrade) && <th className={`${tableHeadClass} py-2`}>Grade</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {materials.map((m, idx) => (
-                    <tr key={idx} style={{ borderTop: '1px solid #f0f0f0' }}>
-                      <td style={{ ...td, fontWeight: 'bold' }}>{m.materialType}</td>
-                      <td style={td}>{m.quantityKg.toFixed(2)} kg</td>
+                    <tr key={idx} className="border-b border-mint-50 last:border-0">
+                      <td className={`${tableCellClass} pl-0 font-semibold text-ink-900`}>{m.materialType}</td>
+                      <td className={tableCellClass}>{m.quantityKg.toFixed(2)} kg</td>
                       {materials.some((x) => x.qualityGrade) && (
-                        <td style={td}>{m.qualityGrade ?? '—'}</td>
+                        <td className={tableCellClass}>{m.qualityGrade ?? '—'}</td>
                       )}
                     </tr>
                   ))}
@@ -215,18 +190,18 @@ const PlanDetailPage: React.FC = () => {
           </Section>
 
           {/* Reasoning */}
-          <Section title="Agent Reasoning">
-            <div style={{ padding: 12, background: '#f5f9ff', borderRadius: 6, fontSize: 13, lineHeight: 1.6 }}>
+          <Section title="Agent reasoning">
+            <div className="rounded-xl bg-sky-50/70 p-3 text-sm leading-relaxed text-ink-800">
               {plan.reasoningSummary}
             </div>
           </Section>
 
           {/* Risk flags */}
           {riskFlags.length > 0 && (
-            <Section title="Risk Flags">
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <Section title="Risk flags">
+              <div className="flex flex-wrap gap-2">
                 {riskFlags.map((flag) => (
-                  <span key={flag} style={riskBadge}>
+                  <span key={flag} className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
                     <AlertTriangle size={12} /> {flag.replace(/_/g, ' ')}
                   </span>
                 ))}
@@ -235,7 +210,7 @@ const PlanDetailPage: React.FC = () => {
           )}
 
           {/* Approval timeline */}
-          <Section title="Approval History">
+          <Section title="Approval history">
             <PlanTimeline actions={plan.approvalActions} />
           </Section>
         </div>
@@ -243,14 +218,14 @@ const PlanDetailPage: React.FC = () => {
         {/* Right column — decision panel */}
         <div>
           {(canDecide || canMarkExecuted) && (
-            <div style={decisionPanel}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 15 }}>
-                {canDecide ? 'Decision Required' : 'Next Step'}
+            <GlassCard hover={false} className="sticky top-5 !border-2 !border-mint-300">
+              <h4 className="mb-3 font-display text-sm font-bold text-ink-900">
+                {canDecide ? 'Decision required' : 'Next step'}
               </h4>
 
               {canDecide && (
                 <>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 'bold', marginBottom: 6 }}>
+                  <label className="mb-1.5 block text-xs font-bold text-ink-700">
                     Comments {plan.status === 'PendingApproval' && '(required for reject/revision)'}
                   </label>
                   <textarea
@@ -258,59 +233,41 @@ const PlanDetailPage: React.FC = () => {
                     onChange={(e) => setDecisionComments(e.target.value)}
                     rows={4}
                     placeholder="Explain your decision…"
-                    style={{ ...input, marginBottom: 12 }}
+                    className={`${inputClass} mb-3`}
                   />
 
-                  <button
-                    onClick={() => handleDecide('Approved')}
-                    disabled={submitting}
-                    style={{ ...btnApprove, width: '100%', justifyContent: 'center', marginBottom: 8 }}
-                  >
-                    <CheckCircle2 size={16} /> Approve Plan
+                  <button onClick={() => handleDecide('Approved')} disabled={submitting} className="mb-2 flex w-full items-center justify-center gap-2 rounded-full bg-mint-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-mint-500/30 disabled:opacity-60">
+                    <CheckCircle2 size={16} /> Approve plan
                   </button>
-
-                  <button
-                    onClick={() => handleDecide('RevisionRequested')}
-                    disabled={submitting}
-                    style={{ ...btnRevision, width: '100%', justifyContent: 'center', marginBottom: 8 }}
-                  >
-                    <MessageSquare size={16} /> Request Revision
+                  <button onClick={() => handleDecide('RevisionRequested')} disabled={submitting} className="mb-2 flex w-full items-center justify-center gap-2 rounded-full bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-500/30 disabled:opacity-60">
+                    <MessageSquare size={16} /> Request revision
                   </button>
-
-                  <button
-                    onClick={() => handleDecide('Rejected')}
-                    disabled={submitting}
-                    style={{ ...btnReject, width: '100%', justifyContent: 'center' }}
-                  >
-                    <XCircle size={16} /> Reject Plan
+                  <button onClick={() => handleDecide('Rejected')} disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-full bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-red-500/20 disabled:opacity-60">
+                    <XCircle size={16} /> Reject plan
                   </button>
                 </>
               )}
 
               {canMarkExecuted && (
                 <>
-                  <p style={{ fontSize: 13, color: '#666', marginTop: 0 }}>
+                  <p className="mt-0 mb-3 text-sm text-ink-600">
                     Plan approved. Create the actual sales/export order, then mark this plan as executed.
                   </p>
-                  <button
-                    onClick={handleMarkExecuted}
-                    disabled={submitting}
-                    style={{ ...btnApprove, width: '100%', justifyContent: 'center' }}
-                  >
-                    <Send size={16} /> Mark as Executed
+                  <button onClick={handleMarkExecuted} disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-full bg-mint-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-mint-500/30 disabled:opacity-60">
+                    <Send size={16} /> Mark as executed
                   </button>
                 </>
               )}
-            </div>
+            </GlassCard>
           )}
 
           {!canDecide && !canMarkExecuted && (
-            <div style={lockedPanel}>
+            <GlassCard hover={false} className="text-center text-sm text-ink-600">
               {plan.status === 'Approved' && '✅ Approved — waiting to be executed.'}
               {plan.status === 'Rejected' && '❌ Rejected — no further action.'}
               {plan.status === 'RevisionRequested' && '🔁 Revision requested — awaiting new plan from agent.'}
               {plan.status === 'Executed' && '✔️ Executed — order has been created.'}
-            </div>
+            </GlassCard>
           )}
         </div>
       </div>
@@ -323,71 +280,23 @@ const SummaryBox: React.FC<{
   label: string;
   value: string;
   sub?: string;
-  highlight?: string;
+  highlight?: boolean;
 }> = ({ icon, label, value, sub, highlight }) => (
-  <div style={{ background: '#fff', padding: 14, borderRadius: 8, border: '1px solid #eee' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: highlight ?? '#1565c0', marginBottom: 4 }}>
+  <GlassCard hover={false} className="p-3.5">
+    <div className={`mb-1 flex items-center gap-1.5 ${highlight ? 'text-mint-700' : 'text-sky-700'}`}>
       {icon}
-      <span style={{ fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' }}>{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wide">{label}</span>
     </div>
-    <div style={{ fontSize: 16, fontWeight: 'bold', color: highlight ?? '#222' }}>{value}</div>
-    {sub && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{sub}</div>}
-  </div>
+    <div className={`text-base font-bold ${highlight ? 'text-mint-700' : 'text-ink-900'}`}>{value}</div>
+    {sub && <div className="mt-0.5 text-[11px] text-ink-600">{sub}</div>}
+  </GlassCard>
 );
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <div style={{ marginBottom: 20 }}>
-    <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#333' }}>{title}</h4>
-    <div style={{ background: '#fff', padding: 14, borderRadius: 8, border: '1px solid #eee' }}>
-      {children}
-    </div>
+  <div className="mb-5">
+    <h4 className="mb-2 font-display text-sm font-bold text-ink-900">{title}</h4>
+    <GlassCard hover={false}>{children}</GlassCard>
   </div>
 );
-
-// ---------- Styles ----------
-const th: React.CSSProperties = { padding: 8, fontSize: 12, fontWeight: 'bold', color: '#666' };
-const td: React.CSSProperties = { padding: 8 };
-const input: React.CSSProperties = {
-  width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc', boxSizing: 'border-box',
-};
-const iconBtn: React.CSSProperties = {
-  background: 'transparent', border: 'none', cursor: 'pointer', padding: 4,
-};
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnApprove: React.CSSProperties = {
-  background: '#2e7d32', color: '#fff', border: 'none', padding: '10px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnReject: React.CSSProperties = {
-  background: '#c62828', color: '#fff', border: 'none', padding: '10px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnRevision: React.CSSProperties = {
-  background: '#e65100', color: '#fff', border: 'none', padding: '10px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 13,
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const awaitingBanner: React.CSSProperties = {
-  marginBottom: 15, padding: 12, background: '#fff8e1', color: '#f57f17',
-  borderRadius: 6, fontWeight: 'bold', fontSize: 13,
-};
-const errorBox: React.CSSProperties = { padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6 };
-const riskBadge: React.CSSProperties = {
-  background: '#fff3e0', color: '#e65100', padding: '4px 10px', borderRadius: 4,
-  fontSize: 12, fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: 4,
-};
-const decisionPanel: React.CSSProperties = {
-  background: '#fff', padding: 16, borderRadius: 10, border: '2px solid #1565c0',
-  position: 'sticky', top: 20,
-};
-const lockedPanel: React.CSSProperties = {
-  background: '#fafafa', padding: 16, borderRadius: 10, border: '1px solid #eee',
-  fontSize: 13, color: '#666', textAlign: 'center',
-};
 
 export default PlanDetailPage;

@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Package, Search, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { materialApi } from './materialApi';
 import type { RecoveredMaterial } from './types';
+import {
+  EmptyState, ErrorMessage, GlassCard, PageHeader,
+  btnSecondary, inputClass, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const MaterialsListPage: React.FC = () => {
   const [rows, setRows] = useState<RecoveredMaterial[]>([]);
@@ -41,123 +45,80 @@ const MaterialsListPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Package size={22} /> Recovered Materials
-        </h2>
-        <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-      </div>
+      <PageHeader
+        title="Recovered materials"
+        subtitle="Read-only view. Source: Processing. These batches are inputs to pricing, sales, and export."
+        icon={Package}
+        actions={<button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>}
+      />
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-        <div style={searchBox}>
-          <Search size={16} color="#888" />
-          <input
-            placeholder="Search material or grade…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={searchInput}
-          />
+      <GlassCard hover={false} className="mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-600" />
+            <input
+              placeholder="Search material or grade…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-ink-800">
+            <input type="checkbox" checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} className="accent-mint-600" />
+            Only sellable
+          </label>
         </div>
-        <label style={toggleLabel}>
-          <input
-            type="checkbox"
-            checked={onlyAvailable}
-            onChange={(e) => setOnlyAvailable(e.target.checked)}
-          />
-          Only sellable
-        </label>
-      </div>
+      </GlassCard>
 
-      <p style={{ fontSize: 13, color: '#666', marginBottom: 15 }}>
-        Read-only view. Source: Component C. These batches are inputs to pricing, sales, and export.
-      </p>
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
 
-      {loading && <p>Loading materials…</p>}
-      {error && <div style={errorBox}>{error}</div>}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div style={emptyBox}>
-          <Package size={40} color="#bbb" />
-          <p>No materials match your filters.</p>
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              <th style={th}>Material</th>
-              <th style={th}>Quantity (kg)</th>
-              <th style={th}>Grade</th>
-              <th style={th}>Processing</th>
-              <th style={th}>Safety</th>
-              <th style={th}>Available</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => (
-              <tr key={m.recoveredMaterialId} style={{ borderTop: '1px solid #eee' }}>
-                <td style={{ ...td, fontWeight: 'bold' }}>{m.materialType}</td>
-                <td style={td}>{m.quantityKg.toFixed(2)}</td>
-                <td style={td}>{m.qualityGrade}</td>
-                <td style={td}>
-                  <ProcessingPill status={m.processingStatus} />
-                </td>
-                <td style={td}>
-                  {m.safetyValidated ? (
-                    <span style={{ color: '#2e7d32', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                      <CheckCircle2 size={14} /> Validated
-                    </span>
-                  ) : (
-                    <span style={{ color: '#c62828', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                      <AlertTriangle size={14} /> Not validated
-                    </span>
-                  )}
-                </td>
-                <td style={{ ...td, color: '#666', fontSize: 13 }}>
-                  {new Date(m.availableAt).toLocaleDateString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <GlassCard hover={false} padded={false}>
+        {loading && !rows.length ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-600">Loading materials…</p>
+        ) : !error && filtered.length === 0 ? (
+          <EmptyState icon={Package} title="No materials match your filters" />
+        ) : !error ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-mint-100">
+                  <th className={`${tableHeadClass} px-4 py-3`}>Material</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Quantity (kg)</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Grade</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Processing</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Safety</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Available</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((m) => (
+                  <tr key={m.recoveredMaterialId} className="border-b border-mint-50 last:border-0">
+                    <td className={`${tableCellClass} font-semibold text-ink-900`}>{m.materialType}</td>
+                    <td className={tableCellClass}>{m.quantityKg.toFixed(2)}</td>
+                    <td className={tableCellClass}>{m.qualityGrade}</td>
+                    <td className={tableCellClass}><ProcessingPill status={m.processingStatus} /></td>
+                    <td className={tableCellClass}>
+                      {m.safetyValidated ? (
+                        <span className="flex items-center gap-1.5 text-mint-700"><CheckCircle2 size={14} /> Validated</span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-red-600"><AlertTriangle size={14} /> Not validated</span>
+                      )}
+                    </td>
+                    <td className={`${tableCellClass} text-ink-600`}>{new Date(m.availableAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </GlassCard>
     </div>
   );
 };
 
 const ProcessingPill: React.FC<{ status: string }> = ({ status }) => {
-  const map: Record<string, { bg: string; fg: string }> = {
-    Ready: { bg: '#e8f5e9', fg: '#2e7d32' },
-    InProgress: { bg: '#fff3e0', fg: '#e65100' },
-    Rejected: { bg: '#ffebee', fg: '#c62828' },
-  };
-  const c = map[status] ?? { bg: '#eceff1', fg: '#546e7a' };
-  return (
-    <span style={{ background: c.bg, color: c.fg, padding: '3px 8px', borderRadius: 4, fontSize: 12, fontWeight: 'bold' }}>
-      {status}
-    </span>
-  );
+  const cls = status === 'Ready' ? 'bg-mint-100 text-mint-800' : status === 'Rejected' ? 'bg-red-100 text-red-700' : status === 'InProgress' ? 'bg-amber-100 text-amber-800' : 'bg-ink-100 text-ink-700';
+  return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cls}`}>{status}</span>;
 };
-
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const searchBox: React.CSSProperties = {
-  flex: 1, display: 'flex', alignItems: 'center', gap: 6,
-  background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: '0 10px',
-};
-const searchInput: React.CSSProperties = { flex: 1, border: 'none', outline: 'none', padding: 8 };
-const toggleLabel: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer',
-};
-const errorBox: React.CSSProperties = { padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6 };
-const emptyBox: React.CSSProperties = {
-  padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
-  border: '1px dashed #ccc',
-};
-const th: React.CSSProperties = { padding: 10, fontSize: 13, fontWeight: 'bold' };
-const td: React.CSSProperties = { padding: 10, fontSize: 14 };
 
 export default MaterialsListPage;

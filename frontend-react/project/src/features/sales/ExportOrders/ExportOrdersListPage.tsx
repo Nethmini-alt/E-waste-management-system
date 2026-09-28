@@ -11,6 +11,10 @@ import ExportOrderDetailModal from './ExportOrderDetailModal';
 import { buyerApi } from '../Buyers/buyerApi';
 import type { Buyer } from '../Buyers/types';
 import { useAuth } from '../../auth/AuthContext';
+import {
+  EmptyState, ErrorMessage, GlassCard, PageHeader,
+  btnPrimary, btnSecondary, inputClass, tableCellClass, tableHeadClass,
+} from '../../../components/ui';
 
 const ExportOrdersListPage: React.FC = () => {
   const { hasRole } = useAuth();
@@ -90,109 +94,97 @@ const ExportOrdersListPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Ship size={22} /> Export Orders
-        </h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={load} style={btnSecondary}><RefreshCw size={14} /> Refresh</button>
-          <button onClick={() => setCreateOpen(true)} style={btnPrimary}>
-            <Plus size={14} /> New Export
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Export orders"
+        icon={Ship}
+        actions={
+          <>
+            <button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+            <button onClick={() => setCreateOpen(true)} className={btnPrimary}><Plus size={14} /> New export</button>
+          </>
+        }
+      />
 
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
-        <div style={{ ...searchBox, flex: 1, minWidth: 220 }}>
-          <Search size={16} color="#888" />
-          <input
-            placeholder="Search buyer, destination, or order ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={searchInput}
-          />
-        </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} style={selectStyle}>
-          <option value="All">All Statuses</option>
-          <option value="Draft">Draft</option>
-          <option value="PendingApproval">Pending Approval</option>
-          <option value="Approved">Approved</option>
-          <option value="Shipped">Shipped</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
-        <select value={buyerFilter} onChange={(e) => setBuyerFilter(e.target.value)} style={selectStyle}>
-          <option value="">All Export Buyers</option>
-          {buyers.map((b) => (
-            <option key={b.buyerId} value={b.buyerId}>{b.companyName}</option>
-          ))}
-        </select>
-      </div>
-
-      {loading && <p>Loading export orders…</p>}
-      {error && <div style={errorBox}>{error}</div>}
-
-      {!loading && !error && filtered.length === 0 && (
-        <div style={emptyBox}>
-          <Ship size={40} color="#bbb" />
-          <p>No export orders match your filters. Click <strong>New Export</strong> to create one.</p>
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
-          <thead>
-            <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
-              <th style={th}>Order</th>
-              <th style={th}>Buyer</th>
-              <th style={th}>Destination</th>
-              <th style={th}>Shipment</th>
-              <th style={{ ...th, textAlign: 'right' }}>Weight</th>
-              <th style={{ ...th, textAlign: 'right' }}>Value</th>
-              <th style={th}>Status</th>
-              <th style={th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o) => (
-              <tr key={o.exportOrderId} style={{ borderTop: '1px solid #eee' }}>
-                <td style={{ ...td, fontFamily: 'monospace', fontSize: 12 }}>
-                  {o.exportOrderId.slice(0, 8)}…
-                </td>
-                <td style={{ ...td, fontWeight: 'bold' }}>{o.buyerCompanyName}</td>
-                <td style={td}>{o.destinationCountry}</td>
-                <td style={{ ...td, fontSize: 13, color: '#666' }}>{o.shipmentDate}</td>
-                <td style={{ ...td, textAlign: 'right' }}>{o.totalWeightKg.toFixed(2)} kg</td>
-                <td style={{ ...td, textAlign: 'right', fontWeight: 'bold' }}>
-                  Rs. {o.totalValue.toFixed(2)}
-                </td>
-                <td style={td}>
-                  <StatusDropdown
-                    status={o.status}
-                    isAdmin={isAdmin}
-                    onChange={(s) => handleStatusChange(o, s)}
-                  />
-                </td>
-                <td style={td}>
-                  <button onClick={() => setDetailOrder(o)} style={iconBtn} title="View">
-                    <Eye size={16} />
-                  </button>
-                  {o.status === 'Draft' && (
-                    <button
-                      onClick={() => handleDelete(o)}
-                      style={{ ...iconBtn, color: '#c62828' }}
-                      title="Delete"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </td>
-              </tr>
+      <GlassCard hover={false} className="mb-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-600" />
+            <input
+              placeholder="Search buyer, destination, or order ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
+            <option value="All">All statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="PendingApproval">Pending approval</option>
+            <option value="Approved">Approved</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <select value={buyerFilter} onChange={(e) => setBuyerFilter(e.target.value)} className={`${inputClass} !w-auto`}>
+            <option value="">All export buyers</option>
+            {buyers.map((b) => (
+              <option key={b.buyerId} value={b.buyerId}>{b.companyName}</option>
             ))}
-          </tbody>
-        </table>
-      )}
+          </select>
+        </div>
+      </GlassCard>
+
+      {error && <ErrorMessage message={error} onRetry={load} className="mb-4" />}
+
+      <GlassCard hover={false} padded={false}>
+        {loading && !orders.length ? (
+          <p className="px-5 py-10 text-center text-sm text-ink-600">Loading export orders…</p>
+        ) : !error && filtered.length === 0 ? (
+          <EmptyState icon={Ship} title="No export orders match your filters" description='Click "New export" to create one.' />
+        ) : !error ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="border-b border-mint-100">
+                  <th className={`${tableHeadClass} px-4 py-3`}>Order</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Buyer</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Destination</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Shipment</th>
+                  <th className={`${tableHeadClass} px-4 py-3 text-right`}>Weight</th>
+                  <th className={`${tableHeadClass} px-4 py-3 text-right`}>Value</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
+                  <th className={`${tableHeadClass} px-4 py-3`}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((o) => (
+                  <tr key={o.exportOrderId} className="border-b border-mint-50 last:border-0">
+                    <td className={`${tableCellClass} font-mono text-xs`}>{o.exportOrderId.slice(0, 8)}…</td>
+                    <td className={`${tableCellClass} font-semibold text-ink-900`}>{o.buyerCompanyName}</td>
+                    <td className={tableCellClass}>{o.destinationCountry}</td>
+                    <td className={`${tableCellClass} text-ink-600`}>{o.shipmentDate}</td>
+                    <td className={`${tableCellClass} text-right`}>{o.totalWeightKg.toFixed(2)} kg</td>
+                    <td className={`${tableCellClass} text-right font-bold`}>Rs. {o.totalValue.toFixed(2)}</td>
+                    <td className={tableCellClass}>
+                      <StatusDropdown status={o.status} isAdmin={isAdmin} onChange={(s) => handleStatusChange(o, s)} />
+                    </td>
+                    <td className={tableCellClass}>
+                      <button onClick={() => setDetailOrder(o)} className="mr-1 rounded-lg p-1.5 text-ink-700 hover:bg-mint-50" title="View">
+                        <Eye size={16} />
+                      </button>
+                      {o.status === 'Draft' && (
+                        <button onClick={() => handleDelete(o)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </GlassCard>
 
       <ExportOrderFormModal
         open={createOpen}
@@ -205,33 +197,25 @@ const ExportOrdersListPage: React.FC = () => {
 };
 
 // ---------- Status dropdown with role awareness ----------
+const STATUS_CLASS: Record<ExportOrder['status'], string> = {
+  Draft: 'bg-amber-100 text-amber-800',
+  PendingApproval: 'bg-amber-100 text-amber-900',
+  Approved: 'bg-sky-100 text-sky-800',
+  Shipped: 'bg-sky-100 text-sky-900',
+  Completed: 'bg-mint-100 text-mint-800',
+  Cancelled: 'bg-red-100 text-red-700',
+};
+
 const StatusDropdown: React.FC<{
   status: ExportOrder['status'];
   isAdmin: boolean;
   onChange: (s: ExportOrder['status']) => void;
 }> = ({ status, isAdmin, onChange }) => {
-  const colors: Record<ExportOrder['status'], { bg: string; fg: string }> = {
-    Draft: { bg: '#fff3e0', fg: '#e65100' },
-    PendingApproval: { bg: '#fff8e1', fg: '#f57f17' },
-    Approved: { bg: '#e3f2fd', fg: '#1565c0' },
-    Shipped: { bg: '#e1f5fe', fg: '#0277bd' },
-    Completed: { bg: '#e8f5e9', fg: '#2e7d32' },
-    Cancelled: { bg: '#ffebee', fg: '#c62828' },
-  };
-  const c = colors[status];
+  const cls = STATUS_CLASS[status];
 
   // Terminal states
   if (status === 'Completed' || status === 'Cancelled') {
-    return (
-      <span
-        style={{
-          background: c.bg, color: c.fg, padding: '4px 10px', borderRadius: 4,
-          fontSize: 12, fontWeight: 'bold',
-        }}
-      >
-        {status}
-      </span>
-    );
+    return <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cls}`}>{status}</span>;
   }
 
   // Legal transitions depend on current status AND role
@@ -257,59 +241,19 @@ const StatusDropdown: React.FC<{
   }
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div className="relative inline-block">
       <select
         value={status}
         onChange={(e) => onChange(e.target.value as ExportOrder['status'])}
-        style={{
-          background: c.bg, color: c.fg, border: 'none', padding: '4px 26px 4px 10px',
-          borderRadius: 4, fontSize: 12, fontWeight: 'bold', cursor: 'pointer',
-          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
-        }}
+        className={`appearance-none rounded-full py-1 pl-2.5 pr-7 text-xs font-bold cursor-pointer border-0 ${cls}`}
       >
         {options.map((o) => (
-          <option key={o} value={o}>
-            {o === 'PendingApproval' ? 'Pending Approval' : o}
-            {o === 'Approved' && !isAdmin ? '' : ''}
-          </option>
+          <option key={o} value={o}>{o === 'PendingApproval' ? 'Pending Approval' : o}</option>
         ))}
       </select>
-      <ChevronDown
-        size={12}
-        style={{
-          position: 'absolute', right: 8, top: '50%',
-          transform: 'translateY(-50%)', pointerEvents: 'none', color: c.fg,
-        }}
-      />
+      <ChevronDown size={12} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
     </div>
   );
-};
-
-// ---------- Styles ----------
-const th: React.CSSProperties = { padding: 10, fontSize: 13, fontWeight: 'bold' };
-const td: React.CSSProperties = { padding: 10, fontSize: 14 };
-const btnPrimary: React.CSSProperties = {
-  background: '#1565c0', color: '#fff', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', fontWeight: 'bold',
-  display: 'flex', alignItems: 'center', gap: 6,
-};
-const btnSecondary: React.CSSProperties = {
-  background: '#eee', color: '#333', border: 'none', padding: '8px 14px',
-  borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-};
-const iconBtn: React.CSSProperties = {
-  background: 'transparent', border: 'none', cursor: 'pointer', padding: 6, marginRight: 4,
-};
-const searchBox: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 6,
-  background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: '0 10px',
-};
-const searchInput: React.CSSProperties = { flex: 1, border: 'none', outline: 'none', padding: 8 };
-const selectStyle: React.CSSProperties = { padding: 8, borderRadius: 6, border: '1px solid #ccc' };
-const errorBox: React.CSSProperties = { padding: 12, background: '#ffebee', color: '#c62828', borderRadius: 6 };
-const emptyBox: React.CSSProperties = {
-  padding: 40, background: '#fff', borderRadius: 8, textAlign: 'center', color: '#888',
-  border: '1px dashed #ccc',
 };
 
 export default ExportOrdersListPage;
