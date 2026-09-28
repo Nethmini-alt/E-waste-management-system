@@ -12,7 +12,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
         {
             t.HasCheckConstraint(
                 "CK_jobs_status",
-                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
+                "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved','awaitingstaffassignment')");
         });
 
         builder.HasKey(j => j.JobId);
@@ -69,6 +69,7 @@ public class JobConfiguration : IEntityTypeConfiguration<Job>
 
         builder.Property(j => j.Notes).HasColumnName("notes");
         builder.Property(j => j.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(500);
+        builder.Property(j => j.MatcherReasoning).HasColumnName("matcher_reasoning");
 
         builder.Property(j => j.CreatedAt)
             .HasColumnName("created_at")

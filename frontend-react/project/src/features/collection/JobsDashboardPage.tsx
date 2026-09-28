@@ -16,11 +16,12 @@ import {
 // page refreshes itself to show those changes without a manual reload.
 const POLL_MS = 30_000;
 
-type FilterKey = 'all' | 'attention' | 'waiting' | 'accepted' | 'inProgress' | 'collected' | 'cancelled';
+type FilterKey = 'all' | 'attention' | 'needsAssignment' | 'waiting' | 'accepted' | 'inProgress' | 'collected' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string; match: (s: JobStatus) => boolean }[] = [
   { key: 'all', label: 'All', match: () => true },
   { key: 'attention', label: 'Needs attention', match: needsAttention },
+  { key: 'needsAssignment', label: 'Needs assignment', match: (s) => s === 'AwaitingStaffAssignment' },
   { key: 'waiting', label: 'Waiting for collector', match: (s) => s === 'Assigned' },
   { key: 'accepted', label: 'Accepted', match: (s) => s === 'Accepted' },
   { key: 'inProgress', label: 'In progress', match: (s) => s === 'InProgress' },
@@ -157,6 +158,9 @@ const JobsDashboardPage: React.FC = () => {
                       <JobStatusPill status={j.status} />
                     </div>
                     <p className="mt-1 text-sm text-amber-900/90">{attentionReason(j.status)}</p>
+                    {j.status === 'AwaitingStaffAssignment' && j.matcherReasoning && (
+                      <p className="mt-1 text-xs text-amber-900/75">Matching agent: {j.matcherReasoning}</p>
+                    )}
                   </div>
                   <span className="text-xs text-amber-900/70" title={formatDateTime(j.createdAt)}>
                     Created {timeAgo(j.createdAt)}

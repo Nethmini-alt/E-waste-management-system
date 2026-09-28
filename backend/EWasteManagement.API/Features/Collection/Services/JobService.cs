@@ -53,7 +53,8 @@ public class JobService : IJobService
             PickupAddress = dto.PickupAddress,
             RequiredCapacityKg = dto.RequiredCapacityKg,
             ScheduledWindowStart = dto.ScheduledWindowStart,
-            ScheduledWindowEnd = dto.ScheduledWindowEnd
+            ScheduledWindowEnd = dto.ScheduledWindowEnd,
+            MatcherReasoning = dto.MatcherReasoning
         };
 
         var coordinates = await _geoService.GeocodeAsync(dto.PickupAddress);
@@ -71,6 +72,15 @@ public class JobService : IJobService
 
         job.PickupLatitude = coordinates.Value.Latitude;
         job.PickupLongitude = coordinates.Value.Longitude;
+
+        if (dto.SkipAutoAssign)
+        {
+            var anyEligible = await FindBestCandidateAsync(job, excludeCollectorIds: new List<Guid>());
+            job.Status = anyEligible is null ? JobStatus.NoCollectorAvailable : JobStatus.AwaitingStaffAssignment;
+            _db.Jobs.Add(job);
+            await _db.SaveChangesAsync();
+            return await ToDtoAsync(job);
+        }
 
         var (candidate, historyReason) = dto.PreferredCollectorId is Guid preferredId
             ? await ChoosePreferredOrBestAsync(job, preferredId)
@@ -268,7 +278,8 @@ public class JobService : IJobService
         var job = await _db.Jobs.FindAsync(jobId)
             ?? throw new KeyNotFoundException("Job not found.");
 
-        if (job.Status is not (JobStatus.PickupLocationUnresolved or JobStatus.NoCollectorAvailable))
+        if (job.Status is not (JobStatus.PickupLocationUnresolved or JobStatus.NoCollectorAvailable
+                or JobStatus.AwaitingStaffAssignment))
             throw new InvalidOperationException(
                 $"The address can only be changed while a job is unresolved or unassigned (current status: '{job.Status}').");
 
@@ -283,6 +294,14 @@ public class JobService : IJobService
         job.PickupAddress = dto.PickupAddress.Trim();
         job.PickupLatitude = coordinates.Value.Latitude;
         job.PickupLongitude = coordinates.Value.Longitude;
+
+        // The Matcher left this one for staff to choose, so a corrected
+        // address doesn't auto-assign it.
+        if (job.Status == JobStatus.AwaitingStaffAssignment)
+        {
+            await _db.SaveChangesAsync();
+            return await ToDtoAsync(job);
+        }
 
         var candidate = await FindBestCandidateAsync(job,
             excludeCollectorIds: await GetRejectedCollectorIdsAsync(jobId));
@@ -306,9 +325,9 @@ public class JobService : IJobService
         var job = await _db.Jobs.FindAsync(jobId)
             ?? throw new KeyNotFoundException("Job not found.");
 
-        if (job.Status is not (JobStatus.Assigned or JobStatus.NoCollectorAvailable))
+        if (job.Status is not (JobStatus.Assigned or JobStatus.NoCollectorAvailable or JobStatus.AwaitingStaffAssignment))
             throw new InvalidOperationException(
-                $"Only jobs that are Assigned or NoCollectorAvailable can be reassigned (current status: '{job.Status}').");
+                $"Only jobs that are Assigned, NoCollectorAvailable or AwaitingStaffAssignment can be reassigned (current status: '{job.Status}').");
 
         if (job.PickupLatitude is null || job.PickupLongitude is null)
             throw new InvalidOperationException("This job has no pickup coordinates. Fix the address first.");
@@ -536,6 +555,7 @@ public class JobService : IJobService
         MeasuredWeightKg = j.MeasuredWeightKg,
         Notes = j.Notes,
         RejectionReason = j.RejectionReason,
+        MatcherReasoning = j.MatcherReasoning,
         CreatedAt = j.CreatedAt,
         RespondedAt = j.RespondedAt,
         StartedAt = j.StartedAt,

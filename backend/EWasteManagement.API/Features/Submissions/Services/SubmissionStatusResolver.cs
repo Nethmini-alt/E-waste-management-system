@@ -20,6 +20,7 @@ namespace EWasteManagement.Api.Services
                     // Rejected is transient: JobService.RejectAsync immediately
                     // re-matches the job to Assigned or NoCollectorAvailable.
                     JobStatus.NoCollectorAvailable or JobStatus.PickupLocationUnresolved or JobStatus.Rejected
+                        or JobStatus.AwaitingStaffAssignment
                         => ("AwaitingCollector", "Awaiting collector"),
                     JobStatus.Completed => ("Collected", "Collected"),
                     JobStatus.Cancelled => ("Cancelled", "Cancelled"),

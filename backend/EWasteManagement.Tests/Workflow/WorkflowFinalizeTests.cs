@@ -31,13 +31,13 @@ public class WorkflowFinalizeTests : CollectionTestBase
     private const decimal NearLat = 6.9100m, NearLng = 79.8600m;
     private const decimal FarLat = 6.9500m, FarLng = 79.9000m;
 
-    private WorkflowOrchestrationService CreateOrchestrator(IJobService? jobService = null) => new(
+    private WorkflowOrchestrationService CreateOrchestrator(IJobService? jobService = null, IMatcherAgentClient? matcher = null) => new(
         new WorkflowService(Db, new ConfigurationBuilder().Build()),
         new WorkflowBackgroundQueue(),
         new ReadyPlanner(),
         new UnusedAgents(),
         new UnusedAgents(),
-        new UnusedAgents(),
+        matcher ?? new UnusedAgents(),
         jobService ?? CreateJobService(),
         Geo,
         NullLogger<WorkflowOrchestrationService>.Instance);
@@ -54,7 +54,8 @@ public class WorkflowFinalizeTests : CollectionTestBase
     // A submission plus a workflow parked at Finalizing, with every earlier
     // step's result already stored, i.e. exactly what a crash right before
     // (or during) Finalize leaves behind.
-    private async Task<CollectionWorkflow> SeedWorkflowAtFinalizingAsync(Guid? recommendedCollectorId)
+    private async Task<CollectionWorkflow> SeedWorkflowAtFinalizingAsync(
+        Guid? recommendedCollectorId, bool? autoAssign = null, string reasoning = "test")
     {
         var submission = new Submission
         {
@@ -82,8 +83,8 @@ public class WorkflowFinalizeTests : CollectionTestBase
             MatcherResultJson = JsonSerializer.Serialize(new MatcherResultRequest
             {
                 RecommendedCollectorId = recommendedCollectorId,
-                AutoAssign = recommendedCollectorId is not null,
-                Reasoning = "test",
+                AutoAssign = autoAssign ?? recommendedCollectorId is not null,
+                Reasoning = reasoning,
             }),
         };
         Db.CollectionWorkflows.Add(workflow);
@@ -187,12 +188,90 @@ public class WorkflowFinalizeTests : CollectionTestBase
         // Control for the test above: shows the recommendation is what moved
         // the job to the farther collector.
         var (near, _) = await SeedTwoCollectorsAsync();
-        var workflow = await SeedWorkflowAtFinalizingAsync(recommendedCollectorId: null);
+        var workflow = await SeedWorkflowAtFinalizingAsync(recommendedCollectorId: null, autoAssign: true);
 
         await CreateOrchestrator().RunChainAsync(workflow.WorkflowId);
 
         var job = Assert.Single(await JobsForAsync(workflow.SubmissionId));
         Assert.Equal(near.CollectorId, job.CollectorId);
+    }
+
+    // ---------- Matcher didn't auto-assign: staff pick the collector ----------
+
+    private const string AmbiguousReasoning = "Top two candidates within 3.0 points — treated as ambiguous. Leaving for staff to confirm.";
+
+    [Fact]
+    public async Task Finalize_without_auto_assign_creates_an_unassigned_job_awaiting_staff()
+    {
+        var (_, far) = await SeedTwoCollectorsAsync();
+        var workflow = await SeedWorkflowAtFinalizingAsync(far.CollectorId, autoAssign: false, reasoning: AmbiguousReasoning);
+
+        await CreateOrchestrator().RunChainAsync(workflow.WorkflowId);
+
+        var job = Assert.Single(await JobsForAsync(workflow.SubmissionId));
+        Assert.Equal(JobStatus.AwaitingStaffAssignment, job.Status);
+        Assert.Null(job.CollectorId);
+        Assert.Equal(AmbiguousReasoning, job.MatcherReasoning);
+        Assert.Empty(await Db.JobAssignmentHistory.AsNoTracking().Where(h => h.JobId == job.JobId).ToListAsync());
+
+        var finished = await ReloadAsync(workflow.WorkflowId);
+        Assert.Equal(WorkflowStatus.Completed, finished.Status);
+        Assert.Equal(job.JobId, finished.ResultingJobId);
+    }
+
+    [Fact]
+    public async Task Finalize_without_auto_assign_and_nobody_eligible_is_no_collector_available()
+    {
+        var workflow = await SeedWorkflowAtFinalizingAsync(null, autoAssign: false,
+            reasoning: "No collector candidates were returned. Needs staff review.");
+
+        await CreateOrchestrator().RunChainAsync(workflow.WorkflowId);
+
+        var job = Assert.Single(await JobsForAsync(workflow.SubmissionId));
+        Assert.Equal(JobStatus.NoCollectorAvailable, job.Status);
+        Assert.Null(job.CollectorId);
+        Assert.Equal("No collector candidates were returned. Needs staff review.", job.MatcherReasoning);
+    }
+
+    [Fact]
+    public async Task Matcher_not_auto_assigning_goes_to_finalize_instead_of_admin_approval()
+    {
+        var (near, _) = await SeedTwoCollectorsAsync();
+        var workflow = await SeedWorkflowAtFinalizingAsync(null);
+        var atMatching = await Db.CollectionWorkflows.SingleAsync(w => w.WorkflowId == workflow.WorkflowId);
+        atMatching.Status = WorkflowStatus.Matching;
+        atMatching.MatcherResultJson = null;
+        await Db.SaveChangesAsync();
+        Db.ChangeTracker.Clear();
+
+        var matcher = new FixedMatcher(new MatcherAgentResult
+        {
+            RecommendedCollectorId = near.CollectorId, AutoAssign = false, Reasoning = AmbiguousReasoning,
+        });
+        await CreateOrchestrator(matcher: matcher).RunChainAsync(workflow.WorkflowId);
+
+        var finished = await ReloadAsync(workflow.WorkflowId);
+        Assert.Equal(WorkflowStatus.Completed, finished.Status);
+        Assert.False(finished.ApprovalRequired);
+
+        var job = Assert.Single(await JobsForAsync(workflow.SubmissionId));
+        Assert.Equal(JobStatus.AwaitingStaffAssignment, job.Status);
+        Assert.Equal(AmbiguousReasoning, job.MatcherReasoning);
+        Assert.Equal(finished.ResultingJobId, job.JobId);
+    }
+
+    [Fact]
+    public async Task Staff_can_assign_a_job_the_matcher_left_for_them()
+    {
+        var (_, far) = await SeedTwoCollectorsAsync();
+        var workflow = await SeedWorkflowAtFinalizingAsync(far.CollectorId, autoAssign: false, reasoning: AmbiguousReasoning);
+        await CreateOrchestrator().RunChainAsync(workflow.WorkflowId);
+        var job = Assert.Single(await JobsForAsync(workflow.SubmissionId));
+
+        var result = await CreateJobService().ReassignAsync(job.JobId, new ReassignJobDto { CollectorId = far.CollectorId });
+
+        Assert.Equal(nameof(JobStatus.Assigned), result.Status);
+        Assert.Equal(far.CollectorId, result.CollectorId);
     }
 
     [Fact]
@@ -239,6 +318,17 @@ public class WorkflowFinalizeTests : CollectionTestBase
             decimal estimatedWeightKg, decimal estimatedValueUsd, bool alreadyEscalated,
             List<Guid>? excludeCollectorIds = null, CancellationToken ct = default)
             => throw new InvalidOperationException("Matcher should not run in a Finalize test.");
+    }
+
+    private sealed class FixedMatcher : IMatcherAgentClient
+    {
+        private readonly MatcherAgentResult _result;
+        public FixedMatcher(MatcherAgentResult result) => _result = result;
+
+        public Task<MatcherAgentResult> RunAsync(Guid workflowId, decimal pickupLatitude, decimal pickupLongitude,
+            decimal estimatedWeightKg, decimal estimatedValueUsd, bool alreadyEscalated,
+            List<Guid>? excludeCollectorIds = null, CancellationToken ct = default)
+            => Task.FromResult(_result);
     }
 
     // Records what Finalize hands to job creation, then delegates to the real service.

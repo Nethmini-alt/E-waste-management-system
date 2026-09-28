@@ -213,6 +213,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 // uses it if that collector is still eligible, and records
                 // it in the job history either way.
                 PreferredCollectorId = matcherRecommendation?.RecommendedCollectorId,
+                SkipAutoAssign = matcherRecommendation is { AutoAssign: false },
+                MatcherReasoning = matcherRecommendation is { AutoAssign: false } ? matcherRecommendation.Reasoning : null,
             });
             resultingJobId = job.JobId;
         }
@@ -231,8 +233,8 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
         // Which stage caused the pause tells us where to resume:
         //  - Matcher hasn't run yet  -> this was Validator escalating -> go to Matching.
-        //  - Matcher already ran     -> this was Matcher's own ambiguous/high-value
-        //                               case -> go straight to Finalizing.
+        //  - Matcher already ran     -> a workflow paused by the Matcher before it
+        //                               stopped gating on approval -> go straight to Finalizing.
         // Finalize passes Matcher's recommended collector to JobService as
         // PreferredCollectorId, so an approved recommendation is honoured if
         // that collector is still eligible when the job is created.

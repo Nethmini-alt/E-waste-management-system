@@ -14,6 +14,7 @@ public class SubmissionStatusResolverTests
     [InlineData(JobStatus.NoCollectorAvailable, "AwaitingCollector", "Awaiting collector")]
     [InlineData(JobStatus.PickupLocationUnresolved, "AwaitingCollector", "Awaiting collector")]
     [InlineData(JobStatus.Rejected, "AwaitingCollector", "Awaiting collector")]
+    [InlineData(JobStatus.AwaitingStaffAssignment, "AwaitingCollector", "Awaiting collector")]
     [InlineData(JobStatus.Completed, "Collected", "Collected")]
     [InlineData(JobStatus.Cancelled, "Cancelled", "Cancelled")]
     public void Job_status_wins_once_a_job_exists(JobStatus job, string code, string label)

@@ -8,7 +8,8 @@ export type JobStatus =
   | 'Completed'
   | 'Cancelled'
   | 'NoCollectorAvailable'
-  | 'PickupLocationUnresolved';
+  | 'PickupLocationUnresolved'
+  | 'AwaitingStaffAssignment';
 
 export interface Job {
   jobId: string;
@@ -32,6 +33,8 @@ export interface Job {
   measuredWeightKg: number | null;
   notes: string | null;
   rejectionReason: string | null;
+  /** Why the Matcher agent didn't auto-assign this job. */
+  matcherReasoning: string | null;
 
   createdAt: string;
   respondedAt: string | null;

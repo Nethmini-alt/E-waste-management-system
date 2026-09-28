@@ -38,6 +38,9 @@ public class Job
     public string? Notes { get; set; }
     public string? RejectionReason { get; set; }
 
+    // Why the Matcher agent didn't auto-assign, shown to staff while the job awaits assignment.
+    public string? MatcherReasoning { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? RespondedAt { get; set; }
 
