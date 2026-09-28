@@ -94,11 +94,10 @@ public class WorkflowService : IWorkflowService
         var workflow = await RequireAsync(workflowId, ct);
         workflow.MatcherResultJson = JsonSerializer.Serialize(request);
 
-        // Not auto-assigned (ambiguous, high-value, or already escalated) —
-        // this reuses the same PendingApproval gate rather than a separate
-        // status, since staff resolve it the same way: review, then proceed.
-        workflow.Status = request.AutoAssign ? WorkflowStatus.Finalizing : WorkflowStatus.PendingApproval;
-        if (!request.AutoAssign) workflow.ApprovalRequired = true;
+        // Admin approval only gates item risk (Validator). When the Matcher
+        // doesn't auto-assign, Finalize still creates the job, unassigned,
+        // and staff pick the collector on the Collection jobs page.
+        workflow.Status = WorkflowStatus.Finalizing;
 
         workflow.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);

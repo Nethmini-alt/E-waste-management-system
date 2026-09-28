@@ -5,6 +5,8 @@
 **/TestResults/
 *.user
 *.suo
+backend/EWasteManagement.API/wwwroot/uploads/*
+!backend/EWasteManagement.API/wwwroot/uploads/.gitkeep
 appsettings.Development.json
 appsettings.*.local.json
 *.db

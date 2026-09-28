@@ -189,6 +189,10 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("estimated_eta_minutes");
 
+                    b.Property<string>("MatcherReasoning")
+                        .HasColumnType("text")
+                        .HasColumnName("matcher_reasoning");
+
                     b.Property<decimal?>("MeasuredWeightKg")
                         .HasColumnType("numeric(10,2)")
                         .HasColumnName("measured_weight_kg");
@@ -260,7 +264,7 @@ namespace EWasteManagement.API.Migrations
 
                     b.ToTable("jobs", null, t =>
                         {
-                            t.HasCheckConstraint("CK_jobs_status", "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved')");
+                            t.HasCheckConstraint("CK_jobs_status", "status IN ('assigned','accepted','rejected','inprogress','completed','cancelled','nocollectoravailable','pickuplocationunresolved','awaitingstaffassignment')");
                         });
                 });
 

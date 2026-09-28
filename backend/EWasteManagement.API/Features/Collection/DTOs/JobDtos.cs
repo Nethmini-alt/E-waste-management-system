@@ -17,6 +17,11 @@ public class CreateJobDto
     // eligible when the job is created; otherwise normal matching picks
     // someone and the history records that the recommendation was replaced.
     public Guid? PreferredCollectorId { get; set; }
+
+    // The Matcher chose not to auto-assign: create the job unassigned as
+    // AwaitingStaffAssignment so staff pick the collector.
+    public bool SkipAutoAssign { get; set; }
+    public string? MatcherReasoning { get; set; }
 }
 
 public class RejectJobDto
@@ -53,6 +58,7 @@ public class JobResponseDto
     public decimal? MeasuredWeightKg { get; set; }
     public string? Notes { get; set; }
     public string? RejectionReason { get; set; }
+    public string? MatcherReasoning { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime? RespondedAt { get; set; }

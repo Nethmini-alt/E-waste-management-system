@@ -14,5 +14,7 @@ public enum JobStatus
     Completed,
     Cancelled,
     NoCollectorAvailable,
-    PickupLocationUnresolved
+    PickupLocationUnresolved,
+    // Collectors exist, but the Matcher left the choice to staff.
+    AwaitingStaffAssignment
 }

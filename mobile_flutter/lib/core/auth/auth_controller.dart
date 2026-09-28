@@ -51,16 +51,36 @@ class AuthController extends Notifier<AuthState> {
   }
 
   /// POST /api/auth/login. Throws the DioException on failure so the screen can show the message.
-  Future<void> signIn(String email, String password) async {
+  Future<void> signIn(String email, String password) => _authenticate(
+        '/api/auth/login',
+        {'email': email.trim(), 'password': password},
+      );
+
+  /// POST /api/auth/register, one of Household | Corporate | Collector. The
+  /// backend's AuthResponse already includes a token, so a successful
+  /// registration signs the user straight in — no separate login step.
+  Future<void> signUp({
+    required String fullName,
+    required String email,
+    required String password,
+    required String phone,
+    required String role,
+  }) =>
+      _authenticate('/api/auth/register', {
+        'fullName': fullName.trim(),
+        'email': email.trim(),
+        'password': password,
+        'phone': phone.trim(),
+        'role': role,
+      });
+
+  Future<void> _authenticate(String path, Map<String, dynamic> body) async {
     final dio = Dio(BaseOptions(
       baseUrl: Env.apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
     ));
-    final response = await dio.post<Map<String, dynamic>>(
-      '/api/auth/login',
-      data: {'email': email.trim(), 'password': password},
-    );
+    final response = await dio.post<Map<String, dynamic>>(path, data: body);
     final data = response.data!;
     final token = data['token'] as String;
     final user = AuthUser.fromJson(data);

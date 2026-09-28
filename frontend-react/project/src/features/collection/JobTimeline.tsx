@@ -58,6 +58,8 @@ const buildSteps = (job: Job, history: JobHistoryEntry[]): Step[] => {
     steps.push({ key: 'unresolved', title: "Address couldn't be located", detail: 'Waiting for staff to correct it', tone: 'staff' });
   if (job.status === 'NoCollectorAvailable')
     steps.push({ key: 'nocollector', title: 'No collector available', detail: 'Waiting for staff to assign one', tone: 'staff' });
+  if (job.status === 'AwaitingStaffAssignment')
+    steps.push({ key: 'awaitingstaff', title: 'Left for staff by the matching agent', detail: 'Waiting for staff to assign a collector', tone: 'staff' });
   if (job.startedAt)
     steps.push({ key: 'started', title: `${job.collectorName ?? 'Collector'} set off for the pickup`, at: job.startedAt, tone: 'good' });
   if (job.status === 'Completed')

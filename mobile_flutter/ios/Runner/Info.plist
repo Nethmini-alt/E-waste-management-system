@@ -3,7 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>The camera scans inventory QR labels in the warehouse.</string>
+	<string>The camera scans inventory QR labels in the warehouse, and takes photos of e-waste items and completed collections.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose a photo of an e-waste item or a completed collection.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Collectors share their location while on shift so pickups can be matched to the nearest available collector.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

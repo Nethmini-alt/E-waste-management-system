@@ -277,12 +277,18 @@ const JobDetailPage: React.FC = () => {
             </Section>
           )}
 
-          {job.status === 'NoCollectorAvailable' && (
+          {(job.status === 'NoCollectorAvailable' || job.status === 'AwaitingStaffAssignment') && (
             <Section title="Assign a collector" tone="attention">
               <p className="mb-4 flex gap-2 text-sm text-amber-900">
                 <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-amber-600" aria-hidden />
                 {attentionReason(job.status)}
               </p>
+              {job.matcherReasoning && (
+                <p className="-mt-2 mb-4 rounded-xl bg-white/60 px-3 py-2 text-sm text-ink-800">
+                  <span className="font-semibold">Why matching didn't assign it: </span>
+                  {job.matcherReasoning}
+                </p>
+              )}
               <CandidatePicker job={job} history={history} onDone={handleUpdated} />
               <div className="mt-4 border-t border-amber-200 pt-3">
                 {showAddress ? (

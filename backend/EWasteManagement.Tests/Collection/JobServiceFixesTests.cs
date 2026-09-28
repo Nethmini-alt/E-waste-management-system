@@ -282,6 +282,32 @@ public class JobServiceFixesTests : CollectionTestBase
     // --- Staff: reassign -------------------------------------------------
 
     [Fact]
+    public async Task UpdateAddressAsync_AwaitingStaffAssignment_UpdatesAddressButLeavesItForStaff()
+    {
+        await SeedCollectorAsync();
+        var job = await SeedJobAsync(collectorId: null, status: JobStatus.AwaitingStaffAssignment);
+
+        var result = await CreateJobService().UpdateAddressAsync(job.JobId,
+            new UpdateJobAddressDto { PickupAddress = "45 Duplication Road, Colombo 04" });
+
+        Assert.Equal("45 Duplication Road, Colombo 04", result.PickupAddress);
+        Assert.Equal(nameof(JobStatus.AwaitingStaffAssignment), result.Status);
+        Assert.Null(result.CollectorId);
+    }
+
+    [Fact]
+    public async Task ReassignAsync_AwaitingStaffAssignment_AutoMatchAssignsNearest()
+    {
+        var collector = await SeedCollectorAsync();
+        var job = await SeedJobAsync(collectorId: null, status: JobStatus.AwaitingStaffAssignment);
+
+        var result = await CreateJobService().ReassignAsync(job.JobId, new ReassignJobDto());
+
+        Assert.Equal(nameof(JobStatus.Assigned), result.Status);
+        Assert.Equal(collector.CollectorId, result.CollectorId);
+    }
+
+    [Fact]
     public async Task ReassignAsync_HandPicked_AssignsAndLogsStaffReason()
     {
         var chosen = await SeedCollectorAsync();

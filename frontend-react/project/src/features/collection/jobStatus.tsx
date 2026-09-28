@@ -13,13 +13,14 @@ const STATUS: Record<JobStatus, { label: string; className: string }> = {
   Rejected: { label: 'Rejected', className: 'bg-rose-100 text-rose-800' },
   NoCollectorAvailable: { label: 'No collector found', className: 'bg-amber-100 text-amber-900' },
   PickupLocationUnresolved: { label: 'Address not found', className: 'bg-amber-100 text-amber-900' },
+  AwaitingStaffAssignment: { label: 'Needs assignment', className: 'bg-violet-100 text-violet-800' },
 };
 
 export const statusLabel = (s: JobStatus) => STATUS[s]?.label ?? s;
 
 /** Jobs that are stuck until a staff member acts on them. */
 export const needsAttention = (s: JobStatus) =>
-  s === 'NoCollectorAvailable' || s === 'PickupLocationUnresolved';
+  s === 'NoCollectorAvailable' || s === 'PickupLocationUnresolved' || s === 'AwaitingStaffAssignment';
 
 /** What's wrong with a stuck job and what staff can do about it. */
 export const attentionReason = (s: JobStatus): string | null => {
@@ -27,6 +28,8 @@ export const attentionReason = (s: JobStatus): string | null => {
     return "The pickup address couldn't be found on the map. Correct it to start matching.";
   if (s === 'NoCollectorAvailable')
     return 'No available collector could take this pickup. Run matching again or choose a collector.';
+  if (s === 'AwaitingStaffAssignment')
+    return 'The matching agent left this pickup for staff to assign. Let matching choose or pick a collector.';
   return null;
 };
 

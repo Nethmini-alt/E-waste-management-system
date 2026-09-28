@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, Cpu, ShieldAlert,
-  Tag, Weight, DollarSign, Plus, Trash2, Clock, Send,
+  Tag, Weight, DollarSign, Plus, Trash2, Clock, Send, Image as ImageIcon, Loader2, X,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import { extractFieldErrors, extractGeneralError, type SubmissionFieldErrors } from './submissionErrors';
@@ -10,6 +10,7 @@ import { IN_PROGRESS_STATUSES, SUBMISSION_CATEGORIES, type SubmissionResponse } 
 import { SubmissionProgress } from './SubmissionProgress';
 import { GlassCard, Notice, PageHeader, StatusPill, btnPrimary, inputClass, labelClass } from '../../components/ui';
 import type { StatusTone } from '../../components/ui/StatusPill';
+import { uploadApi } from '../../api/uploadApi';
 
 // Statuses SubmissionProgress can represent as a normal step reached along
 // the happy path (including the successful end states it marks "done").
@@ -17,6 +18,11 @@ const PROGRESS_STATUSES = ['Analyzing', 'AwaitingReview', 'Scheduling', 'Collect
 
 const POLL_INTERVAL_MS = 1500;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
+
+// Must match UploadRequestValidator on the backend — checked here too so a
+// bad file is rejected instantly, without a round trip.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const STATUS_TONE: Record<string, StatusTone> = {
   CollectorAssigned: 'success',
@@ -33,9 +39,13 @@ interface ItemDraft {
   itemName: string;
   description: string;
   imageUrl: string;
+  imageUploading: boolean;
+  imageError: string | null;
 }
 
-const newItem = (): ItemDraft => ({ key: crypto.randomUUID(), itemName: '', description: '', imageUrl: '' });
+const newItem = (): ItemDraft => ({
+  key: crypto.randomUUID(), itemName: '', description: '', imageUrl: '', imageUploading: false, imageError: null,
+});
 
 const SubmitPage: React.FC = () => {
   const [category, setCategory] = useState('');
@@ -56,6 +66,30 @@ const SubmitPage: React.FC = () => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
   const addItem = () => setItems((prev) => (prev.length >= 10 ? prev : [...prev, newItem()]));
   const removeItem = (key: string) => setItems((prev) => (prev.length <= 1 ? prev : prev.filter((it) => it.key !== key)));
+
+  const handleImageSelect = async (key: string, file: File | undefined) => {
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      updateItem(key, { imageError: 'Image must be JPEG, PNG, or WEBP.' });
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      updateItem(key, { imageError: 'Image must be 5 MB or smaller.' });
+      return;
+    }
+
+    updateItem(key, { imageUploading: true, imageError: null });
+    try {
+      const url = await uploadApi.uploadImage(file);
+      updateItem(key, { imageUrl: url, imageUploading: false });
+    } catch (err) {
+      console.error(err);
+      updateItem(key, { imageUploading: false, imageError: extractGeneralError(err) });
+    }
+  };
+
+  const anyImageUploading = items.some((it) => it.imageUploading);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -219,13 +253,38 @@ const SubmitPage: React.FC = () => {
                   />
                   <FieldError message={fieldErrors?.items[i]?.description} />
 
-                  <input
-                    type="url"
-                    className={inputClass}
-                    placeholder="Image URL (optional)"
-                    value={item.imageUrl}
-                    onChange={(e) => updateItem(item.key, { imageUrl: e.target.value })}
-                  />
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-dashed border-mint-300 px-3.5 py-2 text-xs font-semibold text-mint-700 hover:bg-mint-50 focus-within:ring-2 focus-within:ring-mint-500">
+                    <ImageIcon size={14} /> {item.imageUrl ? 'Change photo' : 'Add photo (optional)'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        void handleImageSelect(item.key, e.target.files?.[0]);
+                        e.target.value = ''; // lets the same file be re-picked after an error
+                      }}
+                    />
+                  </label>
+
+                  {item.imageUploading && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700">
+                      <Loader2 size={13} className="animate-spin motion-reduce:animate-none" /> Uploading…
+                    </p>
+                  )}
+                  {item.imageUrl && !item.imageUploading && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={item.imageUrl} alt="" className="h-16 w-16 rounded-xl border border-mint-100 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => updateItem(item.key, { imageUrl: '' })}
+                        className="flex items-center rounded-lg p-1.5 text-red-600 hover:bg-red-50"
+                        aria-label="Remove photo"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                  <FieldError message={item.imageError ?? undefined} />
                   <FieldError message={fieldErrors?.items[i]?.imageUrl} />
                 </div>
               ))}
@@ -241,8 +300,8 @@ const SubmitPage: React.FC = () => {
             </button>
           </div>
 
-          <button type="submit" disabled={loading || polling} className={`${btnPrimary} self-start`}>
-            <Send size={14} /> {loading ? 'Submitting…' : polling ? 'Processing…' : 'Submit e-waste item'}
+          <button type="submit" disabled={loading || polling || anyImageUploading} className={`${btnPrimary} self-start`}>
+            <Send size={14} /> {loading ? 'Submitting…' : polling ? 'Processing…' : anyImageUploading ? 'Uploading photo…' : 'Submit e-waste item'}
           </button>
         </form>
       </GlassCard>
