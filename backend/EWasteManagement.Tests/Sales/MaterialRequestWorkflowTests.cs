@@ -224,6 +224,11 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
         var matcher = CreateMatcher(agent, AvailableMaterial("Copper", 50m, item.Id));
         await matcher.MatchInventoryAsync(item.Id);
 
+        // The backend now asks the agent to rank the competitors instead of pre-sorting
+        // them itself. PriorityOrder is left unset here, so the fake reports "no opinion"
+        // and the deterministic net-value ordering below is what decides.
+        Assert.Single(agent.PriorityCalls);
+
         var assignedGoal = Assert.Single(agent.Goals);
         Assert.Equal(exportBuyer.BuyerId, assignedGoal.Goal!.TargetBuyerId);
         Assert.Equal(40m, assignedGoal.Goal.MaxQuantityKg);
@@ -232,6 +237,99 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
         Assert.Equal(MaterialRequestStatus.PlanGenerated, exportRequest.Status);
         Assert.Equal(MaterialRequestStatus.Waiting, localRequest.Status);
     }
+
+    [Fact]
+    public async Task MatchInventoryAsync_AgentPriorityOrder_OverridesBackendNetValueOrdering()
+    {
+        var demand = await SeedCompetingRequestsAsync();
+        var localRequestId = demand.Local.MaterialRequestId;
+
+        var agent = new RecordingSalesAgent(_connection, demand.Item.Id)
+        {
+            // The agent chose fairness (fifo) this round: the long-waiting local buyer is
+            // served before the more valuable export request. Deciding that — and saying
+            // why — is exactly what the backend used to be unable to express.
+            PriorityOrder = new List<Guid> { localRequestId, demand.Export.MaterialRequestId }
+        };
+        var matcher = CreateMatcher(agent, AvailableMaterial("Copper", 50m, demand.Item.Id));
+
+        await matcher.MatchInventoryAsync(demand.Item.Id);
+
+        var priorityCall = Assert.Single(agent.PriorityCalls);
+        Assert.Equal("Copper", priorityCall.MaterialType);
+        Assert.Equal(50m, priorityCall.CapacityKg);          // unclaimed stock, not total stock
+        Assert.Equal(2, priorityCall.Candidates.Count);
+        Assert.Contains(priorityCall.Candidates, candidate => candidate.BuyerType == "Export" && candidate.QuantityKg == 40m);
+        Assert.Contains(priorityCall.Candidates, candidate => candidate.BuyerType == "Local" && candidate.PricePerKg == 100m);
+
+        var assignedGoal = Assert.Single(agent.Goals);
+        Assert.Equal(_buyer.BuyerId, assignedGoal.Goal!.TargetBuyerId);
+        Assert.Equal(20m, assignedGoal.Goal.MaxQuantityKg);
+
+        _db.ChangeTracker.Clear();
+        Assert.Equal(MaterialRequestStatus.PlanGenerated,
+            (await _db.MaterialRequests.SingleAsync(request => request.MaterialRequestId == localRequestId)).Status);
+        Assert.Equal(MaterialRequestStatus.Waiting,
+            (await _db.MaterialRequests.SingleAsync(request => request.BuyerId == demand.ExportBuyer.BuyerId)).Status);
+    }
+
+    [Fact]
+    public async Task MatchInventoryAsync_AgentPriorityCallFails_FallsBackToNetValueOrdering()
+    {
+        var demand = await SeedCompetingRequestsAsync();
+        var localRequestId = demand.Local.MaterialRequestId;
+
+        var agent = new RecordingSalesAgent(_connection, demand.Item.Id)
+        {
+            PriorityFailure = new InvalidOperationException("Sales agent is unreachable.")
+        };
+        var matcher = CreateMatcher(agent, AvailableMaterial("Copper", 50m, demand.Item.Id));
+
+        // Must not throw: allocation keeps working while the agent is down.
+        await matcher.MatchInventoryAsync(demand.Item.Id);
+
+        Assert.Single(agent.PriorityCalls);
+        var assignedGoal = Assert.Single(agent.Goals);
+        Assert.Equal(demand.ExportBuyer.BuyerId, assignedGoal.Goal!.TargetBuyerId);
+        Assert.Equal(40m, assignedGoal.Goal.MaxQuantityKg);
+
+        _db.ChangeTracker.Clear();
+        Assert.Equal(MaterialRequestStatus.Waiting,
+            (await _db.MaterialRequests.SingleAsync(request => request.MaterialRequestId == localRequestId)).Status);
+        Assert.Equal(MaterialRequestStatus.PlanGenerated,
+            (await _db.MaterialRequests.SingleAsync(request => request.BuyerId == demand.ExportBuyer.BuyerId)).Status);
+    }
+
+    private async Task<CompetingDemand> SeedCompetingRequestsAsync()
+    {
+        var item = await SeedReadyInventoryAsync("Copper", 100m);
+        var exportUser = new User
+        {
+            Email = "export@example.test",
+            FullName = "Export Buyer",
+            PasswordHash = "test-hash",
+            Role = UserRole.Corporate
+        };
+        var exportBuyer = new Buyer
+        {
+            UserId = exportUser.UserId,
+            CompanyName = "Export Buyer Ltd",
+            ContactPerson = "Export Buyer",
+            Email = exportUser.Email,
+            BuyerType = BuyerType.Export,
+            Status = BuyerStatus.Active
+        };
+        _db.AddRange(exportUser, exportBuyer);
+
+        var local = NewRequest("Copper", 20m);
+        var export = NewRequest("Copper", 40m, exportBuyer);
+        _db.MaterialRequests.AddRange(local, export);
+        await _db.SaveChangesAsync();
+        return new CompetingDemand(item, local, export, exportBuyer);
+    }
+
+    private sealed record CompetingDemand(
+        InventoryItem Item, MaterialRequest Local, MaterialRequest Export, Buyer ExportBuyer);
 
     [Fact]
     public async Task MatchInventoryAsync_StockWithoutLivePrice_WaitsForPriceThenRetries()
@@ -376,6 +474,9 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
         private readonly SqliteConnection _connection;
         private readonly Guid _inventoryItemId;
         public List<(AgentRunGoal? Goal, Guid GeneratedPlanId)> Goals { get; } = new();
+        public List<DemandPriorityGoal> PriorityCalls { get; } = new();
+        public List<Guid>? PriorityOrder { get; set; }
+        public Exception? PriorityFailure { get; set; }
         public bool ShouldFail { get; set; }
         public RecordingSalesAgent(SqliteConnection connection, Guid inventoryItemId)
         {
@@ -404,6 +505,24 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
             await agentDb.SaveChangesAsync(ct);
             Goals.Add((goal, plan.CommercialPlanId));
             return plan.CommercialPlanId;
+        }
+
+        public Task<DemandPriorityResult?> PrioritizeDemandAsync(
+            DemandPriorityGoal goal, CancellationToken ct = default)
+        {
+            PriorityCalls.Add(goal);
+            if (PriorityFailure is not null)
+                throw PriorityFailure;
+            if (PriorityOrder is null)
+                return Task.FromResult<DemandPriorityResult?>(null);   // "no opinion"
+
+            return Task.FromResult<DemandPriorityResult?>(new DemandPriorityResult
+            {
+                Strategy = "fifo",
+                StrategyReason = "Longest wait first.",
+                ReasoningSummary = "Test priority order.",
+                RankedMaterialRequestIds = PriorityOrder
+            });
         }
     }
 

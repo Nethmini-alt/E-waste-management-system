@@ -33,6 +33,11 @@ class WorkflowState(TypedDict, total=False):
     approval_required: bool
     risk_flags: list[str]
 
+    # --- Decision inputs/outputs added by the tool-based decision layer ---
+    priority_objective: str
+    route_scores: list[dict]
+    pricing_age_days: float | None
+
     # --- Submission ---
     commercial_plan_id: str | None
     errors: list[str]

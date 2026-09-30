@@ -1,0 +1,4 @@
+﻿Test run for E:\web\E-Waste-Managment-System\E-waste-management-system\backend\EWasteManagement.Tests\bin\Release\net8.0\EWasteManagement.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   412, Skipped:     0, Total:   412, Duration: 14 s - EWasteManagement.Tests.dll (net8.0)

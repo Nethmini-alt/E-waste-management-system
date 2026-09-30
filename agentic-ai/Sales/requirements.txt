@@ -6,3 +6,6 @@ pydantic-settings==2.5.2
 python-dotenv==1.0.1
 langgraph==0.2.34
 langchain-core==0.3.10
+# Optional: only needed when GOOGLE_API_KEY is set. graph/llm.py imports it defensively,
+# so the agent keeps working (deterministically) without it.
+langchain-google-genai>=2.0.4

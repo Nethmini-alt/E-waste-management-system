@@ -111,10 +111,30 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
 
         waiting = waiting
             .Where(request => request.Buyer.BuyerType != BuyerType.Export || request.QuantityKg >= 20m)
-            .OrderByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg))
-            .ThenByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg) / request.QuantityKg)
-            .ThenBy(request => request.CreatedAt)
             .ToList();
+
+        // "Who gets served first?" is the Sales agent's call now: it ranks these
+        // competitors with its own priority tools (agentic-ai/Sales/graph/priority.py) and
+        // returns the order plus the reasons. This backend used to decide that itself, by
+        // sorting on expected net value — a revenue-first rule with no explanation.
+        //
+        // The sort below is kept as the OFFLINE FALLBACK: allocation must not stall, and
+        // must not silently change, just because the Python service is unreachable.
+        var agentOrder = await TryGetAgentPriorityAsync(
+            waiting, inventory.ItemType, availableKg - reservedKg, rankingPrice.PricePerKg, ct);
+
+        waiting = agentOrder is null
+            ? waiting
+                .OrderByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg))
+                .ThenByDescending(request => EstimateNetValue(request, rankingPrice.PricePerKg) / request.QuantityKg)
+                .ThenBy(request => request.CreatedAt)
+                .ToList()
+            : waiting
+                .OrderBy(request => agentOrder.TryGetValue(request.MaterialRequestId, out var rank)
+                    ? rank
+                    : int.MaxValue)
+                .ThenBy(request => request.CreatedAt)
+                .ToList();
 
         foreach (var request in waiting)
         {
@@ -238,6 +258,69 @@ public class MaterialRestockMatcher : IMaterialRestockMatcher
                 }
                 _logger.LogError(ex, "Plan generation failed for material request {RequestId}; it will be retried", request.MaterialRequestId);
             }
+        }
+    }
+
+    /// <summary>
+    /// Asks the Sales agent to rank the requests competing for this material. Returns null
+    /// when the agent has no opinion or cannot be reached, so the caller can fall back to
+    /// its own deterministic ordering.
+    /// </summary>
+    private async Task<Dictionary<Guid, int>?> TryGetAgentPriorityAsync(
+        List<MaterialRequest> candidates,
+        string materialType,
+        decimal capacityKg,
+        decimal pricePerKg,
+        CancellationToken ct)
+    {
+        // A single candidate is already an answer, and a matching cycle is the wrong place
+        // to spend a model call — skip the round trip entirely.
+        if (candidates.Count <= 1)
+            return null;
+
+        var now = DateTime.UtcNow;
+        try
+        {
+            var result = await _agent.PrioritizeDemandAsync(new DemandPriorityGoal
+            {
+                MaterialType = materialType,
+                CapacityKg = capacityKg,
+                Candidates = candidates.Select(request => new DemandPriorityCandidate
+                {
+                    MaterialRequestId = request.MaterialRequestId,
+                    BuyerId = request.BuyerId,
+                    BuyerType = request.Buyer.BuyerType.ToString(),
+                    QuantityKg = request.QuantityKg,
+                    PricePerKg = pricePerKg,
+                    CreatedAt = request.CreatedAt,
+                    WaitingHours = Math.Round((now - request.CreatedAt).TotalHours, 2)
+                }).ToList()
+            }, ct);
+
+            if (result is null || result.RankedMaterialRequestIds.Count == 0)
+            {
+                _logger.LogInformation(
+                    "Sales agent had no priority order for {MaterialType}; using the deterministic net-value order.",
+                    materialType);
+                return null;
+            }
+
+            _logger.LogInformation(
+                "Sales agent prioritised {Count} competing {MaterialType} request(s) as '{Strategy}': {Reason}",
+                result.RankedMaterialRequestIds.Count, materialType, result.Strategy, result.StrategyReason);
+
+            // Ranks are de-duplicated defensively: a repeated id must not shift the queue.
+            return result.RankedMaterialRequestIds
+                .Select((id, index) => (Id: id, Index: index))
+                .GroupBy(pair => pair.Id)
+                .ToDictionary(group => group.Key, group => group.Min(pair => pair.Index));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "Sales agent priority call failed for {MaterialType}; using the deterministic net-value order.",
+                materialType);
+            return null;
         }
     }
 

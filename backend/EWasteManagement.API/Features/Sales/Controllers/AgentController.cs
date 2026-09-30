@@ -1,4 +1,5 @@
 using EWasteManagement.API.Features.Sales.DTOs;
+using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Sales.Services;
 using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
@@ -89,7 +90,7 @@ public class AgentController : ControllerBase
 
         var data = await _db.Buyers
             .AsNoTracking()
-            .Where(b => b.Status == Features.Sales.Entities.BuyerStatus.Active)
+            .Where(b => b.Status == BuyerStatus.Active)
             .Select(b => new
             {
                 buyerId = b.BuyerId,
@@ -112,5 +113,68 @@ public class AgentController : ControllerBase
         // No offers table yet — return empty. Structure is stable so agent code
         // won't need to change when offers land.
         return Ok(Array.Empty<object>());
+    }
+
+    /// <summary>
+    /// getOpenMaterialRequests — the buyer demand competing for saleable stock: Waiting,
+    /// WaitingForPrice and PlanGenerationFailed requests from Active buyers, with the
+    /// live approved price for each material.
+    ///
+    /// This is what lets the Sales agent rank demand itself (POST /prioritize-demand)
+    /// instead of the backend pre-ordering requests by expected net value for it.
+    /// </summary>
+    [HttpGet("material-requests/open")]
+    public async Task<IActionResult> GetOpenMaterialRequests(
+        [FromQuery] string? materialType, CancellationToken ct)
+    {
+        var guard = Guard();
+        if (guard != null) return guard;
+
+        // One live-price lookup for the whole page, using the same rule the order
+        // services apply, so the agent never ranks against a dead rate.
+        var prices = await _db.MaterialPricings
+            .AsNoTracking()
+            .WhereLive(MaterialPricingPolicy.Today)
+            .OrderByDescending(p => p.EffectiveDate)
+            .Select(p => new { p.MaterialType, p.PricePerKg })
+            .ToListAsync(ct);
+
+        var priceByType = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        foreach (var price in prices)
+            priceByType.TryAdd(price.MaterialType, price.PricePerKg);
+
+        var query = _db.MaterialRequests
+            .AsNoTracking()
+            .Include(r => r.Buyer)
+            .Where(r => (r.Status == MaterialRequestStatus.Waiting
+                    || r.Status == MaterialRequestStatus.WaitingForPrice
+                    || r.Status == MaterialRequestStatus.PlanGenerationFailed)
+                && r.Buyer.Status == BuyerStatus.Active);
+
+        if (!string.IsNullOrWhiteSpace(materialType))
+        {
+            var wanted = materialType.Trim().ToLower();
+            query = query.Where(r => r.MaterialType.ToLower() == wanted);
+        }
+
+        // Oldest first: the agent's "fifo" objective and every table break rely on it.
+        var requests = await query.OrderBy(r => r.CreatedAt).ToListAsync(ct);
+        var now = DateTime.UtcNow;
+
+        var data = requests.Select(r => new AgentOpenDemandDto
+        {
+            MaterialRequestId = r.MaterialRequestId,
+            BuyerId = r.BuyerId,
+            BuyerCompanyName = r.Buyer.CompanyName,
+            BuyerType = r.Buyer.BuyerType.ToString(),
+            MaterialType = r.MaterialType,
+            QuantityKg = r.QuantityKg,
+            Status = r.Status.ToString(),
+            PricePerKg = priceByType.TryGetValue(r.MaterialType, out var price) ? price : (decimal?)null,
+            WaitingHours = Math.Round((now - r.CreatedAt).TotalHours, 2),
+            CreatedAt = r.CreatedAt
+        }).ToList();
+
+        return Ok(data);
     }
 }

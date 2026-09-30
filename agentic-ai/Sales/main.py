@@ -3,12 +3,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from graph.planner import run_workflow
-from schemas import AgentRunRequest, AgentRunResponse
+from graph.priority import build_priority_queue
+from schemas import AgentRunRequest, AgentRunResponse, PrioritizeDemandRequest, PrioritizeDemandResponse
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("agent")
 
-app = FastAPI(title="Commercial Recovery Planning Agent", version="0.1.0")
+app = FastAPI(title="Commercial Recovery Planning Agent", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +38,7 @@ async def run(req: AgentRunRequest) -> AgentRunResponse:
             target_material_types=req.target_material_types,
             max_quantity_kg=req.max_quantity_kg,
             preferred_route=req.preferred_route,
+            priority_objective=req.priority_objective,
         )
     except Exception as exc:
         log.exception("Agent run failed")
@@ -54,4 +56,34 @@ async def run(req: AgentRunRequest) -> AgentRunResponse:
         approvalRequired=state.get("approval_required", True),
         reasoningSummary=state["reasoning_summary"],
         riskFlags=state.get("risk_flags", []),
+        priorityObjective=state.get("priority_objective", "net_value"),
+        pricingAgeDays=state.get("pricing_age_days"),
+        routeScores=state.get("route_scores", []),
     )
+
+
+@app.post("/prioritize-demand", response_model=PrioritizeDemandResponse)
+async def prioritize_demand(req: PrioritizeDemandRequest) -> PrioritizeDemandResponse:
+    """
+    Rank competing buyer demand for saleable stock, then hand the order back.
+
+    The .NET matcher calls this before it decides which waiting material request to turn
+    into a commercial plan. With `candidates` supplied it ranks exactly those; without
+    them it fetches open demand with its own tool, so the same endpoint answers
+    "what should we sell next?" for a dashboard too.
+    """
+    log.info(
+        "Prioritising demand (material=%s, capacity=%s, objective=%s, supplied_candidates=%s)",
+        req.material_type, req.capacity_kg, req.objective,
+        len(req.candidates) if req.candidates else "fetched",
+    )
+    try:
+        return await build_priority_queue(
+            material_type=req.material_type,
+            capacity_kg=req.capacity_kg,
+            objective=req.objective,
+            candidates=req.candidates,
+        )
+    except Exception as exc:
+        log.exception("Demand prioritisation failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
