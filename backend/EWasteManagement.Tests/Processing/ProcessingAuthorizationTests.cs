@@ -1,4 +1,5 @@
 using System.Reflection;
+using EWasteManagement.API.Features.Admin.Controllers;
 using EWasteManagement.API.Features.Processing.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
@@ -6,29 +7,28 @@ using Xunit;
 namespace EWasteManagement.Tests.Processing;
 
 /// <summary>
-/// Money decisions are Admin-only: warehouse Staff can process items and view payments and rates,
-/// but cannot pay collectors or change rates. These pin the attributes that enforce that.
+/// Who may do what in Component C. Management staff carry the "Staff" role, worker staff the
+/// "Worker" role. Stacked [Authorize] attributes must ALL pass, so a method-level "Worker" on a
+/// "Staff,Admin,Worker" controller means worker only.
 /// </summary>
 public class ProcessingAuthorizationTests
 {
     private static string?[] Roles(MemberInfo member)
         => member.GetCustomAttributes<AuthorizeAttribute>().Select(a => a.Roles).ToArray();
 
-    [Fact]
-    public void MarkPaid_RequiresAdmin_OnTopOfTheControllersStaffOrAdminRule()
-    {
-        var method = typeof(CollectorPaymentsController).GetMethod(nameof(CollectorPaymentsController.MarkPaid))!;
+    private static MethodInfo Method<T>(string name) => typeof(T).GetMethod(name)!;
 
-        Assert.Contains("Admin", Roles(method));
-        Assert.Contains("Staff,Admin", Roles(typeof(CollectorPaymentsController)));
+    [Fact]
+    public void MarkPaid_IsOpenToAdminAndManagementStaff_NotWorkers()
+    {
+        Assert.Empty(Roles(Method<CollectorPaymentsController>(nameof(CollectorPaymentsController.MarkPaid))));
+        Assert.Equal(new[] { "Staff,Admin" }, Roles(typeof(CollectorPaymentsController)));
     }
 
     [Fact]
-    public void PaymentReads_StayOpenToStaff()
+    public void PaymentReads_StayOpenToManagementStaff()
     {
-        var list = typeof(CollectorPaymentsController).GetMethod(nameof(CollectorPaymentsController.List))!;
-
-        Assert.Empty(Roles(list));
+        Assert.Empty(Roles(Method<CollectorPaymentsController>(nameof(CollectorPaymentsController.List))));
     }
 
     [Fact]
@@ -37,5 +37,33 @@ public class ProcessingAuthorizationTests
         Assert.Equal(new[] { "Admin" }, Roles(typeof(RatePoliciesController)));
         Assert.DoesNotContain(typeof(RatePoliciesController).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly),
             m => m.GetCustomAttributes<AllowAnonymousAttribute>().Any());
+    }
+
+    [Theory]
+    [InlineData(nameof(InventoryProcessingController.TransitionStatus))]
+    [InlineData(nameof(InventoryProcessingController.AddDismantleLog))]
+    [InlineData(nameof(InventoryProcessingController.Classify))]
+    [InlineData(nameof(InventoryProcessingController.MoveLocation))]
+    [InlineData(nameof(InventoryProcessingController.List))]
+    [InlineData(nameof(InventoryProcessingController.GetById))]
+    [InlineData(nameof(InventoryProcessingController.GetHistory))]
+    public void Inventory_IsOpenToManagementStaffWorkersAndAdmin(string method)
+    {
+        Assert.Empty(Roles(Method<InventoryProcessingController>(method)));
+        Assert.Equal(new[] { "Staff,Admin,Worker" }, Roles(typeof(InventoryProcessingController)));
+    }
+
+    [Fact]
+    public void Receiving_IsOpenToManagementStaffWorkersAndAdmin()
+    {
+        Assert.Equal(new[] { "Staff,Admin,Worker" }, Roles(typeof(JobReceiptController)));
+        Assert.Equal(new[] { "Staff,Admin,Worker" }, Roles(typeof(ExtraWasteController)));
+        Assert.Empty(Roles(Method<ExtraWasteController>(nameof(ExtraWasteController.Receive))));
+    }
+
+    [Fact]
+    public void StaffManagement_IsAdminOnly()
+    {
+        Assert.Equal(new[] { "Admin" }, Roles(typeof(StaffController)));
     }
 }

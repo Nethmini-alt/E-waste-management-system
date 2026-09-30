@@ -22,11 +22,26 @@ public class CreateChildInventoryItemRequest
     public decimal WeightKg { get; set; }
 }
 
+public class RecoveredMaterialRequest
+{
+    /// <summary>Must be a material type Sales has a price row for (e.g. "Copper"), so it can be sold.</summary>
+    public string MaterialType { get; set; } = string.Empty;
+    public decimal WeightKg { get; set; }
+
+    /// <summary>Set by the worker for hazardous output; known hazardous types are held regardless.</summary>
+    public bool Hazardous { get; set; }
+}
+
 public class AddDismantleLogRequest
 {
     public string Description { get; set; } = string.Empty;
     public decimal? RemainingWeightKg { get; set; }
+
+    /// <summary>Dismantled components: become inventory items with status Recovered.</summary>
     public List<CreateChildInventoryItemRequest> ChildItems { get; set; } = new();
+
+    /// <summary>Finished materials: become inventory items that are ReadyForSale (OnHold if hazardous).</summary>
+    public List<RecoveredMaterialRequest> Materials { get; set; } = new();
 }
 
 public class DismantleLogResponse
@@ -36,10 +51,11 @@ public class DismantleLogResponse
     /// <summary>The parent's weight after this step (always set).</summary>
     public decimal? UpdatedWeightKg { get; set; }
 
-    /// <summary>Weight that went neither into the components nor the remainder (dust, screws, scrap).</summary>
+    /// <summary>Weight that went neither into the outputs nor the remainder (dust, screws, scrap).</summary>
     public decimal LossKg { get; set; }
 
     public List<Guid> ChildInventoryItemIds { get; set; } = new();
+    public List<Guid> MaterialInventoryItemIds { get; set; } = new();
 }
 
 public class ClassifyInventoryItemRequest

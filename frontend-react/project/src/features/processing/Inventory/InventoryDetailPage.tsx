@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Boxes, CheckCircle2, Inbox, ListChecks, Lock, MapPin, RefreshCw, ShieldAlert,
-  ShoppingCart, Ship, Tag, Wrench, ArrowRight, Route as RouteIcon, type LucideIcon,
+  ShoppingCart, Ship, Tag, Wrench, ArrowRight, PackageOpen, Route as RouteIcon, type LucideIcon,
 } from 'lucide-react';
 import { inventoryApi } from './inventoryApi';
-import type { InventoryDetail, ProcessingLogEntry } from './types';
+import type { InventoryChild, InventoryDetail, ProcessingLogEntry } from './types';
 import ClassifyModal from './ClassifyModal';
 import DismantleModal from './DismantleModal';
 import MoveLocationModal from './MoveLocationModal';
@@ -15,6 +15,7 @@ import ReceiptDetailModal from '../Receive/ReceiptDetailModal';
 import {
   CLASSIFICATION_SOURCE_LABELS,
   INVENTORY_STATUS_LABELS,
+  ITEM_KIND_LABELS,
   ORIGIN_TYPE_LABELS,
   canAddDismantleStep,
   canClassify,
@@ -59,6 +60,7 @@ const TRANSITION_BUTTON_LABELS: Partial<Record<InventoryStatus, string>> = {
 
 const HISTORY_ICONS: Record<string, LucideIcon> = {
   Received: Inbox,
+  Recovered: PackageOpen,
   Sorting: ListChecks,
   Dismantling: Wrench,
   DismantleStep: Wrench,
@@ -75,6 +77,51 @@ const historyLabel = (action: string): string => {
   if (action === 'Received') return 'Received at warehouse';
   return isInventoryStatus(action) ? `Status → ${INVENTORY_STATUS_LABELS[action]}` : action;
 };
+
+const OutputTable: React.FC<{
+  title: string;
+  empty: string;
+  rows: InventoryChild[];
+  nameHeader: string;
+  footer?: React.ReactNode;
+}> = ({ title, empty, rows, nameHeader, footer }) => (
+  <GlassCard padded={false}>
+    <div className="px-5 pb-2 pt-5">
+      <h3 className="font-display text-base font-bold text-ink-900">{title}</h3>
+    </div>
+    {rows.length === 0 ? (
+      <p className="px-5 pb-5 text-sm text-ink-600">{empty}</p>
+    ) : (
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[420px] border-collapse">
+          <thead>
+            <tr className="border-b border-mint-100">
+              <th className={`${tableHeadClass} px-5 py-2`}>{nameHeader}</th>
+              <th className={`${tableHeadClass} px-5 py-2`}>Status</th>
+              <th className={`${tableHeadClass} px-5 py-2 text-right`}>Weight</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id} className="border-b border-mint-50 last:border-0">
+                <td className={`${tableCellClass} px-5`}>
+                  <Link to={`/processing/inventory/${c.id}`} className="font-semibold text-ink-900 hover:text-mint-700">
+                    {c.itemType}
+                  </Link>
+                </td>
+                <td className={`${tableCellClass} px-5`}>
+                  <StatusBadge status={c.status} />
+                </td>
+                <td className={`${tableCellClass} px-5 text-right font-mono`}>{formatKg(c.verifiedWeightKg)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    {rows.length > 0 && footer && <div className="border-t border-mint-50 px-5 py-3">{footer}</div>}
+  </GlassCard>
+);
 
 const DetailRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
@@ -178,6 +225,8 @@ const InventoryDetailPage: React.FC = () => {
   const terminal = isTerminalStatus(status);
   const classification = item.classification;
   const historyNewestFirst = [...history].reverse();
+  const components = item.children.filter((c) => c.kind !== 'Material');
+  const materials = item.children.filter((c) => c.kind === 'Material');
 
   return (
     <div>
@@ -202,7 +251,9 @@ const InventoryDetailPage: React.FC = () => {
               <StatusBadge status={status} />
               <CategoryBadge category={classification?.category} />
               <span className="rounded-full bg-ink-100 px-2.5 py-1 text-xs font-medium text-ink-800">{ORIGIN_TYPE_LABELS[item.originType]}</span>
-              {item.parentInventoryItemId && <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800">Dismantled component</span>}
+              {item.kind !== 'Unit' && (
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-800">{ITEM_KIND_LABELS[item.kind]}</span>
+              )}
             </div>
           </div>
           <button type="button" onClick={() => load(true)} className={btnSecondary} disabled={refreshing}>
@@ -281,41 +332,23 @@ const InventoryDetailPage: React.FC = () => {
             )}
           </GlassCard>
 
-          <GlassCard padded={false}>
-            <div className="px-5 pb-2 pt-5">
-              <h3 className="font-display text-base font-bold text-ink-900">Dismantled components</h3>
-            </div>
-            {item.children.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-ink-600">No components have been split off this item.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px] border-collapse">
-                  <thead>
-                    <tr className="border-b border-mint-100">
-                      <th className={`${tableHeadClass} px-5 py-2`}>Component</th>
-                      <th className={`${tableHeadClass} px-5 py-2`}>Status</th>
-                      <th className={`${tableHeadClass} px-5 py-2 text-right`}>Weight</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {item.children.map((c) => (
-                      <tr key={c.id} className="border-b border-mint-50 last:border-0">
-                        <td className={`${tableCellClass} px-5`}>
-                          <Link to={`/processing/inventory/${c.id}`} className="font-semibold text-ink-900 hover:text-mint-700">
-                            {c.itemType}
-                          </Link>
-                        </td>
-                        <td className={`${tableCellClass} px-5`}>
-                          <StatusBadge status={c.status} />
-                        </td>
-                        <td className={`${tableCellClass} px-5 text-right font-mono`}>{formatKg(c.verifiedWeightKg)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </GlassCard>
+          <OutputTable
+            title="Dismantled components"
+            nameHeader="Component"
+            rows={components}
+            empty="No components have been split off this item."
+          />
+          <OutputTable
+            title="Recovered materials"
+            nameHeader="Material"
+            rows={materials}
+            empty="No materials have been recovered from this item."
+            footer={
+              <Link to="/processing/material-stock" className="inline-flex items-center gap-1 text-sm font-semibold text-mint-700 hover:underline">
+                See all material stock <ArrowRight size={13} />
+              </Link>
+            }
+          />
         </div>
 
         {/* Right column */}
@@ -337,7 +370,7 @@ const InventoryDetailPage: React.FC = () => {
             )}
 
             <div className="flex flex-col gap-2">
-              {status === 'Received' &&
+              {(status === 'Received' || status === 'Recovered') &&
                 manualTransitions.includes('Sorting') && (
                   <button type="button" className={btnPrimary} onClick={() => setModal({ type: 'transition', next: 'Sorting' })}>
                     <ListChecks size={15} /> {TRANSITION_BUTTON_LABELS.Sorting}

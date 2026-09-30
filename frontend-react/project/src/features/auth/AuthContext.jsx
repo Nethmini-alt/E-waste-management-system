@@ -8,6 +8,10 @@ const AuthContext = createContext(null);
 const STORAGE_TOKEN = 'access_token';
 const STORAGE_USER = 'auth_user';
 
+// Worker staff use only the Flutter warehouse app; the web is for management staff, admins and customers.
+export const WORKER_WEB_MESSAGE = 'Worker staff accounts sign in to the warehouse mobile app, not the website.';
+const isWorker = (role) => typeof role === 'string' && role.toLowerCase() === 'worker';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +21,13 @@ export const AuthProvider = ({ children }) => {
     const raw = localStorage.getItem(STORAGE_USER);
     if (raw) {
       try {
-        setUser(JSON.parse(raw));
+        const stored = JSON.parse(raw);
+        if (isWorker(stored?.role)) {
+          localStorage.removeItem(STORAGE_TOKEN);
+          localStorage.removeItem(STORAGE_USER);
+        } else {
+          setUser(stored);
+        }
       } catch {
         localStorage.removeItem(STORAGE_USER);
       }
@@ -27,9 +37,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await api.post('/api/auth/login', { email, password });
-    const { token, userId, email: mail, fullName, role } = res.data;
+    const { token, userId, email: mail, fullName, role, staffType } = res.data;
+    if (isWorker(role)) {
+      const err = new Error(WORKER_WEB_MESSAGE);
+      err.response = { data: { message: WORKER_WEB_MESSAGE } };
+      throw err;
+    }
     localStorage.setItem(STORAGE_TOKEN, token);
-    const u = { userId, email: mail, fullName, role };
+    const u = { userId, email: mail, fullName, role, staffType: staffType ?? null };
     localStorage.setItem(STORAGE_USER, JSON.stringify(u));
     setUser(u);
   };

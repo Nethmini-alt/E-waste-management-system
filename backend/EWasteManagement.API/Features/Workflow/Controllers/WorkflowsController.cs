@@ -61,7 +61,7 @@ public class WorkflowsController : ControllerBase
 
     /// <summary>Human-in-the-loop approval — resumes the chain from wherever it paused.</summary>
     [HttpPost("{id:guid}/approve")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> Approve(Guid id, [FromBody] WorkflowApprovalDecisionRequest request, CancellationToken ct)
     {
         var workflow = await _workflows.GetAsync(id, ct);
@@ -76,7 +76,7 @@ public class WorkflowsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/reject")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> Reject(Guid id, [FromBody] WorkflowApprovalDecisionRequest request, CancellationToken ct)
     {
         var workflow = await _workflows.GetAsync(id, ct);

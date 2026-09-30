@@ -13,12 +13,16 @@ import {
   CLASSIFICATION_CATEGORY_LABELS,
   INVENTORY_STATUSES,
   INVENTORY_STATUS_LABELS,
+  ITEM_KINDS,
+  ITEM_KIND_LABELS,
   LIMITS,
   ORIGIN_TYPES,
   ORIGIN_TYPE_LABELS,
   isClassificationCategory,
   isInventoryStatus,
+  isItemKind,
   isOriginType,
+  type ItemKind,
 } from '../processingEnums';
 import { useWarehouseLocations } from '../hooks/useLookups';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -41,6 +45,12 @@ import {
 } from '../components';
 
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const KIND_TAB_LABELS: Record<ItemKind, string> = {
+  Unit: 'Received items',
+  Component: 'Dismantled components',
+  Material: 'Recovered materials',
+};
 const isSortField = (v: unknown): v is InventorySortField => INVENTORY_SORT_FIELDS.includes(v as InventorySortField);
 
 const InventoryListPage: React.FC = () => {
@@ -52,6 +62,7 @@ const InventoryListPage: React.FC = () => {
   const statusParam = params.get('status');
   const categoryParam = params.get('category');
   const originParam = params.get('origin');
+  const kindParam = params.get('kind');
   const locationParam = params.get('location');
   const sortParam = params.get('sort');
   const searchParam = params.get('q') ?? '';
@@ -59,6 +70,7 @@ const InventoryListPage: React.FC = () => {
   const status = isInventoryStatus(statusParam) ? statusParam : undefined;
   const category = isClassificationCategory(categoryParam) ? categoryParam : undefined;
   const originType = isOriginType(originParam) ? originParam : undefined;
+  const kind = isItemKind(kindParam) ? kindParam : undefined;
   const locationId = locationParam && GUID_RE.test(locationParam) ? locationParam : undefined;
   const sortBy: InventorySortField = isSortField(sortParam) ? sortParam : 'CreatedAt';
   const descending = params.get('dir') !== 'asc';
@@ -106,6 +118,7 @@ const InventoryListPage: React.FC = () => {
         status,
         category,
         originType,
+        kind,
         locationId,
         sortBy,
         descending,
@@ -118,7 +131,7 @@ const InventoryListPage: React.FC = () => {
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [searchParam, status, category, originType, locationId, sortBy, descending, page]);
+  }, [searchParam, status, category, originType, kind, locationId, sortBy, descending, page]);
 
   useEffect(() => {
     load();
@@ -127,16 +140,20 @@ const InventoryListPage: React.FC = () => {
   const hasFilters = Boolean(searchParam || status || category || originType || locationId);
   const clearFilters = () => {
     setSearchInput('');
-    setParams(new URLSearchParams());
+    setParams(kind ? new URLSearchParams({ kind }) : new URLSearchParams());
   };
 
   const rows = data?.items ?? [];
+  const tabClass = (active: boolean) =>
+    `rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+      active ? 'bg-mint-600 text-white shadow-md shadow-mint-500/30' : 'bg-white/70 text-ink-800 hover:bg-mint-50'
+    }`;
 
   return (
     <div>
       <PageHeader
         title="Inventory"
-        subtitle="Every item received into the warehouse — search, filter and open an item to process it."
+        subtitle="Every item received into the warehouse, including dismantled components and recovered materials — search, filter and open an item to process it."
         icon={Boxes}
         actions={
           <>
@@ -149,6 +166,17 @@ const InventoryListPage: React.FC = () => {
           </>
         }
       />
+
+      <div role="tablist" aria-label="Item kind" className="mb-4 flex flex-wrap gap-2">
+        <button type="button" role="tab" aria-selected={!kind} className={tabClass(!kind)} onClick={() => updateParams({ kind: null })}>
+          All
+        </button>
+        {ITEM_KINDS.map((k) => (
+          <button key={k} type="button" role="tab" aria-selected={kind === k} className={tabClass(kind === k)} onClick={() => updateParams({ kind: k })}>
+            {KIND_TAB_LABELS[k]}
+          </button>
+        ))}
+      </div>
 
       {/* Filters */}
       <GlassCard className="mb-4">
@@ -272,7 +300,7 @@ const InventoryListPage: React.FC = () => {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={Boxes}
-            title={hasFilters ? 'No items match your filters' : 'No inventory yet'}
+            title={hasFilters ? 'No items match your filters' : kind ? `No ${KIND_TAB_LABELS[kind].toLowerCase()} yet` : 'No inventory yet'}
             description={
               hasFilters
                 ? 'Try removing a filter or searching for a different item type.'
@@ -320,7 +348,7 @@ const InventoryListPage: React.FC = () => {
                         >
                           {item.itemType}
                         </Link>
-                        {item.parentInventoryItemId && <div className="text-[11px] text-ink-600">Dismantled component</div>}
+                        {item.kind !== 'Unit' && <div className="text-[11px] text-ink-600">{ITEM_KIND_LABELS[item.kind]}</div>}
                       </td>
                       <td className={tableCellClass}>
                         <StatusBadge status={item.status} />

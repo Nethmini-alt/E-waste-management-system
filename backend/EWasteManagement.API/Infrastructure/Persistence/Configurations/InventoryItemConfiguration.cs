@@ -13,10 +13,13 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         {
             t.HasCheckConstraint(
                 "ck_inventory_items_status",
-                "status IN ('received','sorting','dismantling','classified','readyforsale','exportonly','onhold')");
+                "status IN ('received','sorting','dismantling','classified','readyforsale','exportonly','onhold','recovered')");
             t.HasCheckConstraint(
                 "ck_inventory_items_origin_type",
                 "origin_type IN ('jobcollection','extrawaste')");
+            t.HasCheckConstraint(
+                "ck_inventory_items_kind",
+                "kind IN ('unit','component','material')");
         });
 
         builder.HasKey(x => x.Id);
@@ -33,6 +36,13 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
             .HasConversion(EnumStringConverter.Create<InventoryStatus>())
             .HasColumnName("status")
             .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(x => x.Kind)
+            .HasConversion(EnumStringConverter.Create<ItemKind>())
+            .HasColumnName("kind")
+            .HasMaxLength(20)
+            .HasDefaultValue(ItemKind.Unit)
             .IsRequired();
 
         builder.Property(x => x.JobId).HasColumnName("job_id");

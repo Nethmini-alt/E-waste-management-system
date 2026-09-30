@@ -3,7 +3,7 @@ using EWasteManagement.API.Features.Auth.Entities;
 namespace EWasteManagement.API.Features.Sales.Entities;
 
 /// <summary>
-/// Approved pricing for a recovered material type. Managed by staff.
+/// Approved pricing for a recovered material type. Managed by an admin; staff can only read it.
 /// One row per (MaterialType + EffectiveDate).
 ///
 /// At most ONE row per MaterialType may be <see cref="PricingStatus.Approved"/> — enforced

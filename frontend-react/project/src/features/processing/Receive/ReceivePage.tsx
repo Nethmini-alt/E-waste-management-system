@@ -9,7 +9,7 @@ import { PageHeader } from '../components';
 type Tab = 'job' | 'extra' | 'history';
 
 const TABS: { id: Tab; label: string; hint: string; icon: React.ElementType }[] = [
-  { id: 'job', label: 'Job collection', hint: 'A collector finished a pickup job', icon: Truck },
+  { id: 'job', label: 'Job collection', hint: 'One or more completed jobs from a collector', icon: Truck },
   { id: 'extra', label: 'Extra waste', hint: 'Walk-in drop-off brought by a collector', icon: Recycle },
   { id: 'history', label: 'Receipt history', hint: 'Past drop-offs, incl. rejected items', icon: ReceiptText },
 ];

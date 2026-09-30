@@ -7,7 +7,7 @@ import { LIMITS, isReservedExtraWasteType } from '../processingEnums';
 import { useCollectors, useRatePolicies, useWarehouseLocations } from '../hooks/useLookups';
 import { getApiErrorMessage } from '../utils/apiError';
 import { formatKg, formatMoney } from '../utils/format';
-import { ErrorMessage, GlassCard, Notice, btnPrimary, btnSecondary, inputClass, labelClass } from '../components';
+import { ErrorMessage, GlassCard, Notice, SearchSelect, btnPrimary, btnSecondary, inputClass, labelClass } from '../components';
 import ReceiptDetailModal from './ReceiptDetailModal';
 
 interface LineRow {
@@ -211,14 +211,15 @@ const ExtraWasteReceiveForm: React.FC = () => {
             <label className={labelClass} htmlFor="ew-collector">
               Collector
             </label>
-            <select id="ew-collector" value={collectorId} onChange={(e) => setCollectorId(e.target.value)} className={inputClass} disabled={collectors.loading}>
-              <option value="">{collectors.loading ? 'Loading collectors…' : 'Select a collector…'}</option>
-              {collectors.data.map((c) => (
-                <option key={c.collectorId} value={c.collectorId}>
-                  {c.fullName} · {c.vehicleType}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              id="ew-collector"
+              value={collectorId}
+              onChange={setCollectorId}
+              disabled={collectors.loading}
+              placeholder={collectors.loading ? 'Loading collectors…' : 'Type the collector’s name…'}
+              emptyText="No collector with that name"
+              options={collectors.data.map((c) => ({ value: c.collectorId, label: c.fullName, hint: c.vehicleType }))}
+            />
             {!collectors.loading && collectors.data.length === 0 && !collectors.error && (
               <p className="mt-1 text-xs text-amber-700">No active collectors are registered yet.</p>
             )}

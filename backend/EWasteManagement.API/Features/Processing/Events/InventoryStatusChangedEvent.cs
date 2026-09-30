@@ -17,14 +17,18 @@ public class InventoryStatusChangedEvent : IDomainEvent
     public string? Notes { get; }
     public DateTime OccurredAt { get; }
 
+    /// <summary>True when the item was just created (received, or produced by dismantling) rather than moved between statuses.</summary>
+    public bool IsEntry { get; }
+
     public InventoryStatusChangedEvent(Guid inventoryItemId, InventoryStatus previousStatus,
-        InventoryStatus newStatus, Guid staffId, string? notes)
+        InventoryStatus newStatus, Guid staffId, string? notes, bool isEntry = false)
     {
         InventoryItemId = inventoryItemId;
         PreviousStatus = previousStatus;
         NewStatus = newStatus;
         StaffId = staffId;
         Notes = notes;
+        IsEntry = isEntry;
         OccurredAt = DateTime.UtcNow;
     }
 }

@@ -7,7 +7,7 @@ namespace EWasteManagement.API.Features.Processing.Controllers;
 // Reference data for the Processing screens' dropdowns (receive forms, filters).
 [ApiController]
 [Route("api/v1/inventory/lookups")]
-[Authorize(Roles = "Staff,Admin")]
+[Authorize(Roles = "Staff,Admin,Worker")]
 public class ProcessingLookupsController : ControllerBase
 {
     private readonly IProcessingLookupService _service;
@@ -33,6 +33,11 @@ public class ProcessingLookupsController : ControllerBase
     [HttpGet("item-types")]
     public async Task<IActionResult> GetItemTypes(CancellationToken cancellationToken)
         => Ok(await _itemTypes.GetAllowedTypesAsync(cancellationToken));
+
+    // The names a recovered material may be given: the material types Sales prices.
+    [HttpGet("material-types")]
+    public async Task<IActionResult> GetMaterialTypes(CancellationToken cancellationToken)
+        => Ok(await _itemTypes.GetMaterialTypesAsync(cancellationToken));
 
     [HttpGet("collectors")]
     public async Task<IActionResult> GetCollectors(CancellationToken cancellationToken)

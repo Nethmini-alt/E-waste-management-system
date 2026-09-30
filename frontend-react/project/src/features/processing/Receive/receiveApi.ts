@@ -1,6 +1,8 @@
 import { api } from '../../../api/client';
 import type {
   ReceivableJob,
+  ReceiveDeliveryInput,
+  ReceiveDeliveryResponse,
   ReceiptDetail,
   ReceiptListQuery,
   ReceiptListResponse,
@@ -17,6 +19,17 @@ export const receiveApi = {
 
   receiveJob: (input: ReceiveJobWasteInput) =>
     api.post<ReceiveJobWasteResponse>('/api/v1/inventory/job-collection/receive', input).then((r) => r.data),
+
+  /** One collector's several completed jobs at once — all saved together or not at all. */
+  receiveDelivery: (input: ReceiveDeliveryInput) =>
+    api
+      .post<ReceiveDeliveryResponse>('/api/v1/inventory/job-collection/receive-delivery', {
+        collectorId: input.collectorId,
+        warehouseLocationId: input.warehouseLocationId,
+        notes: input.notes?.trim() || null,
+        jobs: input.jobs.map((j) => ({ jobId: j.jobId, verifiedWeightKg: j.verifiedWeightKg, itemType: j.itemType })),
+      })
+      .then((r) => r.data),
 
   receiveExtraWaste: (input: ReceiveExtraWasteInput) =>
     api

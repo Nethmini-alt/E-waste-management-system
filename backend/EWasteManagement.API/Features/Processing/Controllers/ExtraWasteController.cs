@@ -8,7 +8,7 @@ namespace EWasteManagement.API.Features.Processing.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory/extra-waste")]
-[Authorize(Roles = "Staff,Admin")]
+[Authorize(Roles = "Staff,Admin,Worker")]
 public class ExtraWasteController : ControllerBase
 {
     private readonly IExtraWasteReceiptService _service;

@@ -12,5 +12,8 @@ export const lookupApi = {
   /** Types a job item or dismantled component may be given (active rate-policy types + priced materials). */
   itemTypes: () => api.get<string[]>('/api/v1/inventory/lookups/item-types').then((r) => r.data),
 
+  /** Names a recovered material may be given: the material types Sales prices. */
+  materialTypes: () => api.get<string[]>('/api/v1/inventory/lookups/material-types').then((r) => r.data),
+
   collectors: () => api.get<CollectorLookup[]>('/api/v1/inventory/lookups/collectors').then((r) => r.data),
 };

@@ -6,11 +6,14 @@ class AuthUser {
   final String email;
   final String fullName;
 
-  /// "Household" | "Corporate" | "Collector" | "Staff" | "Admin" — the backend's UserRole names.
+  /// "Household" | "Corporate" | "Collector" | "Staff" | "Worker" | "Admin". "Staff" is management
+  /// staff (web only); "Worker" is worker staff, the only role the warehouse screens are for.
   final String role;
 
-  bool get isAdmin => role.toLowerCase() == 'admin';
-  bool get isStaffOrAdmin => const {'staff', 'admin'}.contains(role.toLowerCase());
+  bool get isWorker => role.toLowerCase() == 'worker';
+
+  /// Management staff and admins work on the web portal; the warehouse app is not for them.
+  bool get isWebOnly => const {'staff', 'admin'}.contains(role.toLowerCase());
 
   /// Household or Corporate — the two roles that submit e-waste.
   bool get isGenerator => const {'household', 'corporate'}.contains(role.toLowerCase());

@@ -16,6 +16,7 @@ public class InventoryListQuery
     public InventoryStatus? Status { get; set; }
     public ClassificationCategory? Category { get; set; }
     public OriginType? OriginType { get; set; }
+    public ItemKind? Kind { get; set; }
     public Guid? LocationId { get; set; }
     public Guid? ParentId { get; set; }
     public InventorySortField SortBy { get; set; } = InventorySortField.CreatedAt;
@@ -39,6 +40,7 @@ public class InventoryItemListItemResponse
     public string ItemType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string OriginType { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
     public decimal VerifiedWeightKg { get; set; }
     public Guid CurrentLocationId { get; set; }
     public string CurrentLocationName { get; set; } = string.Empty;
@@ -63,6 +65,7 @@ public class InventoryChildSummary
     public Guid Id { get; set; }
     public string ItemType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
     public decimal VerifiedWeightKg { get; set; }
 }
 
@@ -72,6 +75,7 @@ public class InventoryItemDetailResponse
     public string ItemType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string OriginType { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
     public decimal VerifiedWeightKg { get; set; }
     public Guid CurrentLocationId { get; set; }
     public string CurrentLocationName { get; set; } = string.Empty;

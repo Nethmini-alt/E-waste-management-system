@@ -22,6 +22,8 @@ export interface PaymentListItem {
   status: PaymentStatus;
   createdAt: string;
   paidAt: string | null;
+  /** Set when this job was received together with others from the same collector. */
+  deliveryId: string | null;
 }
 
 export interface PaymentListResponse extends PagedResponse<PaymentListItem> {
@@ -129,4 +131,27 @@ export interface PaymentDetail extends MarkPaidTarget {
   snapshot: PaymentCalculationSnapshot | null;
   job: PaymentJobInfo | null;
   receipt: PaymentReceiptInfo | null;
+  delivery: DeliverySummary | null;
+}
+
+// GET /api/v1/payments/deliveries/{id}  — several job payments received in one visit
+export interface DeliveryPaymentLine {
+  paymentId: string;
+  jobId: string;
+  amount: number;
+  status: PaymentStatus;
+  paidAt: string | null;
+}
+
+export interface DeliverySummary {
+  deliveryId: string;
+  collectorId: string;
+  collectorName: string | null;
+  receivedAt: string;
+  receivedByName: string | null;
+  notes: string | null;
+  payments: DeliveryPaymentLine[];
+  totalAmount: number;
+  pendingAmount: number;
+  paidAmount: number;
 }

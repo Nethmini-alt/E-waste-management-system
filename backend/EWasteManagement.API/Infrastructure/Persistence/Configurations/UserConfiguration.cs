@@ -1,4 +1,5 @@
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Shared.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,6 +14,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             t.HasCheckConstraint(
                 "CK_users_role",
                 "role IN ('household','corporate','collector','staff','admin')");
+            t.HasCheckConstraint(
+                "CK_users_staff_type",
+                "(role = 'staff' AND staff_type IN ('management','worker')) OR (role <> 'staff' AND staff_type IS NULL)");
         });
 
         builder.HasKey(u => u.UserId);
@@ -46,6 +50,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
                 v => Enum.Parse<UserRole>(v, true))
             .HasMaxLength(20)
             .IsRequired();
+
+        builder.Property(u => u.StaffType)
+            .HasColumnName("staff_type")
+            .HasConversion(EnumStringConverter.Create<StaffType>())
+            .HasMaxLength(20);
 
         builder.Property(u => u.IsActive)
             .HasColumnName("is_active")

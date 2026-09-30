@@ -8,7 +8,7 @@ namespace EWasteManagement.API.Features.Processing.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory/job-collection")]
-[Authorize(Roles = "Staff,Admin")]
+[Authorize(Roles = "Staff,Admin,Worker")]
 public class JobReceiptController : ControllerBase
 {
     private readonly IJobReceiptService _service;
@@ -29,6 +29,18 @@ public class JobReceiptController : ControllerBase
             return Unauthorized("Could not resolve the authenticated staff member's id from the token.");
 
         var result = await _service.ReceiveAsync(request, staffId, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
+    // One collector, several completed jobs, one visit.
+    [HttpPost("receive-delivery")]
+    public async Task<IActionResult> ReceiveDelivery(
+        [FromBody] ReceiveDeliveryRequest request, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var staffId))
+            return Unauthorized("Could not resolve the authenticated staff member's id from the token.");
+
+        var result = await _service.ReceiveDeliveryAsync(request, staffId, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, result);
     }
 }

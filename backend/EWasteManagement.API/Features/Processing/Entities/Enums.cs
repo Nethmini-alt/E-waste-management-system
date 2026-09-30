@@ -14,7 +14,16 @@ public enum InventoryStatus
     Classified,
     ReadyForSale,
     ExportOnly,
-    OnHold
+    OnHold,
+    Recovered
+}
+
+// Unit = what came in through receiving; Component and Material are created by dismantling a parent.
+public enum ItemKind
+{
+    Unit,
+    Component,
+    Material
 }
 
 public enum ClassificationCategory

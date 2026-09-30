@@ -8,6 +8,7 @@ namespace EWasteManagement.API.Features.Sales.Controllers;
 
 [ApiController]
 [Route("api/material-pricing")]
+// Management staff can read the price list; only an admin adds, edits, approves or expires prices.
 [Authorize(Roles = "Staff,Admin")]
 public class MaterialPricingController : ControllerBase
 {
@@ -36,6 +37,7 @@ public class MaterialPricingController : ControllerBase
 
     /// <summary>Create a new pricing row (always starts in Draft).</summary>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(MaterialPricingResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<MaterialPricingResponse>> Create(
@@ -49,6 +51,7 @@ public class MaterialPricingController : ControllerBase
 
     /// <summary>Update a pricing row. Approving auto-expires the previous Approved row.</summary>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(MaterialPricingResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -60,6 +63,7 @@ public class MaterialPricingController : ControllerBase
 
     /// <summary>Delete a Draft pricing row. Approved rows must be Expired instead.</summary>
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -71,11 +75,12 @@ public class MaterialPricingController : ControllerBase
 
     /// <summary>
     /// Mark every Approved price whose expiry date has passed as Expired, and report how many
-    /// were changed. Runs automatically on a background timer; exposed so staff can force it
+    /// were changed. Runs automatically on a background timer; exposed so an admin can force it
     /// (and so it is testable through the API). Safe to call at any time — pricing lookups
     /// already refuse to use expired-by-date rows, so nothing depends on this having run.
     /// </summary>
     [HttpPost("expire-stale")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ExpireStale(CancellationToken ct)
     {

@@ -15,6 +15,7 @@ const STYLES: Record<string, { pill: string; dot: string }> = {
   ReadyForSale: { pill: 'bg-mint-600 text-white', dot: 'bg-white' },
   ExportOnly: { pill: 'bg-violet-100 text-violet-800', dot: 'bg-violet-500' },
   OnHold: { pill: 'bg-red-100 text-red-800', dot: 'bg-red-500' },
+  Recovered: { pill: 'bg-cyan-100 text-cyan-800', dot: 'bg-cyan-500' },
   // Payments
   Pending: { pill: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
   Paid: { pill: 'bg-mint-100 text-mint-800', dot: 'bg-mint-500' },

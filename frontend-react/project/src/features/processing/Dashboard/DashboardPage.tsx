@@ -59,7 +59,7 @@ const DashboardPage: React.FC = () => {
 
   const counts = data?.statusCounts;
   const total = counts ? INVENTORY_STATUSES.reduce((sum, s) => sum + counts[s], 0) : 0;
-  const inProgress = counts ? counts.Received + counts.Sorting + counts.Dismantling : 0;
+  const inProgress = counts ? counts.Received + counts.Recovered + counts.Sorting + counts.Dismantling : 0;
   const outbound = counts ? counts.ReadyForSale + counts.ExportOnly : 0;
 
   return (
@@ -119,7 +119,7 @@ const DashboardPage: React.FC = () => {
           {/* KPIs */}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Total items" value={total} hint="Everything received" icon={Boxes} />
-            <StatCard label="In progress" value={inProgress} hint="Received, sorting or dismantling" icon={Layers} />
+            <StatCard label="In progress" value={inProgress} hint="Received, recovered, sorting or dismantling" icon={Layers} />
             <StatCard label="Ready to hand off" value={outbound} hint="Ready for sale or reserved for export" icon={ShoppingCart} />
             <StatCard
               label="Pending payments"
@@ -132,16 +132,16 @@ const DashboardPage: React.FC = () => {
           {/* Pipeline */}
           <GlassCard>
             <h3 className="mb-3 font-display text-base font-bold text-ink-900">Inventory by status</h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
               {INVENTORY_STATUSES.map((status) => (
                 <Link
                   key={status}
                   to={`/processing/inventory?status=${status}`}
-                  className="rounded-2xl border border-mint-100 bg-white/60 p-3.5 transition hover:-translate-y-0.5 hover:bg-mint-50/70 hover:shadow-md"
+                  className="min-w-0 rounded-2xl border border-mint-100 bg-white/60 p-3.5 transition hover:-translate-y-0.5 hover:bg-mint-50/70 hover:shadow-md"
                 >
-                  <StatusBadge status={status} />
+                  <StatusBadge status={status} className="max-w-full !whitespace-normal leading-tight" />
                   <p className="mt-2 font-display text-2xl font-bold text-ink-900">{counts[status]}</p>
-                  <p className="text-[11px] text-ink-600">{INVENTORY_STATUS_LABELS[status]}</p>
+                  <p className="break-words text-[11px] leading-tight text-ink-600">{INVENTORY_STATUS_LABELS[status]}</p>
                 </Link>
               ))}
             </div>

@@ -40,8 +40,9 @@ const statusLabel = (s: string): string => WORKFLOW_STATUS_LABELS[s as WorkflowS
  * rejects a workflow that is waiting for a decision.
  */
 const AgenticReviewPage: React.FC = () => {
-  const user = useCurrentUser();
-  const isAdmin = user?.role.toLowerCase() === 'admin';
+  const role = useCurrentUser()?.role.toLowerCase();
+  // Admins and management staff decide; every decision is recorded with the person's name.
+  const canDecide = role === 'admin' || role === 'staff';
 
   // Deep link from Submissions Review (?workflowId=...): open that
   // workflow's modal as soon as the list has loaded, then drop the param so
@@ -110,9 +111,9 @@ const AgenticReviewPage: React.FC = () => {
         </Notice>
       )}
 
-      {!isAdmin && (
+      {!canDecide && (
         <Notice tone="info" className="mb-4">
-          You can review every workflow, but only an Admin can approve or reject one.
+          You can review every workflow, but only admins and management staff can approve or reject one.
         </Notice>
       )}
 
@@ -218,7 +219,7 @@ const AgenticReviewPage: React.FC = () => {
                             setOpenId(w.workflowId);
                           }}
                         >
-                          {w.status === 'PendingApproval' && isAdmin ? 'Review' : 'View'}
+                          {w.status === 'PendingApproval' && canDecide ? 'Review' : 'View'}
                         </button>
                       </td>
                     </tr>
@@ -232,7 +233,7 @@ const AgenticReviewPage: React.FC = () => {
 
       <WorkflowReviewModal
         workflow={opened}
-        isAdmin={isAdmin}
+        canDecide={canDecide}
         onClose={() => setOpenId(null)}
         onDecided={(message) => {
           setOpenId(null);

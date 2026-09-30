@@ -28,6 +28,34 @@ export interface ReceiveJobWasteInput {
   itemType: string;
 }
 
+// POST /api/v1/inventory/job-collection/receive-delivery
+// Several completed jobs of one collector in one visit: one item and one payment per job, grouped.
+export interface ReceiveDeliveryInput {
+  collectorId: string;
+  warehouseLocationId: string;
+  notes?: string;
+  jobs: { jobId: string; verifiedWeightKg: number; itemType: string }[];
+}
+
+export interface DeliveryJobResult {
+  jobId: string;
+  inventoryItemId: string;
+  itemType: string;
+  verifiedWeightKg: number;
+  reportedWeightKg: number | null;
+  discrepancyKg: number | null;
+  paymentId: string;
+  paymentAmount: number;
+}
+
+export interface ReceiveDeliveryResponse {
+  deliveryId: string;
+  collectorId: string;
+  receivedAt: string;
+  jobs: DeliveryJobResult[];
+  totalPendingAmount: number;
+}
+
 export interface ReceiveJobWasteResponse {
   inventoryItemId: string;
   jobId: string;

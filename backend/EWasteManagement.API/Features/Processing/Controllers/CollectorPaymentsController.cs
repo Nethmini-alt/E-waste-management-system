@@ -31,10 +31,22 @@ public class CollectorPaymentsController : ControllerBase
     public async Task<IActionResult> GetPending([FromQuery] PendingPaymentsQuery query, CancellationToken cancellationToken)
         => Ok(await _service.GetPendingAsync(query, cancellationToken));
 
-    // Paying a collector is an Admin decision; Staff (warehouse workers) can view payments but not pay them.
-    // Both this and the class-level Staff,Admin rule must pass, so only Admin gets through.
+    // A multi-job delivery: every job payment in it and the combined total.
+    [HttpGet("deliveries/{deliveryId:guid}")]
+    public async Task<IActionResult> GetDelivery(Guid deliveryId, CancellationToken cancellationToken)
+        => Ok(await _service.GetDeliveryAsync(deliveryId, cancellationToken));
+
+    // Pays every still-pending payment of the delivery in one go (same roles as paying one payment).
+    [HttpPut("deliveries/{deliveryId:guid}/pay")]
+    public async Task<IActionResult> MarkDeliveryPaid(Guid deliveryId, CancellationToken cancellationToken)
+    {
+        if (!TryGetStaffId(out var staffId)) return Unauthorized("Could not resolve the authenticated staff member's id.");
+        return Ok(await _service.MarkDeliveryPaidAsync(deliveryId, staffId, cancellationToken));
+    }
+
+    // Admin and management staff pay collectors (class-level rule). Worker staff get the "Worker"
+    // role, so they cannot reach any payment endpoint.
     [HttpPut("{id}/pay")]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> MarkPaid(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetStaffId(out var staffId)) return Unauthorized("Could not resolve the authenticated staff member's id.");

@@ -5,7 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/format.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_sheet.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -13,13 +13,15 @@ import '../../../../core/widgets/layout.dart';
 import '../../application/warehouse_providers.dart';
 import '../../data/warehouse_models.dart';
 import '../warehouse_shell.dart';
+import '../widgets/pill_tabs.dart';
 import 'extra_waste_form.dart';
-import 'receive_job_sheet.dart';
+import 'receipt_history.dart';
+import 'receive_delivery_sheet.dart';
 
-enum ReceiveTab { job, extra }
+enum ReceiveTab { job, extra, history }
 
-/// Receive waste at the dock: a completed job, or an extra-waste drop-off — kept separate, each
-/// with its own receipt and payment, exactly like the web Receive page.
+/// Receive waste at the dock: a collector's delivery of completed jobs, or an extra-waste
+/// drop-off — each with its own receipt and payment, exactly like the web Receive page.
 class ReceiveScreen extends StatefulWidget {
   const ReceiveScreen({super.key, this.initialTab = ReceiveTab.job});
 
@@ -43,6 +45,9 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
     return switch (_tab) {
       ReceiveTab.job => _JobCollectionTab(header: _header()),
       ReceiveTab.extra => WarehousePage(children: [_header(), const ExtraWasteForm()]),
+      ReceiveTab.history => WarehousePage(
+          children: [_header(), ReceiptHistory(onOpenItem: (id) => context.go('/warehouse/inventory/$id'))],
+        ),
     };
   }
 
@@ -51,12 +56,12 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
         children: [
           const PageHeader(
             title: 'Receive waste',
-            subtitle: 'Weigh in completed jobs and extra-waste drop-offs.',
+            subtitle: 'Weigh in what collectors bring to the warehouse.',
             icon: LucideIcons.packagePlus,
           ),
           PillTabs<ReceiveTab>(
             value: _tab,
-            options: const {ReceiveTab.job: 'Job collection', ReceiveTab.extra: 'Extra waste'},
+            options: const {ReceiveTab.job: 'Jobs', ReceiveTab.extra: 'Extra waste', ReceiveTab.history: 'History'},
             onChanged: (t) => setState(() => _tab = t),
           ),
           const SizedBox(height: 16),
@@ -64,58 +69,8 @@ class _ReceiveScreenState extends State<ReceiveScreen> {
       );
 }
 
-/// The web app's pill tab list (`rounded-full px-4 py-2`, selected = mint-600).
-class PillTabs<T> extends StatelessWidget {
-  const PillTabs({super.key, required this.value, required this.options, required this.onChanged});
-
-  final T value;
-  final Map<T, String> options;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      padding: const EdgeInsets.all(6),
-      radius: 999,
-      child: Row(
-        children: [
-          for (final entry in options.entries)
-            Expanded(
-              child: Semantics(
-                selected: entry.key == value,
-                button: true,
-                child: InkWell(
-                  onTap: () => onChanged(entry.key),
-                  borderRadius: BorderRadius.circular(999),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: entry.key == value ? AppColors.mint600 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: entry.key == value
-                          ? const [BoxShadow(color: Color(0x4D10B981), blurRadius: 10, offset: Offset(0, 4))]
-                          : null,
-                    ),
-                    child: Text(
-                      entry.value,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: entry.key == value ? Colors.white : AppColors.ink800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
+/// Completed jobs waiting at the dock, grouped by the collector who brought them: the worker
+/// picks the collector standing in front of them, then ticks the jobs in one sheet.
 class _JobCollectionTab extends ConsumerWidget {
   const _JobCollectionTab({required this.header});
 
@@ -133,103 +88,107 @@ class _JobCollectionTab extends ConsumerWidget {
           AsyncData(:final value) when value.isEmpty => const GlassCard(
               child: EmptyState(
                 icon: LucideIcons.truck,
-                title: 'No jobs waiting to be received',
-                description: 'When a collector completes a pickup it appears here until it has been received into inventory.',
+                title: 'Nothing to receive right now',
+                description: 'When a collector finishes a pickup, they will show up here.',
               ),
             ),
           AsyncData(:final value) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, bottom: 8),
-                  child: Text('${value.length} completed job${value.length == 1 ? '' : 's'} · tap one to weigh it in',
-                      style: const TextStyle(fontSize: 12, color: AppColors.ink600)),
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 10),
+                  child: Text('Who is delivering? Tap their name.', style: AppText.strong),
                 ),
-                for (final job in value) _JobCard(job: job),
+                for (final group in _byCollector(value)) _CollectorCard(jobs: group),
               ],
             ),
           AsyncError(:final error) => ErrorMessage(
               message: apiErrorMessage(error, 'Failed to load the jobs waiting to be received.'),
               onRetry: () => ref.invalidate(receivableJobsProvider),
             ),
-          _ => const GlassCard(child: LoadingState(label: 'Loading jobs…')),
+          _ => const GlassCard(child: LoadingState(label: 'Loading…')),
         },
       ],
     );
   }
+
+  static List<List<ReceivableJob>> _byCollector(List<ReceivableJob> jobs) {
+    final groups = <String, List<ReceivableJob>>{};
+    for (final j in jobs) {
+      groups.putIfAbsent(j.collectorId, () => []).add(j);
+    }
+    return groups.values.toList()..sort((a, b) => _name(a.first).toLowerCase().compareTo(_name(b.first).toLowerCase()));
+  }
 }
 
-class _JobCard extends ConsumerWidget {
-  const _JobCard({required this.job});
+String _name(ReceivableJob job) {
+  final name = job.collectorName;
+  return name == null || name.isEmpty ? 'Collector ${job.collectorId.substring(0, 8)}' : name;
+}
 
-  final ReceivableJob job;
+class _CollectorCard extends ConsumerWidget {
+  const _CollectorCard({required this.jobs});
+
+  /// Jobs waiting from one collector.
+  final List<ReceivableJob> jobs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final first = jobs.first;
+    final name = _name(first);
+    final vehicle = first.collectorVehicleType;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: GlassCard(
         padding: const EdgeInsets.all(16),
         onTap: () async {
-          final itemId = await showAppSheet<String>(context, builder: (_) => ReceiveJobSheet(job: job));
+          final itemId = await showAppSheet<String>(
+            context,
+            builder: (_) => ReceiveDeliverySheet(collectorName: name, jobs: jobs),
+          );
           ref.invalidate(receivableJobsProvider);
           ref.invalidate(warehouseSummaryProvider);
           if (itemId != null && context.mounted) context.go('/warehouse/inventory/$itemId');
         },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2),
-                  child: Icon(LucideIcons.mapPin, size: 15, color: AppColors.mint600),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    job.pickupAddress.isEmpty ? 'No address recorded' : job.pickupAddress,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink900),
-                  ),
-                ),
-                Text(Format.shortId(job.jobId), style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.ink600)),
-              ],
+            Container(
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: AppColors.mint100, shape: BoxShape.circle),
+              child: Text(
+                name.characters.first.toUpperCase(),
+                style: AppText.display(18, color: AppColors.mint800),
+              ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 14,
-              runSpacing: 4,
-              children: [
-                _Meta(LucideIcons.truck, job.collectorLabel),
-                if (job.submissionCategory != null) _Meta(LucideIcons.tag, job.submissionCategory!),
-                _Meta(LucideIcons.scale, 'Reported ${job.reportedWeightKg == null ? 'n/a' : Format.kg(job.reportedWeightKg!)}'),
-                if (job.estimatedDistanceKm != null) _Meta(LucideIcons.route, '${job.estimatedDistanceKm} km'),
-                _Meta(LucideIcons.clock, Format.dateTime(job.completedAt)),
-              ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: AppText.display(16)),
+                  if (vehicle != null && vehicle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(vehicle, style: AppText.small),
+                  ],
+                ],
+              ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: AppColors.amber100, borderRadius: BorderRadius.circular(999)),
+              child: Text(
+                '${jobs.length} job${jobs.length == 1 ? '' : 's'}',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.amber800),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(LucideIcons.chevronRight, size: 20, color: AppColors.ink600),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _Meta extends StatelessWidget {
-  const _Meta(this.icon, this.text);
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: AppColors.ink600),
-        const SizedBox(width: 4),
-        Text(text, style: const TextStyle(fontSize: 12, color: AppColors.ink600)),
-      ],
     );
   }
 }

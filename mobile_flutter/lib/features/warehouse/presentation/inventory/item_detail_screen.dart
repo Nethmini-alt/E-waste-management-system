@@ -110,8 +110,8 @@ class _ItemBody extends ConsumerWidget {
                   CategoryBadge(classification?.category),
                   if (item.originType != null)
                     Pill(label: item.originType!.label, background: AppColors.ink100, foreground: AppColors.ink800),
-                  if (item.parentInventoryItemId != null)
-                    const Pill(label: 'Dismantled component', background: AppColors.violet100, foreground: AppColors.violet800),
+                  if (item.kind != ItemKind.unit)
+                    Pill(label: item.kind.label, background: AppColors.violet100, foreground: AppColors.violet800),
                 ],
               ),
               const SizedBox(height: 18),
@@ -241,41 +241,45 @@ class _ItemBody extends ConsumerWidget {
           const SizedBox(height: 14),
         ],
 
-        if (item.children.isNotEmpty) ...[
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SectionTitle('Dismantled components (${item.children.length})', icon: LucideIcons.gitFork),
-                for (final child in item.children)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Tile(
-                      onTap: () => context.go('/warehouse/inventory/${child.id}'),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(child.itemType, style: AppText.strong),
-                                const SizedBox(height: 4),
-                                Text(Format.kg(child.verifiedWeightKg), style: AppText.small),
-                              ],
+        for (final (title, icon, outputs) in [
+          ('Dismantled components', LucideIcons.gitFork, item.children.where((c) => c.kind != ItemKind.material).toList()),
+          ('Recovered materials', LucideIcons.packageOpen, item.children.where((c) => c.kind == ItemKind.material).toList()),
+        ])
+          if (outputs.isNotEmpty) ...[
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SectionTitle('$title (${outputs.length})', icon: icon),
+                  for (final child in outputs)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Tile(
+                        onTap: () => context.go('/warehouse/inventory/${child.id}'),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(child.itemType, style: AppText.strong),
+                                  const SizedBox(height: 4),
+                                  Text(Format.kg(child.verifiedWeightKg), style: AppText.small),
+                                ],
+                              ),
                             ),
-                          ),
-                          StatusBadge(child.status),
-                          const SizedBox(width: 4),
-                          const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.ink600),
-                        ],
+                            StatusBadge(child.status),
+                            const SizedBox(width: 4),
+                            const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.ink600),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-        ],
+            const SizedBox(height: 14),
+          ],
 
         _QrCard(itemId: item.id, itemType: item.itemType),
         const SizedBox(height: 14),

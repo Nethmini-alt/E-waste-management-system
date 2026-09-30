@@ -73,6 +73,7 @@ class InventoryListItem {
     required this.itemType,
     required this.status,
     required this.originType,
+    required this.kind,
     required this.verifiedWeightKg,
     required this.currentLocationName,
     required this.parentInventoryItemId,
@@ -84,6 +85,7 @@ class InventoryListItem {
   final String itemType;
   final InventoryStatus status;
   final OriginType? originType;
+  final ItemKind kind;
   final double verifiedWeightKg;
   final String currentLocationName;
   final String? parentInventoryItemId;
@@ -95,6 +97,7 @@ class InventoryListItem {
         itemType: j['itemType'] as String,
         status: InventoryStatus.fromApi(j['status'] as String),
         originType: OriginType.tryFromApi(j['originType'] as String?),
+        kind: ItemKind.fromApi(j['kind'] as String?),
         verifiedWeightKg: _d(j['verifiedWeightKg']),
         currentLocationName: j['currentLocationName'] as String? ?? '',
         parentInventoryItemId: j['parentInventoryItemId'] as String?,
@@ -131,17 +134,25 @@ class InventoryClassification {
 }
 
 class InventoryChild {
-  const InventoryChild({required this.id, required this.itemType, required this.status, required this.verifiedWeightKg});
+  const InventoryChild({
+    required this.id,
+    required this.itemType,
+    required this.status,
+    required this.kind,
+    required this.verifiedWeightKg,
+  });
 
   final String id;
   final String itemType;
   final InventoryStatus status;
+  final ItemKind kind;
   final double verifiedWeightKg;
 
   factory InventoryChild.fromJson(Map<String, dynamic> j) => InventoryChild(
         id: j['id'] as String,
         itemType: j['itemType'] as String,
         status: InventoryStatus.fromApi(j['status'] as String),
+        kind: ItemKind.fromApi(j['kind'] as String?),
         verifiedWeightKg: _d(j['verifiedWeightKg']),
       );
 }
@@ -152,6 +163,7 @@ class InventoryDetail {
     required this.itemType,
     required this.status,
     required this.originType,
+    required this.kind,
     required this.verifiedWeightKg,
     required this.currentLocationId,
     required this.currentLocationName,
@@ -167,6 +179,7 @@ class InventoryDetail {
   final String itemType;
   final InventoryStatus status;
   final OriginType? originType;
+  final ItemKind kind;
   final double verifiedWeightKg;
   final String currentLocationId;
   final String currentLocationName;
@@ -182,6 +195,7 @@ class InventoryDetail {
         itemType: j['itemType'] as String,
         status: InventoryStatus.fromApi(j['status'] as String),
         originType: OriginType.tryFromApi(j['originType'] as String?),
+        kind: ItemKind.fromApi(j['kind'] as String?),
         verifiedWeightKg: _d(j['verifiedWeightKg']),
         currentLocationId: j['currentLocationId'] as String,
         currentLocationName: j['currentLocationName'] as String? ?? '',
@@ -217,16 +231,23 @@ class ProcessingLogEntry {
 // ---- action results -------------------------------------------------------------
 
 class DismantleResult {
-  const DismantleResult({required this.updatedWeightKg, required this.lossKg, required this.childIds});
+  const DismantleResult({
+    required this.updatedWeightKg,
+    required this.lossKg,
+    required this.childIds,
+    required this.materialIds,
+  });
 
   final double? updatedWeightKg;
   final double lossKg;
   final List<String> childIds;
+  final List<String> materialIds;
 
   factory DismantleResult.fromJson(Map<String, dynamic> j) => DismantleResult(
         updatedWeightKg: _dOrNull(j['updatedWeightKg']),
         lossKg: _dOrNull(j['lossKg']) ?? 0,
         childIds: (j['childInventoryItemIds'] as List).cast<String>(),
+        materialIds: ((j['materialInventoryItemIds'] as List?) ?? const []).cast<String>(),
       );
 }
 
@@ -309,27 +330,58 @@ class ReceivableJob {
       );
 }
 
-class ReceiveJobResult {
-  const ReceiveJobResult({
+/// One job of a collector's delivery, as sent to receive-delivery.
+class DeliveryJobInput {
+  const DeliveryJobInput({required this.jobId, required this.verifiedWeightKg, required this.itemType});
+
+  final String jobId;
+  final double verifiedWeightKg;
+  final String itemType;
+}
+
+class DeliveryJobResult {
+  const DeliveryJobResult({
+    required this.jobId,
     required this.inventoryItemId,
     required this.itemType,
     required this.verifiedWeightKg,
     required this.reportedWeightKg,
     required this.discrepancyKg,
+    required this.paymentAmount,
   });
 
+  final String jobId;
   final String inventoryItemId;
   final String itemType;
   final double verifiedWeightKg;
   final double? reportedWeightKg;
   final double? discrepancyKg;
+  final double paymentAmount;
 
-  factory ReceiveJobResult.fromJson(Map<String, dynamic> j) => ReceiveJobResult(
+  factory DeliveryJobResult.fromJson(Map<String, dynamic> j) => DeliveryJobResult(
+        jobId: j['jobId'] as String,
         inventoryItemId: j['inventoryItemId'] as String,
         itemType: j['itemType'] as String? ?? '',
         verifiedWeightKg: _d(j['verifiedWeightKg']),
         reportedWeightKg: _dOrNull(j['reportedWeightKg']),
         discrepancyKg: _dOrNull(j['discrepancyKg']),
+        paymentAmount: _d(j['paymentAmount']),
+      );
+}
+
+/// A collector's visit: several completed jobs received together, each its own inventory item and
+/// payment, shown with one pending total (ReceiveDeliveryResponse on the backend).
+class DeliveryResult {
+  const DeliveryResult({required this.deliveryId, required this.jobs, required this.totalPendingAmount});
+
+  final String deliveryId;
+  final List<DeliveryJobResult> jobs;
+  final double totalPendingAmount;
+
+  factory DeliveryResult.fromJson(Map<String, dynamic> j) => DeliveryResult(
+        deliveryId: j['deliveryId'] as String,
+        jobs: (j['jobs'] as List).map((e) => DeliveryJobResult.fromJson(e as Map<String, dynamic>)).toList(),
+        totalPendingAmount: _d(j['totalPendingAmount']),
       );
 }
 
@@ -367,5 +419,145 @@ class ExtraWasteReceiptResult {
   factory ExtraWasteReceiptResult.fromJson(Map<String, dynamic> j) => ExtraWasteReceiptResult(
         receiptId: j['extraWasteReceiptId'] as String,
         items: (j['items'] as List).map((e) => ExtraWasteLineResult.fromJson(e as Map<String, dynamic>)).toList(),
+      );
+}
+
+// ---- receipt history (extra waste) -------------------------------------------------
+
+class ExtraWasteReceiptSummary {
+  const ExtraWasteReceiptSummary({
+    required this.receiptId,
+    required this.receivedAt,
+    required this.collectorName,
+    required this.acceptedCount,
+    required this.rejectedCount,
+    required this.acceptedWeightKg,
+    required this.paymentStatus,
+  });
+
+  final String receiptId;
+  final String receivedAt;
+  final String? collectorName;
+  final int acceptedCount;
+  final int rejectedCount;
+  final double acceptedWeightKg;
+
+  /// "Pending" | "Paid", or null when everything was rejected (no payment is raised).
+  final String? paymentStatus;
+
+  factory ExtraWasteReceiptSummary.fromJson(Map<String, dynamic> j) => ExtraWasteReceiptSummary(
+        receiptId: j['receiptId'] as String,
+        receivedAt: j['receivedAt'] as String,
+        collectorName: j['collectorName'] as String?,
+        acceptedCount: j['acceptedCount'] as int,
+        rejectedCount: j['rejectedCount'] as int,
+        acceptedWeightKg: _d(j['acceptedWeightKg']),
+        paymentStatus: j['paymentStatus'] as String?,
+      );
+}
+
+class ExtraWasteReceiptLine {
+  const ExtraWasteReceiptLine({
+    required this.itemType,
+    required this.weightKg,
+    required this.accepted,
+    required this.rejectionReason,
+    required this.inventoryItemId,
+  });
+
+  final String itemType;
+  final double weightKg;
+  final bool accepted;
+  final String? rejectionReason;
+  final String? inventoryItemId;
+
+  factory ExtraWasteReceiptLine.fromJson(Map<String, dynamic> j) => ExtraWasteReceiptLine(
+        itemType: j['itemType'] as String? ?? '',
+        weightKg: _d(j['weightKg']),
+        accepted: j['accepted'] as bool,
+        rejectionReason: j['rejectionReason'] as String?,
+        inventoryItemId: j['inventoryItemId'] as String?,
+      );
+}
+
+class ExtraWasteReceiptDetail {
+  const ExtraWasteReceiptDetail({
+    required this.receiptId,
+    required this.receivedAt,
+    required this.notes,
+    required this.collectorName,
+    required this.receivedByName,
+    required this.items,
+  });
+
+  final String receiptId;
+  final String receivedAt;
+  final String? notes;
+  final String? collectorName;
+  final String? receivedByName;
+  final List<ExtraWasteReceiptLine> items;
+
+  factory ExtraWasteReceiptDetail.fromJson(Map<String, dynamic> j) => ExtraWasteReceiptDetail(
+        receiptId: j['receiptId'] as String,
+        receivedAt: j['receivedAt'] as String,
+        notes: j['notes'] as String?,
+        collectorName: j['collectorName'] as String?,
+        receivedByName: j['receivedByName'] as String?,
+        items: (j['items'] as List).map((e) => ExtraWasteReceiptLine.fromJson(e as Map<String, dynamic>)).toList(),
+      );
+}
+
+// ---- material stock ------------------------------------------------------------------
+
+/// One recovered-material item that is ready for sale, and where it is stored.
+class MaterialStockItem {
+  const MaterialStockItem({
+    required this.inventoryItemId,
+    required this.weightKg,
+    required this.locationName,
+    required this.recordedAt,
+    required this.parentItemType,
+  });
+
+  final String inventoryItemId;
+  final double weightKg;
+  final String locationName;
+  final String recordedAt;
+
+  /// What it was dismantled from, e.g. "Laptop".
+  final String? parentItemType;
+
+  factory MaterialStockItem.fromJson(Map<String, dynamic> j) => MaterialStockItem(
+        inventoryItemId: j['inventoryItemId'] as String,
+        weightKg: _d(j['weightKg']),
+        locationName: j['locationName'] as String? ?? '',
+        recordedAt: j['recordedAt'] as String,
+        parentItemType: j['parentItemType'] as String?,
+      );
+}
+
+/// All sellable stock of one material, totalled (GET /api/v1/inventory/recovered-materials).
+class MaterialStockGroup {
+  const MaterialStockGroup({
+    required this.materialType,
+    required this.totalWeightKg,
+    required this.availableWeightKg,
+    required this.items,
+  });
+
+  final String materialType;
+  final double totalWeightKg;
+
+  /// Total minus what is already reserved on sales or export orders.
+  final double availableWeightKg;
+  final List<MaterialStockItem> items;
+
+  double get reservedWeightKg => totalWeightKg - availableWeightKg;
+
+  factory MaterialStockGroup.fromJson(Map<String, dynamic> j) => MaterialStockGroup(
+        materialType: j['materialType'] as String,
+        totalWeightKg: _d(j['totalWeightKg']),
+        availableWeightKg: _d(j['availableWeightKg']),
+        items: (j['items'] as List).map((e) => MaterialStockItem.fromJson(e as Map<String, dynamic>)).toList(),
       );
 }

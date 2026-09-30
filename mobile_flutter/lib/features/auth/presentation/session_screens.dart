@@ -59,11 +59,18 @@ class RoleNotAvailableScreen extends ConsumerWidget {
                         const SizedBox(height: 20),
                         const Icon(LucideIcons.smartphone, size: 32, color: AppColors.mint600),
                         const SizedBox(height: 12),
-                        Text('Coming soon to mobile', textAlign: TextAlign.center, style: AppText.display(18)),
+                        Text(
+                          user?.isWebOnly == true ? 'Please use the web portal' : 'Coming soon to mobile',
+                          textAlign: TextAlign.center,
+                          style: AppText.display(18),
+                        ),
                         const SizedBox(height: 8),
                         Text(
-                          'Hi ${user?.firstName ?? 'there'}, the ${user?.role ?? ''} screens are not in the mobile app yet. '
-                          'Please use the web portal for now.',
+                          user?.isWebOnly == true
+                              ? 'Hi ${user!.firstName}, management staff and admins work on the web portal. '
+                                  'The warehouse app is for worker staff.'
+                              : 'Hi ${user?.firstName ?? 'there'}, the ${user?.role ?? ''} screens are not in the mobile app yet. '
+                                  'Please use the web portal for now.',
                           textAlign: TextAlign.center,
                           style: AppText.body,
                         ),

@@ -19,6 +19,7 @@ import JobDetailPage from './features/collection/JobDetailPage';
 import CollectorsPage from './features/collection/CollectorsPage';
 
 import HomePage from './features/home/HomePage';
+import SalesDashboardPage from './features/sales/Dashboard/DashboardPage';
 import BuyersListPage from './features/sales/Buyers/BuyersListPage';
 import MaterialPricingListPage from './features/sales/Pricing/MaterialPricingListPage';
 import MaterialsListPage from './features/sales/Materials/MaterialsListPage';
@@ -33,6 +34,9 @@ import MaterialRequestsPage from './features/sales/MaterialRequests/MaterialRequ
 import MaterialRequestManagementPage from './features/sales/MaterialRequests/MaterialRequestManagementPage';
 
 import ProcessingRoutes from './features/processing/ProcessingRoutes';
+import StaffPage from './features/admin/StaffPage';
+import StaffActivityPage from './features/admin/StaffActivityPage';
+import AdminsPage from './features/admin/AdminsPage';
 
 const App: React.FC = () => (
   <AuthProvider>
@@ -54,6 +58,14 @@ const App: React.FC = () => (
           }
         >
           <Route index element={<HomePage />} />
+          <Route
+            path="/dashboard/sales"
+            element={
+              <ProtectedRoute roles={['staff', 'admin']}>
+                <SalesDashboardPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Buyer Portal */}
           <Route
@@ -207,6 +219,30 @@ const App: React.FC = () => (
             element={
               <ProtectedRoute roles={['admin']}>
                 <ApprovalsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/staff"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <StaffPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/admins"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <AdminsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/staff-activity"
+            element={
+              <ProtectedRoute roles={['admin']}>
+                <StaffActivityPage />
               </ProtectedRoute>
             }
           />

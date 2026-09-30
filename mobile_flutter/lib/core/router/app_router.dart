@@ -17,6 +17,7 @@ import '../../features/warehouse/data/processing_enums.dart';
 import '../../features/warehouse/presentation/home/warehouse_home_screen.dart';
 import '../../features/warehouse/presentation/inventory/inventory_list_screen.dart';
 import '../../features/warehouse/presentation/inventory/item_detail_screen.dart';
+import '../../features/warehouse/presentation/inventory/material_stock_screen.dart';
 import '../../features/warehouse/presentation/receive/receive_screen.dart';
 import '../../features/warehouse/presentation/scan/scan_screen.dart';
 import '../../features/warehouse/presentation/warehouse_shell.dart';
@@ -24,11 +25,11 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_models.dart';
 import '../network/api_error.dart';
 
-/// Where each role lands after signing in. Staff/Admin get the warehouse (Processing &
-/// Inventory); Household/Corporate get the submission flow; Collector gets the job list (once
-/// their profile check, below, lets them past it).
+/// Where each role lands after signing in. Worker staff get the warehouse (receiving & inventory);
+/// Household/Corporate get the submission flow; Collector gets the job list (once their profile
+/// check, below, lets them past it). Management staff and admins use the web portal.
 String homeFor(AuthUser user) {
-  if (user.isStaffOrAdmin) return '/warehouse';
+  if (user.isWorker) return '/warehouse';
   if (user.isGenerator) return '/submissions';
   if (user.isCollector) return '/collector';
   return '/unavailable';
@@ -60,7 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Each role's API is scoped server-side too — don't show a screen that would only ever
       // come back 403.
-      if (path.startsWith('/warehouse') && !user.isStaffOrAdmin) return '/unavailable';
+      if (path.startsWith('/warehouse') && !user.isWorker) return '/unavailable';
       if (path.startsWith('/submissions') && !user.isGenerator) return '/unavailable';
       if (path.startsWith('/collector') && !user.isCollector) return '/unavailable';
       if (path.startsWith('/buyer')) {
@@ -113,7 +114,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
               path: '/warehouse/receive',
               builder: (_, state) => ReceiveScreen(
-                initialTab: state.uri.queryParameters['tab'] == 'extra' ? ReceiveTab.extra : ReceiveTab.job,
+                initialTab: switch (state.uri.queryParameters['tab']) {
+                  'extra' => ReceiveTab.extra,
+                  'history' => ReceiveTab.history,
+                  _ => ReceiveTab.job,
+                },
               ),
             ),
           ]),
@@ -135,6 +140,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 ),
               ],
             ),
+            GoRoute(path: '/warehouse/materials', builder: (_, __) => const MaterialStockScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/warehouse/scan', builder: (_, __) => const ScanScreen()),

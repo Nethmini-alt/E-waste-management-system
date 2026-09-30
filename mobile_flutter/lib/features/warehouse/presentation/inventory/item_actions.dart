@@ -34,7 +34,7 @@ class _TransitionCopy {
 const _transitionCopy = {
   InventoryStatus.sorting: _TransitionCopy(
     'Start sorting',
-    'Moves the item from Received into Sorting so it can be dismantled or classified.',
+    'Moves the item into Sorting so it can be dismantled further or classified.',
     'Start sorting',
   ),
   InventoryStatus.readyForSale: _TransitionCopy(
@@ -260,6 +260,20 @@ class _Component {
   final weight = TextEditingController();
 }
 
+class _Material {
+  String? materialType;
+  bool hazardous = false;
+  final weight = TextEditingController();
+}
+
+// Mirror of HazardousMaterialRules on the backend: these are held even if "hazardous" is not ticked.
+const _hazardKeywords = ['battery', 'batteries', 'lithium', 'li-ion', 'lead', 'mercury', 'crt', 'capacitor', 'toner', 'asbestos'];
+
+bool _isKnownHazard(String? materialType) {
+  final t = materialType?.toLowerCase() ?? '';
+  return _hazardKeywords.any(t.contains);
+}
+
 class DismantleSheet extends ConsumerStatefulWidget {
   const DismantleSheet({super.key, required this.item});
 
@@ -273,6 +287,7 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
   final _description = TextEditingController();
   final _remaining = TextEditingController();
   final List<_Component> _components = [];
+  final List<_Material> _materials = [];
   bool _submitting = false;
   bool _submitted = false;
   String? _error;
@@ -284,19 +299,28 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
     for (final c in _components) {
       c.weight.dispose();
     }
+    for (final m in _materials) {
+      m.weight.dispose();
+    }
     super.dispose();
   }
 
-  // Weight is conserved, exactly as the backend enforces it: components + remainder ≤ current weight.
-  // With no remainder entered the components are taken off the item automatically.
+  static double _positive(TextEditingController c) {
+    final v = parseDecimal(c.text) ?? 0;
+    return v > 0 ? v : 0;
+  }
+
+  // Weight is conserved, exactly as the backend enforces it: components + materials + remainder ≤
+  // current weight. With no remainder entered the outputs are taken off the item automatically.
   double get _current => widget.item.verifiedWeightKg;
-  double get _componentsTotal =>
-      _components.fold(0, (sum, c) => sum + ((parseDecimal(c.weight.text) ?? 0) > 0 ? parseDecimal(c.weight.text)! : 0));
+  double get _componentsTotal => _components.fold(0, (sum, c) => sum + _positive(c.weight));
+  double get _materialsTotal => _materials.fold(0, (sum, m) => sum + _positive(m.weight));
+  double get _outputsTotal => _componentsTotal + _materialsTotal;
   double? get _remainingEntered => parseDecimal(_remaining.text);
-  double get _newWeight => _remainingEntered ?? _current - _componentsTotal;
-  double get _loss => _current - _componentsTotal - _newWeight;
+  double get _newWeight => _remainingEntered ?? _current - _outputsTotal;
+  double get _loss => _current - _outputsTotal - _newWeight;
   // Small tolerance so float noise never blocks a valid entry.
-  bool get _overweight => _componentsTotal > _current + 0.0005 || _componentsTotal + _newWeight > _current + 0.0005;
+  bool get _overweight => _outputsTotal > _current + 0.0005 || _outputsTotal + _newWeight > _current + 0.0005;
 
   List<String> get _problems => [
         if (_description.text.trim().isEmpty) 'Describe what was done in this step.',
@@ -304,7 +328,12 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
           if (_components[i].itemType == null) 'Component ${i + 1}: choose an item type.',
           if (!((parseDecimal(_components[i].weight.text) ?? 0) > 0)) 'Component ${i + 1}: weight must be greater than 0.',
         ],
-        if (_overweight) "Components plus the remaining weight can't be more than this item's current ${Format.kg(_current)}.",
+        for (var i = 0; i < _materials.length; i++) ...[
+          if (_materials[i].materialType == null) 'Material ${i + 1}: choose a material.',
+          if (!((parseDecimal(_materials[i].weight.text) ?? 0) > 0)) 'Material ${i + 1}: weight must be greater than 0.',
+        ],
+        if (_overweight)
+          "Components, materials and the remaining weight can't be more than this item's current ${Format.kg(_current)}.",
       ];
 
   Future<void> _submit() async {
@@ -320,15 +349,22 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
             description: _description.text,
             remainingWeightKg: _remainingEntered,
             components: [for (final c in _components) (itemType: c.itemType!, weightKg: parseDecimal(c.weight.text)!)],
+            materials: [
+              for (final m in _materials)
+                (materialType: m.materialType!, weightKg: parseDecimal(m.weight.text)!, hazardous: m.hazardous),
+            ],
           );
-      final created = result.childIds.length;
+      final components = result.childIds.length;
+      final materials = result.materialIds.length;
+      final outputs = [
+        if (components > 0) '$components component${components == 1 ? '' : 's'} recovered',
+        if (materials > 0) '$materials material${materials == 1 ? '' : 's'} recorded',
+      ];
       final loss = result.lossKg > 0 ? ' ${Format.kg(result.lossKg)} recorded as loss.' : '';
       if (mounted) {
         Navigator.pop(
           context,
-          created > 0
-              ? 'Dismantle step logged — $created component${created == 1 ? '' : 's'} created.$loss'
-              : 'Dismantle step logged.$loss',
+          outputs.isEmpty ? 'Dismantle step logged.$loss' : 'Dismantle step logged — ${outputs.join(', ')}.$loss',
         );
       }
     } catch (e) {
@@ -342,7 +378,8 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
   Widget build(BuildContext context) {
     final item = widget.item;
     final itemTypes = ref.watch(itemTypesProvider);
-    final showPreview = _components.isNotEmpty || _remainingEntered != null;
+    final materialTypes = ref.watch(materialTypesProvider);
+    final showPreview = _components.isNotEmpty || _materials.isNotEmpty || _remainingEntered != null;
 
     return AppSheet(
       title: 'Add dismantle step',
@@ -373,7 +410,7 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
           const SizedBox(height: 8),
           LabeledField(
             label: 'Remaining weight of this item (optional)',
-            help: 'Leave blank to subtract the components automatically. If entered, any difference is recorded as loss (dust, screws, scrap).',
+            help: 'Leave blank to subtract the components and materials automatically. If entered, any difference is recorded as loss (dust, screws, scrap).',
             child: DecimalField(
               controller: _remaining,
               hint: 'Currently ${Format.kg(_current)}',
@@ -402,7 +439,7 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
                 border: Border.all(color: AppColors.mint200),
               ),
               child: const Text(
-                "No components added. Add one for each part that should be tracked as its own inventory item — it inherits this item's origin and location.",
+                "No components added. Add one for each part that should be tracked as its own inventory item (status Recovered) — it inherits this item's origin and location.",
                 style: AppText.small,
               ),
             ),
@@ -440,13 +477,103 @@ class _DismantleSheetState extends ConsumerState<DismantleSheet> {
                 ],
               ),
             ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: Text('RECOVERED MATERIALS (OPTIONAL)', style: AppText.label)),
+              TextButton.icon(
+                onPressed: () => setState(() => _materials.add(_Material())),
+                icon: const Icon(LucideIcons.plus, size: 14, color: AppColors.mint700),
+                label: const Text('Add material', style: TextStyle(color: AppColors.mint700, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          if (materialTypes.hasError)
+            ErrorMessage(
+              message: apiErrorMessage(materialTypes.error!, 'Failed to load material types.'),
+              onRetry: () => ref.invalidate(materialTypesProvider),
+            ),
+          if (materialTypes.hasValue && materialTypes.value!.isEmpty)
+            const Notice(
+              tone: NoticeTone.warning,
+              message: 'Sales has not priced any materials yet, so none can be recorded. Ask management to add material pricing.',
+            ),
+          if (_materials.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.input),
+                border: Border.all(color: AppColors.mint200),
+              ),
+              child: const Text(
+                'Finished materials such as copper, aluminium, steel or circuit boards go straight to Ready for sale. '
+                'Hazardous materials (batteries, lead, mercury, CRT glass…) are put On hold instead.',
+                style: AppText.small,
+              ),
+            ),
+          for (var i = 0; i < _materials.length; i++)
+            Padding(
+              key: ObjectKey(_materials[i]),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: AppDropdown<String>(
+                          value: _materials[i].materialType,
+                          hint: materialTypes.isLoading ? 'Loading…' : 'Material ${i + 1}…',
+                          enabled: materialTypes.hasValue,
+                          items: [for (final t in materialTypes.value ?? const <String>[]) DropdownMenuItem(value: t, child: Text(t))],
+                          onChanged: (v) => setState(() => _materials[i].materialType = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: DecimalField(controller: _materials[i].weight, hint: 'kg', decimals: 3, onChanged: (_) => setState(() {})),
+                      ),
+                      IconButton(
+                        tooltip: 'Remove material ${i + 1}',
+                        onPressed: () {
+                          final removed = _materials[i];
+                          setState(() => _materials.removeAt(i));
+                          WidgetsBinding.instance.addPostFrameCallback((_) => removed.weight.dispose());
+                        },
+                        icon: const Icon(LucideIcons.trash2, size: 16, color: AppColors.red600),
+                      ),
+                    ],
+                  ),
+                  if (_isKnownHazard(_materials[i].materialType))
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text('Known hazardous material — it will be put On hold, not offered for sale.',
+                          style: TextStyle(color: AppColors.red600, fontSize: 12)),
+                    )
+                  else
+                    CheckboxListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _materials[i].hazardous,
+                      onChanged: (v) => setState(() => _materials[i].hazardous = v ?? false),
+                      title: const Text('Hazardous — hold it instead of selling', style: AppText.small),
+                    ),
+                ],
+              ),
+            ),
           if (showPreview) ...[
             const SizedBox(height: 8),
             Notice(
               tone: _overweight ? NoticeTone.error : NoticeTone.info,
               message: _overweight
-                  ? 'Components (${Format.kg(_componentsTotal)}) plus the remaining weight (${Format.kg(_newWeight < 0 ? 0 : _newWeight)}) are more than this item\'s current ${Format.kg(_current)}.'
-                  : 'This item will go from ${Format.kg(_current)} to ${Format.kg(_newWeight)}; components ${Format.kg(_componentsTotal)}${_loss > 0.0005 ? '; loss ${Format.kg(_loss)}' : ''}.',
+                  ? 'Components and materials (${Format.kg(_outputsTotal)}) plus the remaining weight (${Format.kg(_newWeight < 0 ? 0 : _newWeight)}) are more than this item\'s current ${Format.kg(_current)}.'
+                  : 'This item will go from ${Format.kg(_current)} to ${Format.kg(_newWeight)}; components ${Format.kg(_componentsTotal)}'
+                      '${_materialsTotal > 0 ? '; materials ${Format.kg(_materialsTotal)}' : ''}'
+                      '${_loss > 0.0005 ? '; loss ${Format.kg(_loss)}' : ''}.',
             ),
           ],
           if (_submitted && _problems.isNotEmpty) ...[

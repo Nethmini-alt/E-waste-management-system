@@ -21,6 +21,8 @@ public class InventoryItem : BaseEntity
 
     public string ItemType { get; set; } = string.Empty;
 
+    public ItemKind Kind { get; set; } = ItemKind.Unit;
+
     // Private setter — TransitionTo() below is now the ONLY legal way to change this.
     public InventoryStatus Status { get; private set; } = InventoryStatus.Received;
 
@@ -36,6 +38,7 @@ public class InventoryItem : BaseEntity
     private static readonly Dictionary<InventoryStatus, InventoryStatus[]> AllowedTransitions = new()
     {
         [InventoryStatus.Received]     = new[] { InventoryStatus.Sorting },
+        [InventoryStatus.Recovered]    = new[] { InventoryStatus.Sorting },
         [InventoryStatus.Sorting]      = new[] { InventoryStatus.Dismantling, InventoryStatus.Classified },
         [InventoryStatus.Dismantling]  = new[] { InventoryStatus.Classified },
         [InventoryStatus.Classified]   = new[] { InventoryStatus.ReadyForSale, InventoryStatus.ExportOnly, InventoryStatus.OnHold },
@@ -66,5 +69,21 @@ public class InventoryItem : BaseEntity
     /// gap Day 1 deliberately left open.
     /// </summary>
     public void MarkReceived(Guid staffId, string? notes = null)
-        => RaiseDomainEvent(new InventoryStatusChangedEvent(Id, Status, Status, staffId, notes ?? "Received at warehouse"));
+        => RaiseDomainEvent(new InventoryStatusChangedEvent(Id, Status, Status, staffId, notes ?? "Received at warehouse", isEntry: true));
+
+    /// <summary>
+    /// Starts a brand-new item produced by dismantling: a component enters as Recovered, a material
+    /// enters directly as ReadyForSale (or OnHold when hazardous). Like MarkReceived this is an entry,
+    /// not a transition, so it only works on an item that has not been given a status yet.
+    /// </summary>
+    public void MarkCreatedByDismantling(InventoryStatus initialStatus, Guid staffId, string notes)
+    {
+        if (initialStatus is not (InventoryStatus.Recovered or InventoryStatus.ReadyForSale or InventoryStatus.OnHold))
+            throw new InvalidStatusTransitionException("(new)", initialStatus.ToString());
+        if (Status != InventoryStatus.Received || DomainEvents.Count > 0)
+            throw new InvalidOperationException("Only a new, unsaved item can be started from dismantling.");
+
+        Status = initialStatus;
+        RaiseDomainEvent(new InventoryStatusChangedEvent(Id, initialStatus, initialStatus, staffId, notes, isEntry: true));
+    }
 }

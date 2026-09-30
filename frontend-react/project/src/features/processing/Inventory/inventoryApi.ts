@@ -10,6 +10,7 @@ import type {
   InventoryListResponse,
   InventoryStatusResponse,
   ProcessingLogEntry,
+  RecoveredMaterialGroup,
   TransitionStatusInput,
   ValidateClassificationInput,
   ValidateClassificationResponse,
@@ -29,6 +30,9 @@ export const inventoryApi = {
 
   get: (id: string) => api.get<InventoryDetail>(`${BASE}/${id}`).then((r) => r.data),
 
+  /** Sellable recovered materials grouped by material, with each item and its location. */
+  recoveredMaterials: () => api.get<RecoveredMaterialGroup[]>(`${BASE}/recovered-materials`).then((r) => r.data),
+
   history: (id: string) => api.get<ProcessingLogEntry[]>(`${BASE}/${id}/history`).then((r) => r.data),
 
   transition: (id: string, input: TransitionStatusInput) =>
@@ -46,6 +50,7 @@ export const inventoryApi = {
         description: input.description.trim(),
         remainingWeightKg: input.remainingWeightKg ?? null,
         childItems: input.childItems.map((c) => ({ itemType: c.itemType.trim(), weightKg: c.weightKg })),
+        materials: (input.materials ?? []).map((m) => ({ materialType: m.materialType.trim(), weightKg: m.weightKg, hazardous: m.hazardous })),
       })
       .then((r) => r.data),
 

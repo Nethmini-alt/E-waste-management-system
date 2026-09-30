@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_flutter/core/network/api_error.dart';
 import 'package:mobile_flutter/core/utils/format.dart';
 import 'package:mobile_flutter/features/warehouse/data/processing_enums.dart';
+import 'package:mobile_flutter/features/warehouse/data/warehouse_models.dart';
 
 // Pure-logic tests: the rules the app must share with the backend and the web app.
 
@@ -11,6 +12,7 @@ void main() {
     test('InventoryStatus', () {
       expect(InventoryStatus.values.map((s) => '${s.apiName}=${s.apiValue}'), [
         'Received=0', 'Sorting=1', 'Dismantling=2', 'Classified=3', 'ReadyForSale=4', 'ExportOnly=5', 'OnHold=6',
+        'Recovered=7',
       ]);
     });
 
@@ -24,6 +26,11 @@ void main() {
   group('status actions', () {
     test('Received can only start sorting', () {
       expect(InventoryStatus.received.manualTransitions(null), [InventoryStatus.sorting]);
+    });
+
+    test('A recovered component can only start sorting', () {
+      expect(InventoryStatus.recovered.manualTransitions(null), [InventoryStatus.sorting]);
+      expect(InventoryStatus.recovered.canDismantle || InventoryStatus.recovered.canClassify, isFalse);
     });
 
     test('Sorting and Dismantling have no plain status change (dismantle / classify instead)', () {
@@ -111,6 +118,53 @@ void main() {
     test('zone-less API timestamps are treated as UTC', () {
       expect(Format.parseApiDate('2026-09-26T10:00:00')!.toUtc(), DateTime.utc(2026, 9, 26, 10));
       expect(Format.parseApiDate('2026-09-26T10:00:00Z')!.toUtc(), DateTime.utc(2026, 9, 26, 10));
+    });
+  });
+
+  // Shapes copied from the backend DTOs (DeliveryDtos, RecoveredMaterialSummaryDtos,
+  // ExtraWasteReceiptQueryDtos); decimals may arrive as ints.
+  group('warehouse API responses', () {
+    test('a received delivery', () {
+      final r = DeliveryResult.fromJson({
+        'deliveryId': 'd1',
+        'collectorId': 'c1',
+        'receivedAt': '2026-09-30T10:00:00',
+        'totalPendingAmount': 1250,
+        'jobs': [
+          {
+            'jobId': 'j1', 'inventoryItemId': 'i1', 'itemType': 'Laptop', 'verifiedWeightKg': 2.5,
+            'reportedWeightKg': null, 'discrepancyKg': null, 'paymentId': 'p1', 'paymentAmount': 1250,
+          },
+        ],
+      });
+      expect(r.totalPendingAmount, 1250.0);
+      expect(r.jobs.single.inventoryItemId, 'i1');
+      expect(r.jobs.single.reportedWeightKg, isNull);
+    });
+
+    test('material stock', () {
+      final g = MaterialStockGroup.fromJson({
+        'materialType': 'Copper', 'totalWeightKg': 3, 'availableWeightKg': 2.5, 'itemCount': 1,
+        'items': [
+          {
+            'inventoryItemId': 'i1', 'weightKg': 3, 'availableWeightKg': 2.5, 'locationId': 'l1',
+            'locationName': 'Ready-for-Sale Storage', 'recordedAt': '2026-09-30T10:00:00',
+            'parentInventoryItemId': 'i0', 'parentItemType': 'Laptop',
+          },
+        ],
+      });
+      expect(g.reservedWeightKg, 0.5);
+      expect(g.items.single.parentItemType, 'Laptop');
+    });
+
+    test('a drop-off with nothing accepted has no payment', () {
+      final r = ExtraWasteReceiptSummary.fromJson({
+        'receiptId': 'r1', 'receivedAt': '2026-09-30T10:00:00', 'collectorId': 'c1', 'collectorName': 'Nimal',
+        'itemCount': 1, 'acceptedCount': 0, 'rejectedCount': 1, 'totalWeightKg': 4, 'acceptedWeightKg': 0,
+        'paymentId': null, 'paymentStatus': null, 'paymentAmount': null,
+      });
+      expect(r.paymentStatus, isNull);
+      expect(r.acceptedWeightKg, 0.0);
     });
   });
 }

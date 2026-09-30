@@ -43,7 +43,7 @@ public class CollectorPaymentServiceTests : IAsyncLifetime
 
     private async Task<User> SeedStaffAsync(string name)
     {
-        var user = new User { Email = $"{Guid.NewGuid()}@test.com", FullName = name, PasswordHash = "x", Role = UserRole.Staff };
+        var user = new User { Email = $"{Guid.NewGuid()}@test.com", FullName = name, PasswordHash = "x", Role = UserRole.Staff, StaffType = StaffType.Management };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         return user;

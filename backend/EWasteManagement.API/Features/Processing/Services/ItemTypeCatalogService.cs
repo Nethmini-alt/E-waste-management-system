@@ -44,6 +44,32 @@ public class ItemTypeCatalogService : IItemTypeCatalogService
         return allowed.FirstOrDefault(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase));
     }
 
+    public async Task<IReadOnlyList<string>> GetMaterialTypesAsync(CancellationToken cancellationToken = default)
+    {
+        var materialTypes = await _db.MaterialPricings.AsNoTracking()
+            .Select(p => p.MaterialType)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var canonical = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var type in materialTypes)
+        {
+            var trimmed = type.Trim();
+            if (trimmed.Length > 0) canonical.TryAdd(trimmed, trimmed);
+        }
+
+        return canonical.Values.OrderBy(t => t, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    public async Task<string?> ResolveMaterialAsync(string? materialType, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(materialType)) return null;
+
+        var wanted = materialType.Trim();
+        var allowed = await GetMaterialTypesAsync(cancellationToken);
+        return allowed.FirstOrDefault(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase));
+    }
+
     // "GeneralCollection" prices job payments; it is not a physical item type.
     private static bool IsReserved(string itemType)
         => string.Equals(itemType, JobPaymentCalculator.GeneralCollectionItemType, StringComparison.OrdinalIgnoreCase);

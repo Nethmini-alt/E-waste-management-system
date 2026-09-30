@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using EWasteManagement.API.Features.Processing.DTOs;
 using EWasteManagement.API.Features.Processing.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +8,7 @@ namespace EWasteManagement.API.Features.Processing.Controllers;
 
 [ApiController]
 [Route("api/v1/inventory")]
-[Authorize(Roles = "Staff,Admin")]
+[Authorize(Roles = "Staff,Admin,Worker")]
 public class InventoryProcessingController : ControllerBase
 {
     private readonly IInventoryProcessingService _service;
@@ -65,7 +65,7 @@ public class InventoryProcessingController : ControllerBase
 
     // Deliberately not staff-authenticated: this is a read-only, side-effect-free check meant
     // to be called by the internal Agentic AI Validator agent as its allow-listed tool. No
-    // service-to-service secret yet — a documented, scoped-down simplification for the
+    // service-to-service secret yet â€” a documented, scoped-down simplification for the
     // assignment, worth one line in your security-considerations section.
     [HttpPost("{id}/validate-classification")]
     [AllowAnonymous]

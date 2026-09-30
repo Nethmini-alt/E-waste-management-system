@@ -72,6 +72,10 @@ abstract final class AppColors {
   static const teal100 = Color(0xFFCCFBF1);
   static const teal800 = Color(0xFF115E59);
 
+  static const cyan100 = Color(0xFFCFFAFE);
+  static const cyan500 = Color(0xFF06B6D4);
+  static const cyan800 = Color(0xFF155E75);
+
   /// `.btn-glass`: linear-gradient(135deg, #10b981, #047857).
   static const primaryGradient = LinearGradient(
     begin: Alignment.topLeft,

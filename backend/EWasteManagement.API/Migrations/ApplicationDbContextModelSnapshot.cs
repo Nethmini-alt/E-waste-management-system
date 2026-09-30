@@ -80,6 +80,11 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("role");
 
+                    b.Property<string>("StaffType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("staff_type");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -92,6 +97,8 @@ namespace EWasteManagement.API.Migrations
                     b.ToTable("users", null, t =>
                         {
                             t.HasCheckConstraint("CK_users_role", "role IN ('household','corporate','collector','staff','admin')");
+
+                            t.HasCheckConstraint("CK_users_staff_type", "(role = 'staff' AND staff_type IN ('management','worker')) OR (role <> 'staff' AND staff_type IS NULL)");
                         });
                 });
 
@@ -389,6 +396,45 @@ namespace EWasteManagement.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.CollectorDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CollectorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collector_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<Guid>("ReceivedByStaffId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("received_by_staff_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("collector_deliveries", (string)null);
+                });
+
             modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.CollectorPayment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -415,6 +461,10 @@ namespace EWasteManagement.API.Migrations
                     b.Property<Guid?>("CreatedByStaffId")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_staff_id");
+
+                    b.Property<Guid?>("DeliveryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("delivery_id");
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone")
@@ -447,6 +497,8 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnName("xmin");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeliveryId");
 
                     b.HasIndex("SourceType", "SourceId")
                         .IsUnique();
@@ -589,6 +641,14 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("job_id");
 
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("unit")
+                        .HasColumnName("kind");
+
                     b.Property<string>("OriginType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -633,9 +693,11 @@ namespace EWasteManagement.API.Migrations
 
                     b.ToTable("inventory_items", null, t =>
                         {
+                            t.HasCheckConstraint("ck_inventory_items_kind", "kind IN ('unit','component','material')");
+
                             t.HasCheckConstraint("ck_inventory_items_origin_type", "origin_type IN ('jobcollection','extrawaste')");
 
-                            t.HasCheckConstraint("ck_inventory_items_status", "status IN ('received','sorting','dismantling','classified','readyforsale','exportonly','onhold')");
+                            t.HasCheckConstraint("ck_inventory_items_status", "status IN ('received','sorting','dismantling','classified','readyforsale','exportonly','onhold','recovered')");
                         });
                 });
 
@@ -1804,6 +1866,16 @@ namespace EWasteManagement.API.Migrations
                         .IsRequired();
 
                     b.Navigation("InventoryItem");
+                });
+
+            modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.CollectorPayment", b =>
+                {
+                    b.HasOne("EWasteManagement.API.Features.Processing.Entities.CollectorDelivery", "Delivery")
+                        .WithMany()
+                        .HasForeignKey("DeliveryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Delivery");
                 });
 
             modelBuilder.Entity("EWasteManagement.API.Features.Processing.Entities.ExtraWasteReceiptItem", b =>

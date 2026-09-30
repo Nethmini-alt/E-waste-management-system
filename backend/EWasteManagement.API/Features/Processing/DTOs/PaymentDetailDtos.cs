@@ -32,6 +32,9 @@ public class PaymentDetailResponse
 
     public PaymentJobInfo? Job { get; set; }
     public PaymentReceiptInfo? Receipt { get; set; }
+
+    /// <summary>Set when this job payment is one of several received together in a delivery.</summary>
+    public DeliverySummaryResponse? Delivery { get; set; }
 }
 
 public class PaymentJobInfo
