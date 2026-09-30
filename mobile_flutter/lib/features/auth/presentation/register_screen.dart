@@ -204,6 +204,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     ),
                                   ],
                                 ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Flexible(child: Text('Buying recovered materials?', style: AppText.small)),
+                                    TextButton(
+                                      onPressed: _loading ? null : () => context.go('/register/buyer'),
+                                      child: const Text('Register as buyer'),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),

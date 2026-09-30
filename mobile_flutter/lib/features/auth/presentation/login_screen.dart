@@ -86,7 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                const Text('Generators, collectors, warehouse staff and admins', style: AppText.small),
+                                const Text('Buyers, generators, collectors and staff', style: AppText.small),
                                 if (reason != null && _error == null) ...[
                                   const SizedBox(height: 16),
                                   _InlineMessage(text: reason, icon: LucideIcons.clock, color: AppColors.amber800, background: AppColors.amber50),

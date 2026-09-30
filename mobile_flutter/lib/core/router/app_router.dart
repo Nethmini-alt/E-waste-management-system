@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/buyer/application/buyer_providers.dart';
+import '../../features/buyer/presentation/buyer_registration_screen.dart';
+import '../../features/buyer/presentation/buyer_requests_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/session_screens.dart';
@@ -19,6 +22,7 @@ import '../../features/warehouse/presentation/scan/scan_screen.dart';
 import '../../features/warehouse/presentation/warehouse_shell.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_models.dart';
+import '../network/api_error.dart';
 
 /// Where each role lands after signing in. Staff/Admin get the warehouse (Processing &
 /// Inventory); Household/Corporate get the submission flow; Collector gets the job list (once
@@ -47,15 +51,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (auth.status == AuthStatus.restoring) return path == '/splash' ? null : '/splash';
 
       final user = auth.user;
-      if (user == null) return (path == '/login' || path == '/register') ? null : '/login';
+      if (user == null) return (path == '/login' || path == '/register' || path == '/register/buyer') ? null : '/login';
 
-      if (path == '/login' || path == '/register' || path == '/splash') return homeFor(user);
+      if (path == '/login' || path == '/register' || path == '/register/buyer' || path == '/splash') {
+        if (user.role.toLowerCase() == 'corporate') return _corporateHome(ref);
+        return homeFor(user);
+      }
 
       // Each role's API is scoped server-side too — don't show a screen that would only ever
       // come back 403.
       if (path.startsWith('/warehouse') && !user.isStaffOrAdmin) return '/unavailable';
       if (path.startsWith('/submissions') && !user.isGenerator) return '/unavailable';
       if (path.startsWith('/collector') && !user.isCollector) return '/unavailable';
+      if (path.startsWith('/buyer')) {
+        if (user.role.toLowerCase() != 'corporate') return '/unavailable';
+        try {
+          await ref.read(buyerRequestsProvider.future);
+        } catch (error) {
+          return apiErrorStatus(error) == 404 ? '/submissions' : '/unavailable';
+        }
+      }
 
       // A Collector with no profile yet can reach nothing except the setup screen; a Collector
       // who already has one skips straight past it. Cached by collectorProfileProvider, so this
@@ -73,6 +88,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/register/buyer', builder: (_, __) => const BuyerRegistrationScreen()),
+      GoRoute(path: '/buyer', builder: (_, __) => const BuyerRequestsScreen()),
       GoRoute(path: '/unavailable', builder: (_, __) => const RoleNotAvailableScreen()),
       GoRoute(path: '/submissions', builder: (_, __) => const SubmissionShell()),
       GoRoute(path: '/collector/setup-profile', builder: (_, __) => const CollectorProfileSetupScreen()),
@@ -127,3 +144,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+Future<String> _corporateHome(Ref ref) async {
+  try {
+    await ref.read(buyerRequestsProvider.future);
+    return '/buyer';
+  } catch (error) {
+    return apiErrorStatus(error) == 404 ? '/submissions' : '/unavailable';
+  }
+}
