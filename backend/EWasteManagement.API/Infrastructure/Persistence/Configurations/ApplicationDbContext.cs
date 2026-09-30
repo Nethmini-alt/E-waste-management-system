@@ -32,6 +32,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProcessingLog> ProcessingLogs => Set<ProcessingLog>();
     public DbSet<ClassificationRecord> ClassificationRecords => Set<ClassificationRecord>();
     public DbSet<CollectorPayment> CollectorPayments => Set<CollectorPayment>();
+    public DbSet<CollectorDelivery> CollectorDeliveries => Set<CollectorDelivery>();
 
     // Collection & Logistics Tables
     public DbSet<Collector> Collectors => Set<Collector>();

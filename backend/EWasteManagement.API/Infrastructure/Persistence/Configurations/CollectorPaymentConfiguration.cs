@@ -44,5 +44,26 @@ public class CollectorPaymentConfiguration : IEntityTypeConfiguration<CollectorP
 
         // Enforces "one payment per source" from the final flow — no duplicate payments possible.
         builder.HasIndex(x => new { x.SourceType, x.SourceId }).IsUnique();
+
+        builder.Property(x => x.DeliveryId).HasColumnName("delivery_id");
+        builder.HasOne(x => x.Delivery)
+            .WithMany()
+            .HasForeignKey(x => x.DeliveryId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class CollectorDeliveryConfiguration : IEntityTypeConfiguration<CollectorDelivery>
+{
+    public void Configure(EntityTypeBuilder<CollectorDelivery> builder)
+    {
+        builder.ToTable("collector_deliveries");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id");
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        builder.Property(x => x.CollectorId).HasColumnName("collector_id").IsRequired();
+        builder.Property(x => x.ReceivedByStaffId).HasColumnName("received_by_staff_id").IsRequired();
+        builder.Property(x => x.ReceivedAt).HasColumnName("received_at").IsRequired();
+        builder.Property(x => x.Notes).HasColumnName("notes").HasMaxLength(1000);
     }
 }

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Pencil, Trash2, RefreshCw, Tag, CheckCircle2, Clock,
 } from 'lucide-react';
+import { useAuth } from '../../auth/AuthContext';
 import { pricingApi } from './pricingApi';
 import type { MaterialPricing } from './types';
 import MaterialPricingFormModal, {
@@ -15,6 +16,10 @@ import {
 } from '../../../components/ui';
 
 const MaterialPricingListPage: React.FC = () => {
+  // Staff can read the price list; only an admin adds, edits, approves or expires prices.
+  const { user } = useAuth() as unknown as { user: { role: string } | null };
+  const isAdmin = user?.role.toLowerCase() === 'admin';
+
   const [rows, setRows] = useState<MaterialPricing[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,17 +140,22 @@ const MaterialPricingListPage: React.FC = () => {
   return (
     <div>
       <PageHeader
-        title="Material pricing"
+        title="Selling prices"
+        subtitle={isAdmin ? undefined : 'What buyers pay per kilogram. Only an admin can add or change prices.'}
         icon={Tag}
         actions={
           <>
             <button onClick={load} className={btnSecondary}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh</button>
-            <button onClick={handleExpireStale} className={btnSecondary} title="Mark every approved price whose expiry date has passed as Expired">
-              <Clock size={14} /> Expire past dates
-            </button>
-            <button onClick={() => { setEditing(null); setModalOpen(true); }} className={btnPrimary}>
-              <Plus size={14} /> New price
-            </button>
+            {isAdmin && (
+              <>
+                <button onClick={handleExpireStale} className={btnSecondary} title="Mark every approved price whose expiry date has passed as Expired">
+                  <Clock size={14} /> Expire past dates
+                </button>
+                <button onClick={() => { setEditing(null); setModalOpen(true); }} className={btnPrimary}>
+                  <Plus size={14} /> New price
+                </button>
+              </>
+            )}
           </>
         }
       />
@@ -176,7 +186,11 @@ const MaterialPricingListPage: React.FC = () => {
         {loading && !rows.length ? (
           <p className="px-5 py-10 text-center text-sm text-ink-600">Loading pricing…</p>
         ) : !error && filtered.length === 0 ? (
-          <EmptyState icon={Tag} title="No pricing rows found" description='Click "New price" to add one.' />
+          <EmptyState
+            icon={Tag}
+            title="No pricing rows found"
+            description={isAdmin ? 'Click "New price" to add one.' : 'No prices have been added yet.'}
+          />
         ) : !error ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] border-collapse text-left text-sm">
@@ -188,7 +202,7 @@ const MaterialPricingListPage: React.FC = () => {
                   <th className={`${tableHeadClass} px-4 py-3`}>Expiry</th>
                   <th className={`${tableHeadClass} px-4 py-3`}>Status</th>
                   <th className={`${tableHeadClass} px-4 py-3`}>Created by</th>
-                  <th className={`${tableHeadClass} px-4 py-3`}>Actions</th>
+                  {isAdmin && <th className={`${tableHeadClass} px-4 py-3`}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -207,26 +221,28 @@ const MaterialPricingListPage: React.FC = () => {
                       )}
                     </td>
                     <td className={`${tableCellClass} text-ink-600`}>{p.createdByName || '—'}</td>
-                    <td className={tableCellClass}>
-                      {p.status === 'Draft' && (
-                        <button onClick={() => handleStatusChange(p, 'Approved')} className="mr-1 rounded-lg p-1.5 text-mint-700 hover:bg-mint-50" title="Approve">
-                          <CheckCircle2 size={16} />
+                    {isAdmin && (
+                      <td className={tableCellClass}>
+                        {p.status === 'Draft' && (
+                          <button onClick={() => handleStatusChange(p, 'Approved')} className="mr-1 rounded-lg p-1.5 text-mint-700 hover:bg-mint-50" title="Approve">
+                            <CheckCircle2 size={16} />
+                          </button>
+                        )}
+                        {p.status === 'Approved' && (
+                          <button onClick={() => handleStatusChange(p, 'Expired')} className="mr-1 rounded-lg p-1.5 text-amber-700 hover:bg-amber-50" title="Mark expired">
+                            <Clock size={16} />
+                          </button>
+                        )}
+                        <button onClick={() => { setEditing(p); setModalOpen(true); }} className="mr-1 rounded-lg p-1.5 text-ink-700 hover:bg-mint-50" title="Edit">
+                          <Pencil size={16} />
                         </button>
-                      )}
-                      {p.status === 'Approved' && (
-                        <button onClick={() => handleStatusChange(p, 'Expired')} className="mr-1 rounded-lg p-1.5 text-amber-700 hover:bg-amber-50" title="Mark expired">
-                          <Clock size={16} />
-                        </button>
-                      )}
-                      <button onClick={() => { setEditing(p); setModalOpen(true); }} className="mr-1 rounded-lg p-1.5 text-ink-700 hover:bg-mint-50" title="Edit">
-                        <Pencil size={16} />
-                      </button>
-                      {p.status === 'Draft' && (
-                        <button onClick={() => handleDelete(p)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50" title="Delete">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </td>
+                        {p.status === 'Draft' && (
+                          <button onClick={() => handleDelete(p)} className="rounded-lg p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

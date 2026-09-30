@@ -23,6 +23,12 @@ public class AddDismantleLogRequestValidator : AbstractValidator<AddDismantleLog
             child.RuleFor(c => c.ItemType).NotEmpty().MaximumLength(50);
             child.RuleFor(c => c.WeightKg).GreaterThan(0);
         });
+
+        RuleForEach(x => x.Materials).ChildRules(material =>
+        {
+            material.RuleFor(m => m.MaterialType).NotEmpty().MaximumLength(50);
+            material.RuleFor(m => m.WeightKg).GreaterThan(0);
+        });
     }
 }
 
@@ -53,6 +59,7 @@ public class InventoryListQueryValidator : AbstractValidator<InventoryListQuery>
         RuleFor(x => x.Status).IsInEnum();
         RuleFor(x => x.Category).IsInEnum();
         RuleFor(x => x.OriginType).IsInEnum();
+        RuleFor(x => x.Kind).IsInEnum();
         RuleFor(x => x.SortBy).IsInEnum();
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 100);

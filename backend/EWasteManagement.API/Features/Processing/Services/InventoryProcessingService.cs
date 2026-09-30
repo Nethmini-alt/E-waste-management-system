@@ -81,29 +81,41 @@ public class InventoryProcessingService : IInventoryProcessingService
                     $"'{child.ItemType.Trim()}' is not a known item type. Choose a component type from the item-type list."));
         }
 
-        // Weight is conserved: components + what is left of this item can never be more than it weighed.
-        // Without a remaining weight, the components are taken off automatically, so the same kilos are
-        // never counted twice (once on the parent, once on the children). Any gap is recorded as a loss.
+        // Materials go straight to Sales, which finds them by name, so the name must be one Sales prices.
+        var materialTypes = new List<string>();
+        foreach (var material in request.Materials)
+        {
+            materialTypes.Add(await _itemTypes.ResolveMaterialAsync(material.MaterialType, cancellationToken)
+                ?? throw new ArgumentException(
+                    $"'{material.MaterialType.Trim()}' is not a material type Sales prices. Choose one from the material list."));
+        }
+
+        // Weight is conserved: outputs + what is left of this item can never be more than it weighed.
+        // Without a remaining weight, the outputs are taken off automatically, so the same kilos are
+        // never counted twice (once on the parent, once on the outputs). Any gap is recorded as a loss.
         var currentWeight = item.VerifiedWeightKg;
         var componentsWeight = request.ChildItems.Sum(c => c.WeightKg);
-        if (componentsWeight > currentWeight)
+        var materialsWeight = request.Materials.Sum(m => m.WeightKg);
+        var outputsWeight = componentsWeight + materialsWeight;
+        if (outputsWeight > currentWeight)
             throw new ArgumentException(
-                $"The components weigh {componentsWeight:0.###} kg, more than this item's current {currentWeight:0.###} kg.");
+                $"The components and materials weigh {outputsWeight:0.###} kg, more than this item's current {currentWeight:0.###} kg.");
 
-        var newWeight = request.RemainingWeightKg ?? currentWeight - componentsWeight;
-        if (componentsWeight + newWeight > currentWeight)
+        var newWeight = request.RemainingWeightKg ?? currentWeight - outputsWeight;
+        if (outputsWeight + newWeight > currentWeight)
             throw new ArgumentException(
-                $"Components ({componentsWeight:0.###} kg) plus the remaining weight ({newWeight:0.###} kg) " +
+                $"Components and materials ({outputsWeight:0.###} kg) plus the remaining weight ({newWeight:0.###} kg) " +
                 $"come to more than this item's current {currentWeight:0.###} kg.");
-        var lossKg = currentWeight - componentsWeight - newWeight;
+        var lossKg = currentWeight - outputsWeight - newWeight;
 
         // The first dismantle action moves the item into Dismantling; later ones just add to the log.
         if (item.Status == InventoryStatus.Sorting)
             item.TransitionTo(InventoryStatus.Dismantling, staffId, "Dismantling started");
 
-        var weightNote = componentsWeight == 0 && newWeight == currentWeight
+        var weightNote = outputsWeight == 0 && newWeight == currentWeight
             ? string.Empty
             : $" Weight {currentWeight:0.###} kg → {newWeight:0.###} kg; components {componentsWeight:0.###} kg" +
+              (materialsWeight > 0 ? $"; materials {materialsWeight:0.###} kg" : string.Empty) +
               (lossKg > 0 ? $"; loss {lossKg:0.###} kg." : ".");
 
         _db.ProcessingLogs.Add(new ProcessingLog
@@ -124,12 +136,47 @@ public class InventoryProcessingService : IInventoryProcessingService
                 OriginType = item.OriginType,
                 ParentInventoryItemId = item.Id,
                 ItemType = childType,
+                Kind = ItemKind.Component,
                 VerifiedWeightKg = child.WeightKg,
                 CurrentLocationId = item.CurrentLocationId
             };
-            childItem.MarkReceived(staffId, $"Created by dismantling parent item {item.Id}.");
+            childItem.MarkCreatedByDismantling(InventoryStatus.Recovered, staffId,
+                $"Component recovered by dismantling parent item {item.Id}.");
             _db.InventoryItems.Add(childItem);
             childIds.Add(childItem.Id);
+        }
+
+        var materialIds = new List<Guid>();
+        foreach (var (material, materialType) in request.Materials.Zip(materialTypes))
+        {
+            var hazardous = material.Hazardous || HazardousMaterialRules.IsKnownHazardous(materialType);
+            var materialItem = new InventoryItem
+            {
+                OriginType = item.OriginType,
+                ParentInventoryItemId = item.Id,
+                ItemType = materialType,
+                Kind = ItemKind.Material,
+                VerifiedWeightKg = material.WeightKg,
+                CurrentLocationId = item.CurrentLocationId
+            };
+            materialItem.MarkCreatedByDismantling(
+                hazardous ? InventoryStatus.OnHold : InventoryStatus.ReadyForSale, staffId,
+                hazardous
+                    ? $"Hazardous material recovered from parent item {item.Id}; held, not offered for sale."
+                    : $"Material recovered from parent item {item.Id}; ready for sale.");
+            _db.InventoryItems.Add(materialItem);
+
+            // Every sellable item carries a category, the same as items that went through classification.
+            _db.ClassificationRecords.Add(new ClassificationRecord
+            {
+                InventoryItemId = materialItem.Id,
+                Category = hazardous ? ClassificationCategory.Hazardous : ClassificationCategory.LocalRecyclable,
+                SubCategory = "Recovered material",
+                Source = ClassificationSource.Manual,
+                ClassifiedByStaffId = staffId,
+                IsFinal = true
+            });
+            materialIds.Add(materialItem.Id);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -139,7 +186,8 @@ public class InventoryProcessingService : IInventoryProcessingService
             InventoryItemId = item.Id,
             UpdatedWeightKg = newWeight,
             LossKg = lossKg,
-            ChildInventoryItemIds = childIds
+            ChildInventoryItemIds = childIds,
+            MaterialInventoryItemIds = materialIds
         };
     }
 
@@ -248,6 +296,11 @@ public class InventoryProcessingService : IInventoryProcessingService
             var origin = q.OriginType.Value;
             query = query.Where(i => i.OriginType == origin);
         }
+        if (q.Kind.HasValue)
+        {
+            var kind = q.Kind.Value;
+            query = query.Where(i => i.Kind == kind);
+        }
         if (q.LocationId.HasValue)
         {
             var locationId = q.LocationId.Value;
@@ -279,7 +332,7 @@ public class InventoryProcessingService : IInventoryProcessingService
             .Take(q.PageSize)
             .Select(i => new
             {
-                i.Id, i.ItemType, i.Status, i.OriginType, i.VerifiedWeightKg, i.CurrentLocationId,
+                i.Id, i.ItemType, i.Status, i.OriginType, i.Kind, i.VerifiedWeightKg, i.CurrentLocationId,
                 LocationName = i.CurrentLocation!.Name,
                 i.ParentInventoryItemId, i.CreatedAt,
                 Category = _db.ClassificationRecords
@@ -295,7 +348,7 @@ public class InventoryProcessingService : IInventoryProcessingService
             Items = rows.Select(r => new InventoryItemListItemResponse
             {
                 Id = r.Id, ItemType = r.ItemType, Status = r.Status.ToString(), OriginType = r.OriginType.ToString(),
-                VerifiedWeightKg = r.VerifiedWeightKg, CurrentLocationId = r.CurrentLocationId,
+                Kind = r.Kind.ToString(), VerifiedWeightKg = r.VerifiedWeightKg, CurrentLocationId = r.CurrentLocationId,
                 CurrentLocationName = r.LocationName, ParentInventoryItemId = r.ParentInventoryItemId,
                 Category = r.Category?.ToString(), ReceivedAt = r.CreatedAt
             }).ToList(),
@@ -337,7 +390,7 @@ public class InventoryProcessingService : IInventoryProcessingService
         return new InventoryItemDetailResponse
         {
             Id = item.Id, ItemType = item.ItemType, Status = item.Status.ToString(), OriginType = item.OriginType.ToString(),
-            VerifiedWeightKg = item.VerifiedWeightKg, CurrentLocationId = item.CurrentLocationId,
+            Kind = item.Kind.ToString(), VerifiedWeightKg = item.VerifiedWeightKg, CurrentLocationId = item.CurrentLocationId,
             CurrentLocationName = item.CurrentLocation?.Name ?? string.Empty,
             JobId = item.JobId, SubmissionId = item.SubmissionId, ExtraWasteReceiptId = receiptId,
             ParentInventoryItemId = item.ParentInventoryItemId, ReceivedAt = item.CreatedAt,
@@ -350,7 +403,8 @@ public class InventoryProcessingService : IInventoryProcessingService
             },
             Children = children.Select(c => new InventoryChildSummary
             {
-                Id = c.Id, ItemType = c.ItemType, Status = c.Status.ToString(), VerifiedWeightKg = c.VerifiedWeightKg
+                Id = c.Id, ItemType = c.ItemType, Status = c.Status.ToString(), Kind = c.Kind.ToString(),
+                VerifiedWeightKg = c.VerifiedWeightKg
             }).ToList()
         };
     }

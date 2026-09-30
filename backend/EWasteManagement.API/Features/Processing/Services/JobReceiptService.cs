@@ -27,57 +27,133 @@ public class JobReceiptService : IJobReceiptService
     public async Task<ReceiveJobWasteResponse> ReceiveAsync(
         ReceiveJobWasteRequest request, Guid receivedByStaffId, CancellationToken cancellationToken = default)
     {
+        await EnsureLocationAndCollectorExistAsync(request.WarehouseLocationId, request.CollectorId, cancellationToken);
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var received = await ReceiveOneJobAsync(
+            request.JobId, request.CollectorId, request.WarehouseLocationId, request.VerifiedWeightKg, request.ItemType,
+            receivedByStaffId, deliveryId: null, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return new ReceiveJobWasteResponse
+        {
+            InventoryItemId = received.InventoryItemId,
+            JobId = received.JobId,
+            ItemType = received.ItemType,
+            VerifiedWeightKg = received.VerifiedWeightKg,
+            ReportedWeightKg = received.ReportedWeightKg,
+            DiscrepancyKg = received.DiscrepancyKg,
+            ReceivedAt = received.ReceivedAt
+        };
+    }
+
+    // Several completed jobs brought by one collector in one visit. Each job is received exactly as a
+    // single job would be (own item, own payment, same rules); all of it succeeds or none of it does.
+    public async Task<ReceiveDeliveryResponse> ReceiveDeliveryAsync(
+        ReceiveDeliveryRequest request, Guid receivedByStaffId, CancellationToken cancellationToken = default)
+    {
+        await EnsureLocationAndCollectorExistAsync(request.WarehouseLocationId, request.CollectorId, cancellationToken);
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+
+        var delivery = new CollectorDelivery
+        {
+            CollectorId = request.CollectorId,
+            ReceivedByStaffId = receivedByStaffId,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+        };
+        _db.CollectorDeliveries.Add(delivery);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var results = new List<DeliveryJobResult>();
+        foreach (var line in request.Jobs)
+        {
+            var received = await ReceiveOneJobAsync(
+                line.JobId, request.CollectorId, request.WarehouseLocationId, line.VerifiedWeightKg, line.ItemType,
+                receivedByStaffId, delivery.Id, cancellationToken);
+            results.Add(new DeliveryJobResult
+            {
+                JobId = received.JobId,
+                InventoryItemId = received.InventoryItemId,
+                ItemType = received.ItemType,
+                VerifiedWeightKg = received.VerifiedWeightKg,
+                ReportedWeightKg = received.ReportedWeightKg,
+                DiscrepancyKg = received.DiscrepancyKg,
+                PaymentId = received.PaymentId,
+                PaymentAmount = received.PaymentAmount
+            });
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return new ReceiveDeliveryResponse
+        {
+            DeliveryId = delivery.Id,
+            CollectorId = request.CollectorId,
+            ReceivedAt = delivery.ReceivedAt,
+            Jobs = results,
+            TotalPendingAmount = results.Sum(r => r.PaymentAmount)
+        };
+    }
+
+    private async Task EnsureLocationAndCollectorExistAsync(Guid locationId, Guid collectorId, CancellationToken cancellationToken)
+    {
+        var locationExists = await _db.WarehouseLocations.AnyAsync(l => l.Id == locationId, cancellationToken);
+        if (!locationExists)
+            throw new KeyNotFoundException($"WarehouseLocation '{locationId}' was not found.");
+
+        var collectorExists = await _db.Collectors.AnyAsync(c => c.CollectorId == collectorId, cancellationToken);
+        if (!collectorExists)
+            throw new KeyNotFoundException($"Collector '{collectorId}' was not found.");
+    }
+
+    private sealed record ReceivedJob(
+        Guid JobId, Guid InventoryItemId, string ItemType, decimal VerifiedWeightKg, decimal? ReportedWeightKg,
+        decimal? DiscrepancyKg, DateTime ReceivedAt, Guid PaymentId, decimal PaymentAmount);
+
+    // Runs inside the caller's transaction.
+    private async Task<ReceivedJob> ReceiveOneJobAsync(
+        Guid jobId, Guid collectorId, Guid locationId, decimal verifiedWeightKg, string? requestedItemType,
+        Guid receivedByStaffId, Guid? deliveryId, CancellationToken cancellationToken)
+    {
         // App-level pre-check for the common case; the unique index from Step 3 is the
         // backstop for a genuine race between two simultaneous requests for the same job.
-        var alreadyReceived = await _db.InventoryItems
-            .AnyAsync(i => i.JobId == request.JobId, cancellationToken);
+        var alreadyReceived = await _db.InventoryItems.AnyAsync(i => i.JobId == jobId, cancellationToken);
         if (alreadyReceived)
-            throw new DuplicateJobReceiptException(request.JobId);
+            throw new DuplicateJobReceiptException(jobId);
 
-        var job = await _jobVerification.VerifyAsync(request.JobId, cancellationToken);
+        var job = await _jobVerification.VerifyAsync(jobId, cancellationToken);
         if (!job.Found)
-            throw new KeyNotFoundException($"Job '{request.JobId}' was not found.");
+            throw new KeyNotFoundException($"Job '{jobId}' was not found.");
         if (!job.IsCompleted)
-            throw new JobNotCompletedException(request.JobId);
-
-        var locationExists = await _db.WarehouseLocations
-            .AnyAsync(l => l.Id == request.WarehouseLocationId, cancellationToken);
-        if (!locationExists)
-            throw new KeyNotFoundException($"WarehouseLocation '{request.WarehouseLocationId}' was not found.");
-
-        var collectorExists = await _db.Collectors
-            .AnyAsync(c => c.CollectorId == request.CollectorId, cancellationToken);
-        if (!collectorExists)
-            throw new KeyNotFoundException($"Collector '{request.CollectorId}' was not found.");
+            throw new JobNotCompletedException(jobId);
 
         // The job already says who collected it. Never trust the collector id on the request, and
         // never guess one for a job that has none.
         if (job.CollectorId is null)
-            throw JobCollectorMismatchException.NoCollectorAssigned(request.JobId);
-        if (job.CollectorId.Value != request.CollectorId)
-            throw JobCollectorMismatchException.WrongCollector(request.JobId, request.CollectorId);
+            throw JobCollectorMismatchException.NoCollectorAssigned(jobId);
+        if (job.CollectorId.Value != collectorId)
+            throw JobCollectorMismatchException.WrongCollector(jobId, collectorId);
 
-        var itemType = await ResolveItemTypeAsync(request.ItemType, job.SubmissionId, cancellationToken);
+        var itemType = await ResolveItemTypeAsync(requestedItemType, job.SubmissionId, cancellationToken);
 
         decimal? discrepancy = job.ReportedWeightKg.HasValue
-            ? request.VerifiedWeightKg - job.ReportedWeightKg.Value
+            ? verifiedWeightKg - job.ReportedWeightKg.Value
             : null;
-
-        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
 
         var inventoryItem = new InventoryItem
         {
             OriginType = OriginType.JobCollection,
-            JobId = request.JobId,
+            JobId = jobId,
             ItemType = itemType,
-            VerifiedWeightKg = request.VerifiedWeightKg,
-            CurrentLocationId = request.WarehouseLocationId
+            VerifiedWeightKg = verifiedWeightKg,
+            CurrentLocationId = locationId
         };
 
         var note = discrepancy.HasValue
-            ? $"Received from job {request.JobId}, collector {request.CollectorId}. " +
-              $"Reported {job.ReportedWeightKg:F2}kg vs verified {request.VerifiedWeightKg:F2}kg (diff {discrepancy:F2}kg)."
-            : $"Received from job {request.JobId}, collector {request.CollectorId}. " +
+            ? $"Received from job {jobId}, collector {collectorId}. " +
+              $"Reported {job.ReportedWeightKg:F2}kg vs verified {verifiedWeightKg:F2}kg (diff {discrepancy:F2}kg)."
+            : $"Received from job {jobId}, collector {collectorId}. " +
               "Reported weight unavailable — pending Component B integration.";
 
         inventoryItem.MarkReceived(receivedByStaffId, note);
@@ -87,31 +163,23 @@ public class JobReceiptService : IJobReceiptService
 
         // The payment goes to the job's own collector (checked above) and is stamped with the
         // authenticated staff member who received the job.
-        await _paymentService.CreatePaymentAsync(
+        var payment = await _paymentService.CreatePaymentAsync(
             PaymentSourceType.Job,
-            request.JobId,
+            jobId,
             job.CollectorId.Value,
             new PaymentContext
             {
-                TotalWeightKg = request.VerifiedWeightKg,
+                TotalWeightKg = verifiedWeightKg,
                 DistanceKm = job.DistanceKm,
                 ReportedWeightKg = job.ReportedWeightKg
             },
             receivedByStaffId,
-            cancellationToken);
+            cancellationToken,
+            deliveryId);
 
-        await transaction.CommitAsync(cancellationToken);
-
-        return new ReceiveJobWasteResponse
-        {
-            InventoryItemId = inventoryItem.Id,
-            JobId = request.JobId,
-            ItemType = itemType,
-            VerifiedWeightKg = request.VerifiedWeightKg,
-            ReportedWeightKg = job.ReportedWeightKg,
-            DiscrepancyKg = discrepancy,
-            ReceivedAt = inventoryItem.CreatedAt
-        };
+        return new ReceivedJob(
+            jobId, inventoryItem.Id, itemType, verifiedWeightKg, job.ReportedWeightKg, discrepancy,
+            inventoryItem.CreatedAt, payment.Id, payment.Amount);
     }
 
     public async Task<IReadOnlyList<ReceivableJobResponse>> GetReceivableJobsAsync(CancellationToken cancellationToken = default)

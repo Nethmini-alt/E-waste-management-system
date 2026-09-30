@@ -29,8 +29,9 @@ public class InventoryStatusChangedEventHandler : IDomainEventHandler<InventoryS
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        // A material created by dismantling is born ReadyForSale, so it has no "previous" status to compare.
         if (domainEvent.NewStatus == InventoryStatus.ReadyForSale
-            && domainEvent.PreviousStatus != InventoryStatus.ReadyForSale)
+            && (domainEvent.IsEntry || domainEvent.PreviousStatus != InventoryStatus.ReadyForSale))
         {
             _restockQueue.Enqueue(domainEvent.InventoryItemId);
         }

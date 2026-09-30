@@ -18,6 +18,13 @@ export const INVENTORY_STATUS_VALUES = {
   ReadyForSale: 4,
   ExportOnly: 5,
   OnHold: 6,
+  Recovered: 7,
+} as const;
+
+export const ITEM_KIND_VALUES = {
+  Unit: 0,
+  Component: 1,
+  Material: 2,
 } as const;
 
 export const CLASSIFICATION_CATEGORY_VALUES = {
@@ -50,6 +57,7 @@ export const PAYMENT_STATUS_VALUES = {
 // ---------------------------------------------------------------- string-name types
 
 export type InventoryStatus = keyof typeof INVENTORY_STATUS_VALUES;
+export type ItemKind = keyof typeof ITEM_KIND_VALUES;
 export type ClassificationCategory = keyof typeof CLASSIFICATION_CATEGORY_VALUES;
 export type ClassificationSource = keyof typeof CLASSIFICATION_SOURCE_VALUES;
 export type OriginType = keyof typeof ORIGIN_TYPE_VALUES;
@@ -57,17 +65,12 @@ export type PaymentSourceType = keyof typeof PAYMENT_SOURCE_TYPE_VALUES;
 export type PaymentStatus = keyof typeof PAYMENT_STATUS_VALUES;
 
 export const INVENTORY_STATUSES = Object.keys(INVENTORY_STATUS_VALUES) as InventoryStatus[];
+export const ITEM_KINDS = Object.keys(ITEM_KIND_VALUES) as ItemKind[];
 export const CLASSIFICATION_CATEGORIES = Object.keys(CLASSIFICATION_CATEGORY_VALUES) as ClassificationCategory[];
 export const CLASSIFICATION_SOURCES = Object.keys(CLASSIFICATION_SOURCE_VALUES) as ClassificationSource[];
 export const ORIGIN_TYPES = Object.keys(ORIGIN_TYPE_VALUES) as OriginType[];
 export const PAYMENT_SOURCE_TYPES = Object.keys(PAYMENT_SOURCE_TYPE_VALUES) as PaymentSourceType[];
 export const PAYMENT_STATUSES = Object.keys(PAYMENT_STATUS_VALUES) as PaymentStatus[];
-
-// ---------------------------------------------------------------- name -> number (request bodies)
-
-export const inventoryStatusValue = (s: InventoryStatus): number => INVENTORY_STATUS_VALUES[s];
-export const classificationCategoryValue = (c: ClassificationCategory): number => CLASSIFICATION_CATEGORY_VALUES[c];
-export const classificationSourceValue = (s: ClassificationSource): number => CLASSIFICATION_SOURCE_VALUES[s];
 
 // ---------------------------------------------------------------- type guards (URL params etc.)
 
@@ -75,10 +78,17 @@ const isOneOf = <T extends string>(list: readonly T[], value: unknown): value is
   typeof value === 'string' && (list as readonly string[]).includes(value);
 
 export const isInventoryStatus = (v: unknown): v is InventoryStatus => isOneOf(INVENTORY_STATUSES, v);
+export const isItemKind = (v: unknown): v is ItemKind => isOneOf(ITEM_KINDS, v);
 export const isClassificationCategory = (v: unknown): v is ClassificationCategory => isOneOf(CLASSIFICATION_CATEGORIES, v);
 export const isOriginType = (v: unknown): v is OriginType => isOneOf(ORIGIN_TYPES, v);
 export const isPaymentSourceType = (v: unknown): v is PaymentSourceType => isOneOf(PAYMENT_SOURCE_TYPES, v);
 export const isPaymentStatus = (v: unknown): v is PaymentStatus => isOneOf(PAYMENT_STATUSES, v);
+
+// ---------------------------------------------------------------- name -> number (request bodies)
+
+export const inventoryStatusValue = (s: InventoryStatus): number => INVENTORY_STATUS_VALUES[s];
+export const classificationCategoryValue = (c: ClassificationCategory): number => CLASSIFICATION_CATEGORY_VALUES[c];
+export const classificationSourceValue = (s: ClassificationSource): number => CLASSIFICATION_SOURCE_VALUES[s];
 
 // ---------------------------------------------------------------- display labels
 
@@ -91,6 +101,13 @@ export const INVENTORY_STATUS_LABELS: Record<InventoryStatus, string> = {
   // Named differently from the "Export-grade" category so the two are never confused.
   ExportOnly: 'Reserved for export',
   OnHold: 'On hold',
+  Recovered: 'Recovered',
+};
+
+export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
+  Unit: 'Received item',
+  Component: 'Dismantled component',
+  Material: 'Recovered material',
 };
 
 export const CLASSIFICATION_CATEGORY_LABELS: Record<ClassificationCategory, string> = {
@@ -129,6 +146,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
  */
 export const ALLOWED_TRANSITIONS: Record<InventoryStatus, readonly InventoryStatus[]> = {
   Received: ['Sorting'],
+  Recovered: ['Sorting'],
   Sorting: ['Dismantling', 'Classified'],
   Dismantling: ['Classified'],
   Classified: ['ReadyForSale', 'ExportOnly', 'OnHold'],

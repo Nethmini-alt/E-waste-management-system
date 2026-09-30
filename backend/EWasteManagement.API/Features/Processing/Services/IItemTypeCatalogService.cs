@@ -16,4 +16,10 @@ public interface IItemTypeCatalogService
     /// surrounding spaces), or null when it is not on the list.
     /// </summary>
     Task<string?> ResolveAsync(string? itemType, CancellationToken cancellationToken = default);
+
+    /// <summary>Material types Sales prices (MaterialPricing.MaterialType), sorted by name.</summary>
+    Task<IReadOnlyList<string>> GetMaterialTypesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Sales' own spelling of <paramref name="materialType"/>, or null when Sales has never priced it.</summary>
+    Task<string?> ResolveMaterialAsync(string? materialType, CancellationToken cancellationToken = default);
 }

@@ -32,7 +32,7 @@ public class ItemTypeCatalogServiceTests : IAsyncLifetime
         await _db.Database.EnsureCreatedAsync();
 
         // material_pricing.created_by_user_id is a real FK.
-        var user = new User { Email = "catalog.tests@example.com", PasswordHash = "x", FullName = "Catalog Tester", Role = UserRole.Staff };
+        var user = new User { Email = "catalog.tests@example.com", PasswordHash = "x", FullName = "Catalog Tester", Role = UserRole.Staff, StaffType = StaffType.Management };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         _userId = user.UserId;

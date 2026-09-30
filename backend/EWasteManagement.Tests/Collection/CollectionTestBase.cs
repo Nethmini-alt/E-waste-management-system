@@ -50,7 +50,8 @@ public abstract class CollectionTestBase : IAsyncLifetime
             Email = $"{Guid.NewGuid()}@test.com",
             FullName = "Test User",
             PasswordHash = "x",
-            Role = role
+            Role = role,
+            StaffType = role == UserRole.Staff ? StaffType.Management : null
         };
         Db.Users.Add(user);
         await Db.SaveChangesAsync();

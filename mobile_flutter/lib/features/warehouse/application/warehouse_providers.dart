@@ -32,6 +32,11 @@ final itemTypesProvider = FutureProvider<List<String>>((ref) {
   return ref.watch(warehouseApiProvider).itemTypes();
 });
 
+final materialTypesProvider = FutureProvider<List<String>>((ref) {
+  _resetOnUserChange(ref);
+  return ref.watch(warehouseApiProvider).materialTypes();
+});
+
 final collectorsProvider = FutureProvider<List<CollectorLookup>>((ref) {
   _resetOnUserChange(ref);
   return ref.watch(warehouseApiProvider).collectors();
@@ -49,6 +54,7 @@ class WarehouseSummary {
   int get total => statusCounts.values.fold(0, (a, b) => a + b);
   int get inProgress =>
       (statusCounts[InventoryStatus.received] ?? 0) +
+      (statusCounts[InventoryStatus.recovered] ?? 0) +
       (statusCounts[InventoryStatus.sorting] ?? 0) +
       (statusCounts[InventoryStatus.dismantling] ?? 0);
   int get readyToHandOff =>
@@ -75,6 +81,14 @@ final warehouseSummaryProvider = FutureProvider.autoDispose<WarehouseSummary>((r
 
 final receivableJobsProvider = FutureProvider.autoDispose<List<ReceivableJob>>(
   (ref) => ref.watch(warehouseApiProvider).receivableJobs(),
+);
+
+final materialStockProvider = FutureProvider.autoDispose<List<MaterialStockGroup>>(
+  (ref) => ref.watch(warehouseApiProvider).materialStock(),
+);
+
+final receiptDetailProvider = FutureProvider.autoDispose.family<ExtraWasteReceiptDetail, String>(
+  (ref, id) => ref.watch(warehouseApiProvider).extraWasteReceipt(id),
 );
 
 class ItemDetailData {

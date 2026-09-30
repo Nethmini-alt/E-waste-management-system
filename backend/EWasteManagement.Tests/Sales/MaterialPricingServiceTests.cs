@@ -48,6 +48,7 @@ public class MaterialPricingServiceTests : IAsyncLifetime
             PasswordHash = "not-a-real-hash",
             FullName = "Pricing Tester",
             Role = UserRole.Staff,
+            StaffType = StaffType.Management,
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
@@ -261,6 +262,25 @@ public class MaterialPricingServiceTests : IAsyncLifetime
         Assert.Equal(next.PricingId, livePrices[0].PricingId);
         Assert.Equal(2100m, livePrices[0].PricePerKg);
         Assert.Equal(PricingStatus.Expired, (await ReloadAsync(old.PricingId)).Status);
+    }
+
+    // ---------- Who created a price ----------
+
+    [Fact]
+    public async Task List_ShowsWhoCreatedEachPrice_EvenAfterThatUserIsDeleted()
+    {
+        await _service.CreateAsync(NewRequest("Copper", 1800m, Today), _userId);
+
+        Assert.Equal("Pricing Tester", Assert.Single(await _service.GetAllAsync(new MaterialPricingFilter())).CreatedByName);
+
+        var user = await _db.Users.FirstAsync(u => u.UserId == _userId);
+        user.IsDeleted = true;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var row = Assert.Single(await _service.GetAllAsync(new MaterialPricingFilter()));
+        Assert.Equal("Pricing Tester", row.CreatedByName);
+        Assert.Equal("Pricing Tester", (await _service.GetByIdAsync(row.PricingId)).CreatedByName);
     }
 
     // ---------- Helpers ----------

@@ -22,13 +22,17 @@ public class AuthService : IAuthService
         _jwtService = jwtService;
     }
 
+    // Staff and Admin accounts are created by an admin only (see StaffService), never self-registered.
+    private static readonly UserRole[] SelfRegisterRoles = { UserRole.Household, UserRole.Corporate, UserRole.Collector };
+
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
-        if (await _db.Users.AnyAsync(u => u.Email == request.Email))
-            throw new InvalidOperationException("Email is already registered.");
-
-        if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+        if (!Enum.TryParse<UserRole>(request.Role, true, out var role) || !Enum.IsDefined(role)
+            || !SelfRegisterRoles.Contains(role))
             throw new InvalidOperationException("Invalid role specified.");
+
+        if (await _db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == request.Email))
+            throw new InvalidOperationException("Email is already registered.");
 
         var user = new User
         {
@@ -64,6 +68,7 @@ public class AuthService : IAuthService
         UserId = user.UserId,
         Email = user.Email,
         FullName = user.FullName,
-        Role = user.Role.ToString()
+        Role = user.GetAccessRole(),
+        StaffType = user.StaffType?.ToString()
     };
 }

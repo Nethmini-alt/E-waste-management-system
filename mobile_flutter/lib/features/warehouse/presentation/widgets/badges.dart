@@ -48,6 +48,7 @@ class StatusBadge extends StatelessWidget {
     InventoryStatus.readyForSale: (AppColors.mint600, Colors.white, Colors.white),
     InventoryStatus.exportOnly: (AppColors.violet100, AppColors.violet800, AppColors.violet500),
     InventoryStatus.onHold: (AppColors.red100, AppColors.red800, AppColors.red500),
+    InventoryStatus.recovered: (AppColors.cyan100, AppColors.cyan800, AppColors.cyan500),
   };
 
   @override
@@ -89,7 +90,7 @@ class StatusStepper extends StatelessWidget {
   final InventoryStatus status;
 
   static int _index(InventoryStatus s) => switch (s) {
-        InventoryStatus.received => 0,
+        InventoryStatus.received || InventoryStatus.recovered => 0,
         InventoryStatus.sorting => 1,
         InventoryStatus.dismantling => 2,
         InventoryStatus.classified => 3,
@@ -99,7 +100,7 @@ class StatusStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = _index(status);
-    final labels = ['Received', 'Sorting', 'Dismantling', 'Classified', current == 4 ? status.label : 'Outcome'];
+    final labels = [status == InventoryStatus.recovered ? 'Recovered' : 'Received', 'Sorting', 'Dismantling', 'Classified', current == 4 ? status.label : 'Outcome'];
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -7,6 +7,7 @@ import InventoryDetailPage from './Inventory/InventoryDetailPage';
 import PaymentsPage from './Payments/PaymentsPage';
 import AgenticReviewPage from './AgenticReview/AgenticReviewPage';
 import RatePoliciesPage from './RatePolicies/RatePoliciesPage';
+import MaterialStockPage from './Materials/MaterialStockPage';
 
 /**
  * All Processing screens, mounted once in App.tsx at `/processing/*`. Keeping the route table here
@@ -18,6 +19,7 @@ const ProcessingRoutes: React.FC = () => (
     <Route path="receive" element={<ReceivePage />} />
     <Route path="inventory" element={<InventoryListPage />} />
     <Route path="inventory/:id" element={<InventoryDetailPage />} />
+    <Route path="material-stock" element={<MaterialStockPage />} />
     <Route path="payments" element={<PaymentsPage />} />
     <Route path="agentic-review" element={<AgenticReviewPage />} />
     <Route path="rate-policies" element={<RatePoliciesPage />} />

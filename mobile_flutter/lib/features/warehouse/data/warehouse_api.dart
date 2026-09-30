@@ -4,8 +4,8 @@ import 'processing_enums.dart';
 import 'warehouse_models.dart';
 
 /// The Processing endpoints the warehouse app uses — the same calls as the web app's
-/// inventoryApi / receiveApi / lookupApi. Only existing endpoints; nothing here pays collectors
-/// or changes rates (those stay on the web, Admin-only).
+/// inventoryApi / receiveApi / lookupApi. Receiving and every inventory change are worker-only on
+/// the server; paying collectors and changing rates stay on the web (management staff / Admin).
 ///
 /// Query-string enums go by name (model binding accepts names); request-BODY enums go as
 /// numbers because the backend has no JsonStringEnumConverter.
@@ -37,6 +37,12 @@ class WarehouseApi {
     return r.data!.cast<String>();
   }
 
+  /// Names a recovered material may be given — the material types Sales prices, so it can be sold.
+  Future<List<String>> materialTypes() async {
+    final r = await _dio.get<List<dynamic>>('$_lookups/material-types');
+    return r.data!.cast<String>();
+  }
+
   Future<List<CollectorLookup>> collectors() => _getList('$_lookups/collectors', CollectorLookup.fromJson);
 
   // ---- inventory --------------------------------------------------------------
@@ -44,12 +50,14 @@ class WarehouseApi {
   Future<PagedResponse<InventoryListItem>> listInventory({
     String? search,
     InventoryStatus? status,
+    ItemKind? kind,
     int page = 1,
     int pageSize = Limits.pageSize,
   }) async {
     final r = await _dio.get<Map<String, dynamic>>(_inventory, queryParameters: {
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       if (status != null) 'status': status.apiName,
+      if (kind != null) 'kind': kind.apiName,
       'sortBy': 'CreatedAt',
       'descending': true,
       'page': page,
@@ -78,12 +86,16 @@ class WarehouseApi {
     required String description,
     double? remainingWeightKg,
     required List<({String itemType, double weightKg})> components,
+    List<({String materialType, double weightKg, bool hazardous})> materials = const [],
   }) async {
     final r = await _dio.post<Map<String, dynamic>>('$_inventory/$id/dismantle-log', data: {
       'description': description.trim(),
       'remainingWeightKg': remainingWeightKg,
       'childItems': [
         for (final c in components) {'itemType': c.itemType.trim(), 'weightKg': c.weightKg},
+      ],
+      'materials': [
+        for (final m in materials) {'materialType': m.materialType.trim(), 'weightKg': m.weightKg, 'hazardous': m.hazardous},
       ],
     });
     return DismantleResult.fromJson(r.data!);
@@ -131,21 +143,20 @@ class WarehouseApi {
   Future<List<ReceivableJob>> receivableJobs() =>
       _getList('$_inventory/job-collection/receivable', ReceivableJob.fromJson);
 
-  Future<ReceiveJobResult> receiveJob({
-    required String jobId,
+  /// One collector's visit: every job they brought, weighed, saved together as one delivery.
+  Future<DeliveryResult> receiveDelivery({
     required String collectorId,
     required String warehouseLocationId,
-    required double verifiedWeightKg,
-    required String itemType,
+    required List<DeliveryJobInput> jobs,
   }) async {
-    final r = await _dio.post<Map<String, dynamic>>('$_inventory/job-collection/receive', data: {
-      'jobId': jobId,
+    final r = await _dio.post<Map<String, dynamic>>('$_inventory/job-collection/receive-delivery', data: {
       'collectorId': collectorId,
       'warehouseLocationId': warehouseLocationId,
-      'verifiedWeightKg': verifiedWeightKg,
-      'itemType': itemType,
+      'jobs': [
+        for (final j in jobs) {'jobId': j.jobId, 'verifiedWeightKg': j.verifiedWeightKg, 'itemType': j.itemType},
+      ],
     });
-    return ReceiveJobResult.fromJson(r.data!);
+    return DeliveryResult.fromJson(r.data!);
   }
 
   /// [idempotencyKey]: a retry with the same key returns the original receipt instead of creating
@@ -174,4 +185,19 @@ class WarehouseApi {
     });
     return ExtraWasteReceiptResult.fromJson(r.data!);
   }
+
+  Future<PagedResponse<ExtraWasteReceiptSummary>> extraWasteReceipts({int page = 1, int pageSize = 20}) async {
+    final r = await _dio.get<Map<String, dynamic>>('$_inventory/extra-waste', queryParameters: {'page': page, 'pageSize': pageSize});
+    return PagedResponse.fromJson(r.data!, ExtraWasteReceiptSummary.fromJson);
+  }
+
+  Future<ExtraWasteReceiptDetail> extraWasteReceipt(String id) async {
+    final r = await _dio.get<Map<String, dynamic>>('$_inventory/extra-waste/$id');
+    return ExtraWasteReceiptDetail.fromJson(r.data!);
+  }
+
+  // ---- material stock ---------------------------------------------------------------
+
+  Future<List<MaterialStockGroup>> materialStock() =>
+      _getList('$_inventory/recovered-materials', MaterialStockGroup.fromJson);
 }

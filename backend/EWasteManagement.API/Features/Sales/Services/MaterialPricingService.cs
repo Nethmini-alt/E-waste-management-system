@@ -55,20 +55,32 @@ public class MaterialPricingService : IMaterialPricingService
         // Rows come back exactly as stored. A row can still read "Approved" for a few
         // hours after its expiry date until the sweeper runs, so each response carries
         // IsLive — the truthful "may this be used for pricing right now?" flag.
-        var today = MaterialPricingPolicy.Today;
-        return await q
+        var rows = await q
             .OrderByDescending(p => p.EffectiveDate)
-            .Select(p => Map(p, today))
             .ToListAsync(ct);
+
+        var names = await CreatorNamesAsync(rows, ct);
+        var today = MaterialPricingPolicy.Today;
+        return rows.Select(p => Map(p, today, names)).ToList();
     }
 
     public async Task<MaterialPricingResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         var row = await _db.MaterialPricings.AsNoTracking()
-            .Include(p => p.CreatedBy)
             .FirstOrDefaultAsync(p => p.PricingId == id, ct)
             ?? throw new KeyNotFoundException($"Pricing {id} not found.");
-        return Map(row, MaterialPricingPolicy.Today);
+        return Map(row, MaterialPricingPolicy.Today, await CreatorNamesAsync(new[] { row }, ct));
+    }
+
+    // Looked up separately (not via Include) so rows created by a since-deleted user still load
+    // and still show who created them: the users query filter hides deleted accounts.
+    private async Task<Dictionary<Guid, string>> CreatorNamesAsync(
+        IEnumerable<MaterialPricing> rows, CancellationToken ct)
+    {
+        var ids = rows.Select(p => p.CreatedByUserId).Distinct().ToList();
+        return await _db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => ids.Contains(u.UserId))
+            .ToDictionaryAsync(u => u.UserId, u => u.FullName, ct);
     }
 
     // ---------- Writes ----------
@@ -245,7 +257,8 @@ public class MaterialPricingService : IMaterialPricingService
 
     // ---------- Mapping ----------
 
-    private static MaterialPricingResponse Map(MaterialPricing p, DateOnly today) => new()
+    private static MaterialPricingResponse Map(
+        MaterialPricing p, DateOnly today, IReadOnlyDictionary<Guid, string> creatorNames) => new()
     {
         PricingId = p.PricingId,
         MaterialType = p.MaterialType,
@@ -255,7 +268,7 @@ public class MaterialPricingService : IMaterialPricingService
         Status = p.Status.ToString(),
         IsLive = MaterialPricingPolicy.IsLive(p, today),
         CreatedByUserId = p.CreatedByUserId,
-        CreatedByName = p.CreatedBy?.FullName ?? string.Empty,
+        CreatedByName = creatorNames.GetValueOrDefault(p.CreatedByUserId, string.Empty),
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt
     };

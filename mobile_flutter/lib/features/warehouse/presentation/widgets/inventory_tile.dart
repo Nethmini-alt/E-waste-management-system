@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/glass_card.dart';
+import '../../data/processing_enums.dart';
 import '../../data/warehouse_models.dart';
 import 'badges.dart';
 
@@ -35,11 +36,15 @@ class InventoryTile extends StatelessWidget {
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink900),
                         ),
                       ),
-                      if (item.parentInventoryItemId != null) ...[
+                      if (item.kind != ItemKind.unit) ...[
                         const SizedBox(width: 6),
-                        const Tooltip(
-                          message: 'Dismantled component',
-                          child: Icon(LucideIcons.gitFork, size: 14, color: AppColors.violet500),
+                        Tooltip(
+                          message: item.kind.label,
+                          child: Icon(
+                            item.kind == ItemKind.material ? LucideIcons.packageOpen : LucideIcons.gitFork,
+                            size: 14,
+                            color: AppColors.violet500,
+                          ),
                         ),
                       ],
                     ],

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, ExternalLink, MapPin, Package, Truck, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ExternalLink, MapPin, Package, Truck, X } from 'lucide-react';
 import { collectionApi, errorMessage } from './collectionApi';
 import type { Job, JobHistoryEntry } from './types';
 import { JobStatusPill, attentionReason, formatDateTime, formatRoute, timeAgo } from './jobStatus';
@@ -360,7 +360,15 @@ const JobDetailPage: React.FC = () => {
                   </div>
                 </dl>
               </div>
-              <p className="mt-4 text-xs text-ink-600">Next step: Processing logs this item into inventory when it arrives at the facility.</p>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-ink-600">Next step: Processing logs this item into inventory when it arrives at the facility.</p>
+                <Link
+                  to={`/processing/receive?jobId=${job.jobId}`}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-mint-700 hover:underline"
+                >
+                  Receive into warehouse <ArrowRight size={14} />
+                </Link>
+              </div>
             </Section>
           )}
 

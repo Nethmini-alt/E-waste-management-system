@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/network/api_error.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/feedback.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/layout.dart';
@@ -13,8 +15,9 @@ import '../../application/warehouse_providers.dart';
 import '../../data/processing_enums.dart';
 import '../../data/warehouse_models.dart';
 import '../widgets/inventory_tile.dart';
+import '../widgets/pill_tabs.dart';
 
-/// All inventory, newest first: search by item type, filter by status, load more while scrolling.
+/// All inventory, newest first: search by item type, filter by kind and status, load more while scrolling.
 class InventoryListScreen extends ConsumerStatefulWidget {
   const InventoryListScreen({super.key, this.initialStatus});
 
@@ -26,6 +29,7 @@ class InventoryListScreen extends ConsumerStatefulWidget {
 
 class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
   late InventoryStatus? _status = widget.initialStatus;
+  ItemKind? _kind;
   final _search = TextEditingController();
   final _scroll = ScrollController();
   Timer? _debounce;
@@ -87,7 +91,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       _error = null;
     });
     try {
-      final result = await ref.read(warehouseApiProvider).listInventory(search: _search.text, status: _status, page: page);
+      final result = await ref.read(warehouseApiProvider).listInventory(search: _search.text, status: _status, kind: _kind, page: page);
       if (!mounted || id != _requestId) return;
       setState(() {
         _items.addAll(result.items);
@@ -105,6 +109,12 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
   void _onSearchChanged(String _) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), _reload);
+  }
+
+  void _setKind(ItemKind? kind) {
+    if (kind == _kind) return;
+    setState(() => _kind = kind);
+    _reload();
   }
 
   void _setStatus(InventoryStatus? status) {
@@ -143,6 +153,18 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                     counterText: '',
                   ),
                 ),
+                const SizedBox(height: 12),
+                // Whole items come in at the dock; parts and materials come from dismantling.
+                PillTabs<ItemKind?>(
+                  value: _kind,
+                  options: const {
+                    null: 'All',
+                    ItemKind.unit: 'Whole items',
+                    ItemKind.component: 'Parts',
+                    ItemKind.material: 'Materials',
+                  },
+                  onChanged: _setKind,
+                ),
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 38,
@@ -156,6 +178,22 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                if (_kind == ItemKind.material)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Tile(
+                      color: AppColors.mint50,
+                      onTap: () => context.go('/warehouse/materials'),
+                      child: const Row(
+                        children: [
+                          Icon(LucideIcons.packageOpen, size: 18, color: AppColors.mint700),
+                          SizedBox(width: 10),
+                          Expanded(child: Text('See the total weight of each material', style: AppText.strong)),
+                          Icon(LucideIcons.chevronRight, size: 18, color: AppColors.mint700),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (_error != null && _items.isEmpty)
                   ErrorMessage(message: _error!, onRetry: _reload)
                 else if (_loading && _items.isEmpty)
@@ -164,10 +202,10 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                   GlassCard(
                     child: EmptyState(
                       icon: LucideIcons.boxes,
-                      title: _search.text.isEmpty && _status == null ? 'No inventory yet' : 'No items match',
-                      description: _search.text.isEmpty && _status == null
+                      title: _search.text.isEmpty && _status == null && _kind == null ? 'No inventory yet' : 'No items match',
+                      description: _search.text.isEmpty && _status == null && _kind == null
                           ? 'Receive a job or an extra-waste drop-off to get started.'
-                          : 'Try a different search or status.',
+                          : 'Try a different search or filter.',
                     ),
                   )
                 else ...[

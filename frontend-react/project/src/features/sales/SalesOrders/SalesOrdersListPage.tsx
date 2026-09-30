@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, RefreshCw, ShoppingCart, Eye, Trash2, ChevronDown,
 } from 'lucide-react';
@@ -26,7 +26,12 @@ const SalesOrdersListPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | SalesOrder['status']>('All');
   const [buyerFilter, setBuyerFilter] = useState<string>('');
 
-  const [createOpen, setCreateOpen] = useState(false);
+  // "?new=1" (e.g. from Material stock) opens the new-order form straight away.
+  const [params, setParams] = useSearchParams();
+  const [createOpen, setCreateOpen] = useState(params.get('new') === '1');
+  useEffect(() => {
+    if (params.has('new')) setParams({}, { replace: true });
+  }, [params, setParams]);
   const [detailOrder, setDetailOrder] = useState<SalesOrder | null>(null);
 
   const load = async () => {

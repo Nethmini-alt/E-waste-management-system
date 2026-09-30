@@ -80,10 +80,11 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _ActionData('Receive job', 'Weigh in a completed pickup', LucideIcons.truck, '/warehouse/receive', receivableJobs),
-      const _ActionData('Extra waste', 'Record a drop-off receipt', LucideIcons.packagePlus, '/warehouse/receive?tab=extra', null),
-      const _ActionData('Scan item', 'Open an item from its QR label', LucideIcons.scanQrCode, '/warehouse/scan', null),
+      // Scan has its own tab in the bottom bar, so the fourth card is material stock instead.
+      _ActionData('Receive jobs', "Weigh in a collector's delivery", LucideIcons.truck, '/warehouse/receive', receivableJobs),
+      const _ActionData('Extra waste', 'Record a drop-off', LucideIcons.packagePlus, '/warehouse/receive?tab=extra', null),
       const _ActionData('Inventory', 'Sort, dismantle, classify', LucideIcons.boxes, '/warehouse/inventory', null),
+      const _ActionData('Material stock', 'What is ready to sell', LucideIcons.packageOpen, '/warehouse/materials', null),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {

@@ -1,5 +1,6 @@
 using System.Text;
 using EWasteManagement.Api.Services;
+using EWasteManagement.API.Features.Admin.Services;
 using EWasteManagement.API.Features.Auth.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.API.Features.Processing.Events;
@@ -70,6 +71,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Services Registration
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
 builder.Services.AddScoped<ICollectorService, CollectorService>();
 builder.Services.AddScoped<IMatchingService, MatchingService>();
 builder.Services.AddScoped<IJobService, JobService>();
@@ -84,6 +87,7 @@ builder.Services.AddScoped<IInventoryProcessingService, InventoryProcessingServi
 builder.Services.AddScoped<IClassificationValidationService, ClassificationValidationService>();
 builder.Services.AddScoped<IProcessingLookupService, ProcessingLookupService>();
 builder.Services.AddScoped<IItemTypeCatalogService, ItemTypeCatalogService>();
+builder.Services.AddScoped<IRecoveredMaterialSummaryService, RecoveredMaterialSummaryService>();
 builder.Services.AddScoped<IRatePolicyService, RatePolicyService>();
 builder.Services.AddScoped<IWorkflowApprovalHistoryService, WorkflowApprovalHistoryService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();

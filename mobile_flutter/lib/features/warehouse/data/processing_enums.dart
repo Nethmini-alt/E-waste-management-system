@@ -14,7 +14,9 @@ enum InventoryStatus {
   readyForSale('ReadyForSale', 'Ready for sale'),
   // Named differently from the "Export-grade" category so the two are never confused.
   exportOnly('ExportOnly', 'Reserved for export'),
-  onHold('OnHold', 'On hold');
+  onHold('OnHold', 'On hold'),
+  // A component produced by dismantling enters here instead of Received.
+  recovered('Recovered', 'Recovered');
 
   const InventoryStatus(this.apiName, this.label);
 
@@ -30,7 +32,7 @@ enum InventoryStatus {
   /// Mirror of InventoryItem.AllowedTransitions. The server stays the source of truth; this only
   /// hides actions that could never succeed.
   List<InventoryStatus> get allowedNext => switch (this) {
-        received => const [sorting],
+        received || recovered => const [sorting],
         sorting => const [dismantling, classified],
         dismantling => const [classified],
         classified => const [readyForSale, exportOnly, onHold],
@@ -62,6 +64,20 @@ enum InventoryStatus {
         onHold => 'Hazardous Hold Area',
         _ => null,
       };
+}
+
+/// Unit = received through a job or extra-waste drop-off; Component and Material come from dismantling.
+enum ItemKind {
+  unit('Unit', 'Received item'),
+  component('Component', 'Dismantled component'),
+  material('Material', 'Recovered material');
+
+  const ItemKind(this.apiName, this.label);
+
+  final String apiName;
+  final String label;
+
+  static ItemKind fromApi(String? name) => values.where((k) => k.apiName == name).firstOrNull ?? unit;
 }
 
 enum ClassificationCategory {

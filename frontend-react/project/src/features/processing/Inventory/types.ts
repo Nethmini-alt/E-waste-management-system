@@ -2,6 +2,7 @@ import type {
   ClassificationCategory,
   ClassificationSource,
   InventoryStatus,
+  ItemKind,
   OriginType,
 } from '../processingEnums';
 import type { PagedResponse } from '../types';
@@ -24,6 +25,7 @@ export interface InventoryListQuery {
   status?: InventoryStatus;
   category?: ClassificationCategory;
   originType?: OriginType;
+  kind?: ItemKind;
   locationId?: string;
   parentId?: string;
   sortBy?: InventorySortField;
@@ -37,6 +39,7 @@ export interface InventoryListItem {
   itemType: string;
   status: InventoryStatus;
   originType: OriginType;
+  kind: ItemKind;
   verifiedWeightKg: number;
   currentLocationId: string;
   currentLocationName: string;
@@ -63,6 +66,7 @@ export interface InventoryChild {
   id: string;
   itemType: string;
   status: InventoryStatus;
+  kind: ItemKind;
   verifiedWeightKg: number;
 }
 
@@ -71,6 +75,7 @@ export interface InventoryDetail {
   itemType: string;
   status: InventoryStatus;
   originType: OriginType;
+  kind: ItemKind;
   verifiedWeightKg: number;
   currentLocationId: string;
   currentLocationName: string;
@@ -111,18 +116,49 @@ export interface DismantleChildInput {
   weightKg: number;
 }
 
+export interface DismantleMaterialInput {
+  /** Must be on the sellable materials list (material pricing). */
+  materialType: string;
+  weightKg: number;
+  hazardous: boolean;
+}
+
 export interface DismantleLogInput {
   description: string;
   remainingWeightKg?: number;
   childItems: DismantleChildInput[];
+  materials?: DismantleMaterialInput[];
 }
 
 export interface DismantleLogResponse {
   inventoryItemId: string;
   updatedWeightKg: number | null;
-  /** Weight that went neither into the components nor the remainder. */
+  /** Weight that went neither into the outputs nor the remainder. */
   lossKg: number;
   childInventoryItemIds: string[];
+  materialInventoryItemIds: string[];
+}
+
+// ---- GET /api/v1/inventory/recovered-materials ----------------------------
+
+export interface RecoveredMaterialItem {
+  inventoryItemId: string;
+  weightKg: number;
+  availableWeightKg: number;
+  locationId: string;
+  locationName: string;
+  recordedAt: string;
+  parentInventoryItemId: string | null;
+  parentItemType: string | null;
+}
+
+export interface RecoveredMaterialGroup {
+  materialType: string;
+  totalWeightKg: number;
+  /** Total minus what is already reserved on sales/export orders. */
+  availableWeightKg: number;
+  itemCount: number;
+  items: RecoveredMaterialItem[];
 }
 
 export interface ValidateClassificationInput {
@@ -152,3 +188,4 @@ export interface ClassificationResponse {
   status: InventoryStatus;
   isFinal: boolean;
 }
+

@@ -21,4 +21,8 @@ public class CollectorPayment : BaseEntity
     // Null on payments created before audit tracking existed.
     public Guid? CreatedByStaffId { get; set; }
     public Guid? PaidByStaffId { get; set; }
+
+    // Set when the job was received as part of a multi-job delivery.
+    public Guid? DeliveryId { get; set; }
+    public CollectorDelivery? Delivery { get; set; }
 }

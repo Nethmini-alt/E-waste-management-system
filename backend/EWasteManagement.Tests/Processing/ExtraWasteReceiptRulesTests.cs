@@ -51,7 +51,7 @@ public class ExtraWasteReceiptRulesTests : IAsyncLifetime
 
     private async Task<User> SeedStaffAsync(string name)
     {
-        var user = new User { Email = $"{Guid.NewGuid()}@test.com", FullName = name, PasswordHash = "x", Role = UserRole.Staff };
+        var user = new User { Email = $"{Guid.NewGuid()}@test.com", FullName = name, PasswordHash = "x", Role = UserRole.Staff, StaffType = StaffType.Worker };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         return user;

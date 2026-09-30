@@ -114,7 +114,7 @@ const RatePoliciesPage: React.FC = () => {
   return (
     <div>
       <PageHeader
-        title="Rate policies"
+        title="Collector rates"
         subtitle={
           isAdmin
             ? 'What the system pays collectors per kilogram, by item type.'

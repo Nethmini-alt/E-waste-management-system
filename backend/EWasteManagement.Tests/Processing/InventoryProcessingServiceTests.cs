@@ -1,4 +1,6 @@
+using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Processing.DTOs;
+using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Processing.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
@@ -192,6 +194,194 @@ public class InventoryProcessingServiceTests : IAsyncLifetime
 
         var child = await _db.InventoryItems.SingleAsync(i => i.Id == result.ChildInventoryItemIds[0]);
         Assert.Equal("Battery", child.ItemType);
+    }
+
+    // ---------------------------------------------------------------- dismantle: components and materials
+
+    private async Task AddMaterialPriceAsync(params string[] materialTypes)
+    {
+        var user = new User
+        {
+            Email = $"{Guid.NewGuid()}@test.com", PasswordHash = "x", FullName = "Pricer",
+            Role = UserRole.Staff, StaffType = StaffType.Management
+        };
+        _db.Users.Add(user);
+        var day = 1;
+        foreach (var type in materialTypes)
+        {
+            _db.MaterialPricings.Add(new MaterialPricing
+            {
+                MaterialType = type, PricePerKg = 100m, Status = PricingStatus.Approved, CreatedByUserId = user.UserId,
+                EffectiveDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-day++)
+            });
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_Component_IsRecoveredComponentNotReceived()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Battery removed",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } }
+        }, Guid.NewGuid());
+
+        var child = await _db.InventoryItems.SingleAsync(i => i.Id == result.ChildInventoryItemIds[0]);
+        Assert.Equal(InventoryStatus.Recovered, child.Status);
+        Assert.Equal(ItemKind.Component, child.Kind);
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_Material_IsReadyForSaleWithACategory()
+    {
+        await AddMaterialPriceAsync("Copper");
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Cables stripped",
+            Materials = { new RecoveredMaterialRequest { MaterialType = " copper ", WeightKg = 0.3m } }
+        }, Guid.NewGuid());
+
+        var material = await _db.InventoryItems.SingleAsync(i => i.Id == result.MaterialInventoryItemIds[0]);
+        Assert.Equal(InventoryStatus.ReadyForSale, material.Status);
+        Assert.Equal(ItemKind.Material, material.Kind);
+        Assert.Equal("Copper", material.ItemType);
+        Assert.Equal(itemId, material.ParentInventoryItemId);
+        var record = await _db.ClassificationRecords.SingleAsync(c => c.InventoryItemId == material.Id);
+        Assert.Equal(ClassificationCategory.LocalRecyclable, record.Category);
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_HazardousMaterial_IsHeldNotSold()
+    {
+        await AddMaterialPriceAsync("PCB", "Lithium Battery Cells");
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Board and cells removed",
+            Materials =
+            {
+                new RecoveredMaterialRequest { MaterialType = "PCB", WeightKg = 0.2m, Hazardous = true },
+                // Not ticked, but the name is a known hazard.
+                new RecoveredMaterialRequest { MaterialType = "Lithium Battery Cells", WeightKg = 0.3m }
+            }
+        }, Guid.NewGuid());
+
+        var statuses = await _db.InventoryItems
+            .Where(i => result.MaterialInventoryItemIds.Contains(i.Id))
+            .Select(i => i.Status)
+            .ToListAsync();
+        Assert.All(statuses, s => Assert.Equal(InventoryStatus.OnHold, s));
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_MaterialSalesDoesNotPrice_IsRejected()
+    {
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Mystery metal",
+            Materials = { new RecoveredMaterialRequest { MaterialType = "Unobtainium", WeightKg = 0.1m } }
+        }, Guid.NewGuid()));
+
+        Assert.Equal(1, await _db.InventoryItems.CountAsync());
+    }
+
+    [Fact]
+    public async Task AddDismantleLogAsync_MaterialsCountTowardsTheParentsWeight()
+    {
+        await AddMaterialPriceAsync("Aluminium");
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+
+        var result = await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Frame and battery removed",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } },
+            Materials = { new RecoveredMaterialRequest { MaterialType = "Aluminium", WeightKg = 1m } }
+        }, Guid.NewGuid());
+        Assert.Equal(1.6m, result.UpdatedWeightKg);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Too much",
+            Materials = { new RecoveredMaterialRequest { MaterialType = "Aluminium", WeightKg = 2m } }
+        }, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task RecoveredComponent_GoesToSorting_ButCannotSkipAhead()
+    {
+        var parentId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+        var result = await _service.AddDismantleLogAsync(parentId, new AddDismantleLogRequest
+        {
+            Description = "Battery removed",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } }
+        }, Guid.NewGuid());
+        var childId = result.ChildInventoryItemIds[0];
+
+        await Assert.ThrowsAsync<InvalidStatusTransitionException>(() =>
+            _service.TransitionStatusAsync(childId, InventoryStatus.ReadyForSale, Guid.NewGuid(), null, null));
+
+        var moved = await _service.TransitionStatusAsync(childId, InventoryStatus.Sorting, Guid.NewGuid(), null, null);
+        Assert.Equal("Sorting", moved.Status);
+    }
+
+    [Fact]
+    public async Task ListAsync_FiltersByKind()
+    {
+        await AddMaterialPriceAsync("Copper");
+        var itemId = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+        await _service.AddDismantleLogAsync(itemId, new AddDismantleLogRequest
+        {
+            Description = "Split",
+            ChildItems = { new CreateChildInventoryItemRequest { ItemType = "Battery", WeightKg = 0.4m } },
+            Materials = { new RecoveredMaterialRequest { MaterialType = "Copper", WeightKg = 0.2m } }
+        }, Guid.NewGuid());
+
+        var materials = await _service.ListAsync(new InventoryListQuery { Kind = ItemKind.Material });
+        var units = await _service.ListAsync(new InventoryListQuery { Kind = ItemKind.Unit });
+
+        Assert.Equal("Copper", Assert.Single(materials.Items).ItemType);
+        Assert.Equal("Material", materials.Items[0].Kind);
+        Assert.Equal(itemId, Assert.Single(units.Items).Id);
+    }
+
+    [Fact]
+    public async Task RecoveredMaterialSummary_GroupsByMaterialWithTotalsAndLocations()
+    {
+        await AddMaterialPriceAsync("Aluminium", "Copper");
+        var first = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+        var second = await SeedItemInStatusAsync(InventoryStatus.Sorting);
+        await _service.AddDismantleLogAsync(first, new AddDismantleLogRequest
+        {
+            Description = "Frame",
+            Materials = { new RecoveredMaterialRequest { MaterialType = "Aluminium", WeightKg = 1m } }
+        }, Guid.NewGuid());
+        await _service.AddDismantleLogAsync(second, new AddDismantleLogRequest
+        {
+            Description = "Frame and cables",
+            Materials =
+            {
+                new RecoveredMaterialRequest { MaterialType = "aluminium", WeightKg = 0.4m },
+                new RecoveredMaterialRequest { MaterialType = "Copper", WeightKg = 0.2m }
+            }
+        }, Guid.NewGuid());
+
+        var groups = await new RecoveredMaterialSummaryService(_db).GetGroupsAsync();
+
+        var aluminium = Assert.Single(groups, g => g.MaterialType == "Aluminium");
+        Assert.Equal(1.4m, aluminium.TotalWeightKg);
+        Assert.Equal(1.4m, aluminium.AvailableWeightKg);
+        Assert.Equal(2, aluminium.ItemCount);
+        Assert.All(aluminium.Items, i => Assert.Equal("Sorting Area", i.LocationName));
+        Assert.Equal("Laptop", aluminium.Items[0].ParentItemType);
+        Assert.Equal(0.2m, Assert.Single(groups, g => g.MaterialType == "Copper").TotalWeightKg);
     }
 
     // ---------------------------------------------------------------- category decides the outcome

@@ -5,6 +5,8 @@ import { INVENTORY_STATUS_LABELS, type InventoryStatus } from '../processingEnum
 // Position of each status along the happy path. The three terminal outcomes share the last slot.
 const STEP_INDEX: Record<InventoryStatus, number> = {
   Received: 0,
+  // A dismantled component enters here instead of Received.
+  Recovered: 0,
   Sorting: 1,
   Dismantling: 2,
   Classified: 3,
@@ -23,7 +25,7 @@ interface StatusStepperProps {
 export const StatusStepper: React.FC<StatusStepperProps> = ({ status }) => {
   const current = STEP_INDEX[status];
   const steps: { key: string; label: string }[] = [
-    { key: 'Received', label: 'Received' },
+    { key: 'Received', label: status === 'Recovered' ? 'Recovered' : 'Received' },
     { key: 'Sorting', label: 'Sorting' },
     { key: 'Dismantling', label: 'Dismantling' },
     { key: 'Classified', label: 'Classified' },

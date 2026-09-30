@@ -9,4 +9,5 @@ export { ErrorMessage } from './ErrorMessage';
 export { Notice } from './Notice';
 export { PageHeader } from './PageHeader';
 export { StatusStepper } from './StatusStepper';
+export { SearchSelect, type SearchOption } from './SearchSelect';
 export * from './ui';

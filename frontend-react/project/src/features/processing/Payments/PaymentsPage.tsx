@@ -64,8 +64,9 @@ const PaymentsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [paying, setPaying] = useState<PaymentListItem | null>(null);
-  // Only an Admin may mark a payment paid (the server enforces it); Staff see payments read-only.
-  const isAdmin = useCurrentUser()?.role.toLowerCase() === 'admin';
+  // Admins and management staff pay collectors (worker staff never sign in to the web).
+  const role = useCurrentUser()?.role.toLowerCase();
+  const canPay = role === 'admin' || role === 'staff';
   const requestId = useRef(0);
 
   const updateParams = useCallback(
@@ -267,7 +268,14 @@ const PaymentsPage: React.FC = () => {
                         {p.collectorVehicleType && <div className="text-[11px] text-ink-600">{p.collectorVehicleType}</div>}
                       </td>
                       <td className={tableCellClass}>
-                        <div>{PAYMENT_SOURCE_TYPE_LABELS[p.sourceType] ?? p.sourceType}</div>
+                        <div>
+                          {PAYMENT_SOURCE_TYPE_LABELS[p.sourceType] ?? p.sourceType}
+                          {p.deliveryId && (
+                            <span className="ml-1.5 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800" title="Received with other jobs in one delivery">
+                              Delivery
+                            </span>
+                          )}
+                        </div>
                         <div className="font-mono text-[11px] text-ink-600" title={p.sourceId}>
                           {shortId(p.sourceId)}
                         </div>
@@ -290,7 +298,7 @@ const PaymentsPage: React.FC = () => {
                           >
                             Details
                           </button>
-                          {p.status === 'Pending' && isAdmin && (
+                          {p.status === 'Pending' && canPay && (
                             <button
                               type="button"
                               className={`${btnPrimary} ${btnSmall}`}

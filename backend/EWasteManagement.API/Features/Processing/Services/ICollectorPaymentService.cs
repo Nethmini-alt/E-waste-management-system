@@ -11,10 +11,17 @@ public interface ICollectorPaymentService
     /// </summary>
     Task<CollectorPayment> CreatePaymentAsync(
         PaymentSourceType sourceType, Guid sourceId, Guid collectorId,
-        PaymentContext context, Guid createdByStaffId, CancellationToken cancellationToken = default);
+        PaymentContext context, Guid createdByStaffId, CancellationToken cancellationToken = default,
+        Guid? deliveryId = null);
 
     /// <summary><paramref name="paidByStaffId"/> must be the authenticated staff member (from the JWT).</summary>
     Task<CollectorPayment> MarkPaidAsync(Guid paymentId, Guid paidByStaffId, CancellationToken cancellationToken = default);
+
+    /// <summary>A delivery with each of its job payments and the combined total.</summary>
+    Task<DeliverySummaryResponse> GetDeliveryAsync(Guid deliveryId, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks every still-pending payment of the delivery as paid, in one go.</summary>
+    Task<DeliverySummaryResponse> MarkDeliveryPaidAsync(Guid deliveryId, Guid paidByStaffId, CancellationToken cancellationToken = default);
 
     Task<PendingPaymentsResponse> GetPendingAsync(PendingPaymentsQuery query, CancellationToken cancellationToken = default);
 

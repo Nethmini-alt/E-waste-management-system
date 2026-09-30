@@ -186,10 +186,28 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({ paymentId, onCl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingPay, setConfirmingPay] = useState(false);
-  // Only an Admin may mark a payment paid (the server enforces it).
-  const isAdmin = useCurrentUser()?.role.toLowerCase() === 'admin';
+  // Admins and management staff pay collectors (the server enforces it).
+  const role = useCurrentUser()?.role.toLowerCase();
+  const canPay = role === 'admin' || role === 'staff';
   const [receiptId, setReceiptId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [payingDelivery, setPayingDelivery] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+
+  const payWholeDelivery = async (deliveryId: string) => {
+    setPayingDelivery(true);
+    setDeliveryError(null);
+    try {
+      const summary = await paymentApi.payDelivery(deliveryId);
+      setNotice(`All ${summary.payments.length} payments of this delivery were marked as paid (${formatMoney(summary.paidAmount)}).`);
+      await load();
+      onChanged();
+    } catch (e) {
+      setDeliveryError(getApiErrorMessage(e, 'The delivery could not be paid.'));
+    } finally {
+      setPayingDelivery(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!paymentId) return;
@@ -225,7 +243,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({ paymentId, onCl
             <button type="button" className={btnSecondary} onClick={onClose}>
               Close
             </button>
-            {payment?.status === 'Pending' && isAdmin && (
+            {payment?.status === 'Pending' && canPay && (
               <button type="button" className={btnPrimary} onClick={() => setConfirmingPay(true)}>
                 Mark as paid
               </button>
@@ -309,6 +327,61 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({ paymentId, onCl
                 <p className="text-sm text-ink-600">The source record could not be found.</p>
               )}
             </section>
+
+            {/* Delivery: several jobs received together */}
+            {payment.delivery && (
+              <section>
+                <h4 className="mb-2 font-display text-sm font-bold text-ink-900">
+                  Part of a delivery · {payment.delivery.payments.length} jobs received together
+                </h4>
+                <div className="overflow-x-auto rounded-2xl border border-mint-100 bg-white/60">
+                  <table className="w-full min-w-[420px] border-collapse">
+                    <thead>
+                      <tr className="border-b border-mint-100">
+                        <th className={`${tableHeadClass} px-4 py-2`}>Job</th>
+                        <th className={`${tableHeadClass} px-4 py-2`}>Status</th>
+                        <th className={`${tableHeadClass} px-4 py-2 text-right`}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payment.delivery.payments.map((line) => (
+                        <tr key={line.paymentId} className={`border-b border-mint-50 last:border-0 ${line.paymentId === payment.id ? 'bg-mint-50/70' : ''}`}>
+                          <td className={`${tableCellClass} font-mono text-xs`}>
+                            {shortId(line.jobId)}
+                            {line.paymentId === payment.id && <span className="ml-1 font-sans text-[11px] text-ink-600">(this payment)</span>}
+                          </td>
+                          <td className={tableCellClass}>
+                            <StatusBadge status={line.status} />
+                          </td>
+                          <td className={`${tableCellClass} text-right font-mono`}>{formatMoney(line.amount)}</td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td colSpan={2} className={`${tableCellClass} text-right font-semibold text-ink-900`}>
+                          Delivery total{payment.delivery.pendingAmount > 0 ? ` · ${formatMoney(payment.delivery.pendingAmount)} still pending` : ''}
+                        </td>
+                        <td className={`${tableCellClass} text-right font-mono font-bold text-ink-900`}>{formatMoney(payment.delivery.totalAmount)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-1.5 text-xs text-ink-600">
+                  Received {formatDateTime(payment.delivery.receivedAt)} by {payment.delivery.receivedByName ?? 'Not recorded'}
+                  {payment.delivery.notes ? ` — “${payment.delivery.notes}”` : ''}
+                </p>
+                {canPay && payment.delivery.pendingAmount > 0 && (
+                  <button
+                    type="button"
+                    className={`${btnPrimary} mt-3`}
+                    disabled={payingDelivery}
+                    onClick={() => payWholeDelivery(payment.delivery!.deliveryId)}
+                  >
+                    {payingDelivery ? 'Paying…' : `Pay whole delivery · ${formatMoney(payment.delivery.pendingAmount)}`}
+                  </button>
+                )}
+                {deliveryError && <ErrorMessage className="mt-3" message={deliveryError} />}
+              </section>
+            )}
 
             {/* Calculation */}
             <section>

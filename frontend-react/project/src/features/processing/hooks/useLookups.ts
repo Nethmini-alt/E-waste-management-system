@@ -82,4 +82,5 @@ function createLookupHook<T>(fetcher: () => Promise<T[]>): LookupHook<T> {
 export const useWarehouseLocations = createLookupHook<WarehouseLocation>(() => lookupApi.warehouseLocations());
 export const useRatePolicies = createLookupHook<RatePolicy>(() => lookupApi.ratePolicies(true));
 export const useItemTypes = createLookupHook<string>(() => lookupApi.itemTypes());
+export const useMaterialTypes = createLookupHook<string>(() => lookupApi.materialTypes());
 export const useCollectors = createLookupHook<CollectorLookup>(() => lookupApi.collectors());

@@ -19,7 +19,8 @@ public class CollectorPaymentService : ICollectorPaymentService
 
     public async Task<CollectorPayment> CreatePaymentAsync(
         PaymentSourceType sourceType, Guid sourceId, Guid collectorId,
-        PaymentContext context, Guid createdByStaffId, CancellationToken cancellationToken = default)
+        PaymentContext context, Guid createdByStaffId, CancellationToken cancellationToken = default,
+        Guid? deliveryId = null)
     {
         var alreadyExists = await _db.CollectorPayments
             .AnyAsync(p => p.SourceType == sourceType && p.SourceId == sourceId, cancellationToken);
@@ -40,12 +41,76 @@ public class CollectorPaymentService : ICollectorPaymentService
             CollectorId = collectorId,
             Amount = result.Amount,
             CalculationSnapshot = PaymentSnapshotSerializer.Serialize(result.Snapshot),
-            CreatedByStaffId = createdByStaffId
+            CreatedByStaffId = createdByStaffId,
+            DeliveryId = deliveryId
         };
 
         _db.CollectorPayments.Add(payment);
         await _db.SaveChangesAsync(cancellationToken);
         return payment;
+    }
+
+    public async Task<DeliverySummaryResponse> GetDeliveryAsync(Guid deliveryId, CancellationToken cancellationToken = default)
+    {
+        var delivery = await _db.CollectorDeliveries.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Id == deliveryId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Delivery '{deliveryId}' was not found.");
+
+        var payments = await _db.CollectorPayments.AsNoTracking()
+            .Where(p => p.DeliveryId == deliveryId)
+            .OrderBy(p => p.CreatedAt).ThenBy(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        var collectorName = await (from c in _db.Collectors.AsNoTracking()
+                                   join u in _db.Users.AsNoTracking() on c.UserId equals u.UserId
+                                   where c.CollectorId == delivery.CollectorId
+                                   select u.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
+        var receivedByName = await _db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.UserId == delivery.ReceivedByStaffId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new DeliverySummaryResponse
+        {
+            DeliveryId = delivery.Id,
+            CollectorId = delivery.CollectorId,
+            CollectorName = collectorName,
+            ReceivedAt = delivery.ReceivedAt,
+            ReceivedByName = receivedByName,
+            Notes = delivery.Notes,
+            Payments = payments.Select(p => new DeliveryPaymentLine
+            {
+                PaymentId = p.Id, JobId = p.SourceId, Amount = p.Amount, Status = p.Status.ToString(), PaidAt = p.PaidAt
+            }).ToList(),
+            TotalAmount = payments.Sum(p => p.Amount),
+            PendingAmount = payments.Where(p => p.Status == PaymentStatus.Pending).Sum(p => p.Amount),
+            PaidAmount = payments.Where(p => p.Status == PaymentStatus.Paid).Sum(p => p.Amount)
+        };
+    }
+
+    public async Task<DeliverySummaryResponse> MarkDeliveryPaidAsync(Guid deliveryId, Guid paidByStaffId, CancellationToken cancellationToken = default)
+    {
+        var exists = await _db.CollectorDeliveries.AnyAsync(d => d.Id == deliveryId, cancellationToken);
+        if (!exists)
+            throw new KeyNotFoundException($"Delivery '{deliveryId}' was not found.");
+
+        var pending = await _db.CollectorPayments
+            .Where(p => p.DeliveryId == deliveryId && p.Status == PaymentStatus.Pending)
+            .ToListAsync(cancellationToken);
+        if (pending.Count == 0)
+            throw new InvalidOperationException("Every payment in this delivery has already been paid.");
+
+        var now = DateTime.UtcNow;
+        foreach (var payment in pending)
+        {
+            payment.Status = PaymentStatus.Paid;
+            payment.PaidAt = now;
+            payment.PaidByStaffId = paidByStaffId;
+        }
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return await GetDeliveryAsync(deliveryId, cancellationToken);
     }
 
     public async Task<CollectorPayment> MarkPaidAsync(Guid paymentId, Guid paidByStaffId, CancellationToken cancellationToken = default)
@@ -135,6 +200,9 @@ public class CollectorPaymentService : ICollectorPaymentService
                 };
             }
         }
+
+        if (payment.DeliveryId.HasValue)
+            response.Delivery = await GetDeliveryAsync(payment.DeliveryId.Value, cancellationToken);
 
         // Older extra-waste payments have no created_by, but the receipt was written by the same staff
         // member in the same request, so that is a fact rather than a guess. Job payments stay unknown.
@@ -259,7 +327,8 @@ public class CollectorPaymentService : ICollectorPaymentService
                 {
                     Id = p.Id, SourceType = p.SourceType.ToString(), SourceId = p.SourceId,
                     CollectorId = p.CollectorId, CollectorName = collector?.FullName, CollectorVehicleType = collector?.VehicleType,
-                    Amount = p.Amount, Status = p.Status.ToString(), CreatedAt = p.CreatedAt, PaidAt = p.PaidAt
+                    Amount = p.Amount, Status = p.Status.ToString(), CreatedAt = p.CreatedAt, PaidAt = p.PaidAt,
+                    DeliveryId = p.DeliveryId
                 };
             }).ToList(),
             Page = q.Page,
