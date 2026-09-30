@@ -1,3 +1,6 @@
+using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Notifications.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Sales.DTOs;
 using EWasteManagement.API.Features.Sales.Entities;
@@ -19,11 +22,13 @@ public class MaterialRequestService : IMaterialRequestService
 {
     private readonly ApplicationDbContext _db;
     private readonly IMaterialRestockQueue _queue;
+    private readonly INotificationService _notifications;
 
-    public MaterialRequestService(ApplicationDbContext db, IMaterialRestockQueue queue)
+    public MaterialRequestService(ApplicationDbContext db, IMaterialRestockQueue queue, INotificationService notifications)
     {
         _db = db;
         _queue = queue;
+        _notifications = notifications;
     }
 
     public async Task<MaterialRequestResponse> CreateAsync(
@@ -69,6 +74,23 @@ public class MaterialRequestService : IMaterialRequestService
             .ToListAsync(ct);
         foreach (var inventoryId in readyInventoryIds)
             _queue.Enqueue(inventoryId);
+
+        // Sales desk ping: a buyer just asked for stock. Advisory only — the
+        // request itself is already committed.
+        try
+        {
+            await _notifications.NotifyRolesAsync(
+                new[] { UserRole.Staff, UserRole.Admin },
+                "New material request",
+                $"{buyer.CompanyName} requested {materialRequest.QuantityKg} kg of {materialRequest.MaterialType}.",
+                NotificationType.Info,
+                link: "/material-requests/manage",
+                ct: ct);
+        }
+        catch
+        {
+            // notification is advisory — never fail the request
+        }
 
         return Map(materialRequest, buyer.CompanyName);
     }

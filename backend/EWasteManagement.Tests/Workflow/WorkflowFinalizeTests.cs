@@ -6,6 +6,7 @@ using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Workflow.DTOs;
 using EWasteManagement.API.Features.Workflow.Entities;
 using EWasteManagement.API.Features.Workflow.Services;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Infrastructure.BackgroundTasks;
 using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.Tests.Collection;
@@ -32,7 +33,7 @@ public class WorkflowFinalizeTests : CollectionTestBase
     private const decimal FarLat = 6.9500m, FarLng = 79.9000m;
 
     private WorkflowOrchestrationService CreateOrchestrator(IJobService? jobService = null, IMatcherAgentClient? matcher = null) => new(
-        new WorkflowService(Db, new ConfigurationBuilder().Build()),
+        new WorkflowService(Db, new ConfigurationBuilder().Build(), new NotificationService(Db)),
         new WorkflowBackgroundQueue(),
         new ReadyPlanner(),
         new UnusedAgents(),

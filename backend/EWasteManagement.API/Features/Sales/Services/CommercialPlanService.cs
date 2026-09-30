@@ -1,3 +1,5 @@
+using EWasteManagement.API.Features.Notifications.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Sales.DTOs;
 using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Infrastructure.Persistence;
@@ -24,8 +26,13 @@ public interface ICommercialPlanService
 public class CommercialPlanService : ICommercialPlanService
 {
     private readonly ApplicationDbContext _db;
+    private readonly INotificationService _notifications;
 
-    public CommercialPlanService(ApplicationDbContext db) => _db = db;
+    public CommercialPlanService(ApplicationDbContext db, INotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
 
     // ---------- Reads ----------
 
@@ -191,6 +198,11 @@ public class CommercialPlanService : ICommercialPlanService
         });
 
         await _db.SaveChangesAsync(ct);
+
+        // The buyer hears about the decision in their bell. The related
+        // material request's Buyer row carries the recipient user id.
+        await NotifyBuyerSafeAsync(materialRequest, newStatus, request.Comments, ct);
+
         return await GetByIdAsync(plan.CommercialPlanId, ct);
     }
 
@@ -211,6 +223,58 @@ public class CommercialPlanService : ICommercialPlanService
     }
 
     // ---------- Mapping ----------
+
+    /// <summary>
+    /// Ping the buyer behind a material request about the plan decision.
+    /// Never throws: a missing buyer row (or a notification outage) must not
+    /// roll back the decision that was just committed.
+    /// </summary>
+    private async Task NotifyBuyerSafeAsync(
+        MaterialRequest? materialRequest, CommercialPlanStatus newStatus, string? comments, CancellationToken ct)
+    {
+        if (materialRequest is null) return;
+        if (newStatus is not (CommercialPlanStatus.Approved
+            or CommercialPlanStatus.Rejected
+            or CommercialPlanStatus.RevisionRequested))
+            return;
+
+        try
+        {
+            var buyerUserId = await _db.Buyers
+                .Where(b => b.BuyerId == materialRequest.BuyerId)
+                .Select(b => b.UserId)
+                .FirstOrDefaultAsync(ct);
+            if (buyerUserId == default) return;
+
+            var (title, message, type) = newStatus switch
+            {
+                CommercialPlanStatus.Approved => (
+                    "Material request approved",
+                    $"Your request for {materialRequest.QuantityKg} kg of {materialRequest.MaterialType} was approved — an order has been placed.",
+                    NotificationType.Success),
+                CommercialPlanStatus.Rejected => (
+                    "Material request rejected",
+                    $"Your request for {materialRequest.QuantityKg} kg of {materialRequest.MaterialType} was rejected.",
+                    NotificationType.Error),
+                _ => (
+                    "Plan revision requested",
+                    $"Staff asked for a revision on your {materialRequest.MaterialType} request plan.",
+                    NotificationType.Warning),
+            };
+
+            await _notifications.NotifyAsync(
+                buyerUserId,
+                title,
+                comments is null ? message : $"{message} Comment: {comments.Trim()}",
+                type,
+                link: "/material-requests",
+                ct: ct);
+        }
+        catch
+        {
+            // notification is advisory — the decision already committed
+        }
+    }
 
     private static CommercialPlanResponse Map(CommercialPlan p) => new()
     {

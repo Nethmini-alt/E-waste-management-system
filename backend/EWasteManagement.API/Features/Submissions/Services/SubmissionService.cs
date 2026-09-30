@@ -2,7 +2,9 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using EWasteManagement.Api.Dtos;
 using EWasteManagement.Api.Entities;
+using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Workflow.DTOs;
 using EWasteManagement.API.Features.Workflow.Entities;
 using EWasteManagement.API.Features.Workflow.Services;
@@ -15,15 +17,18 @@ namespace EWasteManagement.Api.Services
         private readonly ApplicationDbContext _context;
         private readonly IWorkflowService _workflows;
         private readonly IWorkflowOrchestrationService _orchestrator;
+        private readonly INotificationService _notifications;
 
         public SubmissionService(
             ApplicationDbContext context,
             IWorkflowService workflows,
-            IWorkflowOrchestrationService orchestrator)
+            IWorkflowOrchestrationService orchestrator,
+            INotificationService notifications)
         {
             _context = context;
             _workflows = workflows;
             _orchestrator = orchestrator;
+            _notifications = notifications;
         }
 
         public async Task<SubmissionResponseDto> CreateSubmissionAsync(
@@ -55,6 +60,23 @@ namespace EWasteManagement.Api.Services
             var workflow = _workflows.Add(submission.Id);
             await _context.SaveChangesAsync(ct);
             _orchestrator.Start(workflow.WorkflowId);
+
+            // Tell the review desk a new intake is waiting. Best-effort: the
+            // submission itself is already committed, so a failed ping only
+            // costs the bell badge, never the submission.
+            try
+            {
+                await _notifications.NotifyRolesAsync(
+                    new[] { UserRole.Staff, UserRole.Admin },
+                    "New submission awaiting review",
+                    $"A {submission.Category} submission ({submission.EstimatedWeight} kg) from {submission.PickupAddress} has entered the intake workflow.",
+                    link: "/submissions/review",
+                    ct: ct);
+            }
+            catch
+            {
+                // notification is advisory — never fail the submission
+            }
 
             return (await GetSubmissionByIdAsync(submission.Id, ct))!;
         }

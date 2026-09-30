@@ -1,3 +1,4 @@
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Processing.Events;
 using EWasteManagement.API.Features.Sales.DTOs;
@@ -72,7 +73,7 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
     {
         var item = await SeedReadyInventoryAsync("Copper", 100m);
         var queue = new RecordingMaterialRestockQueue();
-        var service = new MaterialRequestService(_db, queue);
+        var service = new MaterialRequestService(_db, queue, new NotificationService(_db));
 
         var request = await service.CreateAsync(_buyer.UserId,
             new CreateMaterialRequestRequest { MaterialType = " Copper ", QuantityKg = 25m });
@@ -90,7 +91,7 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
     {
         _db.MaterialRequests.Add(NewRequest("Copper", 25m));
         await _db.SaveChangesAsync();
-        var service = new MaterialRequestService(_db, new RecordingMaterialRestockQueue());
+        var service = new MaterialRequestService(_db, new RecordingMaterialRestockQueue(), new NotificationService(_db));
 
         var mine = await service.GetMineAsync(_buyer.UserId);
         var all = await service.GetAllAsync();
@@ -104,7 +105,7 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
     {
         _buyer.BuyerType = BuyerType.Export;
         await _db.SaveChangesAsync();
-        var service = new MaterialRequestService(_db, new RecordingMaterialRestockQueue());
+        var service = new MaterialRequestService(_db, new RecordingMaterialRestockQueue(), new NotificationService(_db));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(_buyer.UserId,
             new CreateMaterialRequestRequest { MaterialType = "Copper", QuantityKg = 19.999m }));
@@ -388,7 +389,7 @@ public class MaterialRequestWorkflowTests : IAsyncLifetime
         request.SalesOrder.PendingQuantityKg = null;
         _db.AddRange(request, plan);
         await _db.SaveChangesAsync();
-        var service = new CommercialPlanService(_db);
+        var service = new CommercialPlanService(_db, new NotificationService(_db));
 
         await service.DecideAsync(plan.CommercialPlanId,
             new ApprovalDecisionRequest { Decision = "Approved" }, _buyer.UserId);

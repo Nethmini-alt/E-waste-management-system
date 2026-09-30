@@ -1,5 +1,8 @@
+using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Collection.DTOs;
 using EWasteManagement.API.Features.Collection.Entities;
+using EWasteManagement.API.Features.Notifications.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Infrastructure.ExternalServices;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -34,12 +37,14 @@ public class JobService : IJobService
     private readonly ApplicationDbContext _db;
     private readonly IGeoService _geoService;
     private readonly IMatchingService _matchingService;
+    private readonly INotificationService _notifications;
 
-    public JobService(ApplicationDbContext db, IGeoService geoService, IMatchingService matchingService)
+    public JobService(ApplicationDbContext db, IGeoService geoService, IMatchingService matchingService, INotificationService notifications)
     {
         _db = db;
         _geoService = geoService;
         _matchingService = matchingService;
+        _notifications = notifications;
     }
 
     public async Task<JobResponseDto> CreateAndAssignAsync(CreateJobDto dto)
@@ -67,6 +72,7 @@ public class JobService : IJobService
             job.Status = JobStatus.PickupLocationUnresolved;
             _db.Jobs.Add(job);
             await _db.SaveChangesAsync();
+            await NotifyAttentionAsync(job, ct: CancellationToken.None);
             return await ToDtoAsync(job);
         }
 
@@ -79,6 +85,7 @@ public class JobService : IJobService
             job.Status = anyEligible is null ? JobStatus.NoCollectorAvailable : JobStatus.AwaitingStaffAssignment;
             _db.Jobs.Add(job);
             await _db.SaveChangesAsync();
+            await NotifyAttentionAsync(job, ct: CancellationToken.None);
             return await ToDtoAsync(job);
         }
 
@@ -93,6 +100,8 @@ public class JobService : IJobService
 
         if (candidate is not null)
             await LogHistoryAsync(job.JobId, candidate.CollectorId, AssignmentOutcome.Assigned, historyReason);
+        else
+            await NotifyAttentionAsync(job, ct: CancellationToken.None);
 
         return await ToDtoAsync(job);
     }
@@ -155,6 +164,8 @@ public class JobService : IJobService
 
         if (nextCandidate is not null)
             await LogHistoryAsync(jobId, nextCandidate.CollectorId, AssignmentOutcome.Assigned);
+        else
+            await NotifyAttentionAsync(job);
 
         return await ToDtoAsync(job);
     }
@@ -199,6 +210,14 @@ public class JobService : IJobService
         job.CompletedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // The submitter's pickup is done — tell their bell (advisory, see helper).
+        await NotifyOwnerSafeAsync(
+            job.SubmissionId,
+            "Pickup completed",
+            $"A collector picked up your submission ({dto.MeasuredWeightKg} kg measured).",
+            NotificationType.Success);
+
         return await ToDtoAsync(job);
     }
 
@@ -404,6 +423,68 @@ public class JobService : IJobService
 
         return await ToDtoAsync(job);
     }
+
+    // --- notifications -------------------------------------------------
+
+    // Staff bell: the job landed somewhere automation can't finish it
+    // (bad address, nobody free, manual assignment requested).
+    private async Task NotifyAttentionAsync(Job job, CancellationToken ct = default)
+    {
+        if (job.Status is not (JobStatus.PickupLocationUnresolved
+            or JobStatus.NoCollectorAvailable
+            or JobStatus.AwaitingStaffAssignment))
+            return;
+
+        var (title, message) = job.Status switch
+        {
+            JobStatus.PickupLocationUnresolved => (
+                "Job needs an address fix",
+                $"The pickup address for job {ShortId(job.JobId)} couldn't be located on the map."),
+            JobStatus.NoCollectorAvailable => (
+                "No collector available",
+                $"Job {ShortId(job.JobId)} has no eligible collector — reassignment is needed."),
+            _ => (
+                "Job awaiting staff assignment",
+                $"Job {ShortId(job.JobId)} is waiting for a staff pick of the collector."),
+        };
+
+        try
+        {
+            await _notifications.NotifyRolesAsync(
+                new[] { UserRole.Staff, UserRole.Admin },
+                title,
+                message,
+                NotificationType.Warning,
+                link: $"/collection/jobs/{job.JobId}",
+                ct: ct);
+        }
+        catch
+        {
+            // notification is advisory — the job row is already committed
+        }
+    }
+
+    // Owner bell: a state change on their submission's pickup job. Never
+    // throws, so a notification outage can't fail the job operation.
+    private async Task NotifyOwnerSafeAsync(Guid submissionId, string title, string message, NotificationType type)
+    {
+        try
+        {
+            var ownerId = await _db.Submissions
+                .Where(s => s.Id == submissionId)
+                .Select(s => s.UserId)
+                .FirstOrDefaultAsync();
+            if (ownerId == default) return;
+
+            await _notifications.NotifyAsync(ownerId, title, message, type, link: "/submissions/mine");
+        }
+        catch
+        {
+            // notification is advisory — the caller's write already committed
+        }
+    }
+
+    private static string ShortId(Guid id) => $"{id.ToString()[..8]}…";
 
     // --- helpers -----------------------------------------------------
 

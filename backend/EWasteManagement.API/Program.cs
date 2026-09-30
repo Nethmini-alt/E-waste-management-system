@@ -19,6 +19,7 @@ using EWasteManagement.API.Shared.Common;
 using EWasteManagement.API.Features.Collection.Services;
 using EWasteManagement.API.Features.Processing.Services;
 using EWasteManagement.API.Features.Workflow.Services;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Infrastructure.BackgroundTasks;
 using EWasteManagement.API.Shared.Storage;
 
@@ -90,6 +91,8 @@ builder.Services.AddScoped<IItemTypeCatalogService, ItemTypeCatalogService>();
 builder.Services.AddScoped<IRecoveredMaterialSummaryService, RecoveredMaterialSummaryService>();
 builder.Services.AddScoped<IRatePolicyService, RatePolicyService>();
 builder.Services.AddScoped<IWorkflowApprovalHistoryService, WorkflowApprovalHistoryService>();
+// In-app notifications (header bell) — producers across the app depend on this.
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 
 // Shared image upload (Submission items today, Collection completion photos

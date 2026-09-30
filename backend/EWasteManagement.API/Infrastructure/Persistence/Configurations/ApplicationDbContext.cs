@@ -1,5 +1,6 @@
 using EWasteManagement.Api.Entities;
 using EWasteManagement.API.Features.Auth.Entities;
+using EWasteManagement.API.Features.Notifications.Entities;
 using EWasteManagement.API.Features.Sales.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Processing.Entities;
@@ -20,6 +21,9 @@ public class ApplicationDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+
+    // In-app notifications behind the header bell icon
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     // Generator & Submission Manager Tables
     public DbSet<Submission> Submissions => Set<Submission>();

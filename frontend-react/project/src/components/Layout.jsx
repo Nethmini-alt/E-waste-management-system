@@ -6,9 +6,10 @@ import { useAuth } from '../features/auth/AuthContext';
 import Hero3D from './Hero3D';
 import CollectorAppNotice from '../features/collection/CollectorAppNotice';
 import SiteFooter from './SiteFooter';
-import { Bell, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { navFor, findActive, entryLink, HOME_DASHBOARD_KEY } from './navigation';
 import SectionTabs from './SectionTabs';
+import NotificationBell from '../features/notifications/NotificationBell';
 
 const SIDEBAR_COLLAPSED_KEY = 'ewaste.sidebarCollapsed';
 
@@ -119,10 +120,8 @@ export const Layout = () => {
         </NavLink>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-3">
-          {/* Icon only for now: notifications are not wired up yet. */}
-          <button type="button" className={iconButton} aria-label="Notifications" title="Notifications">
-            <Bell size={19} />
-          </button>
+          {/* In-app notifications: unread badge + dropdown, wired to /api/notifications. */}
+          <NotificationBell />
 
           <div className="hidden h-8 w-px bg-mint-100 sm:block" />
 

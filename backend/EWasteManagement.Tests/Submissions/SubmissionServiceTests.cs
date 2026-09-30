@@ -9,6 +9,7 @@ using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Workflow.DTOs;
 using EWasteManagement.API.Features.Workflow.Entities;
 using EWasteManagement.API.Features.Workflow.Services;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.Tests.TestHelpers;
 using Microsoft.Data.Sqlite;
@@ -47,9 +48,9 @@ public class SubmissionServiceTests : IAsyncLifetime
         _db = NewContext(_commands);
         await _db.Database.EnsureCreatedAsync();
 
-        var workflows = new WorkflowService(_db, new ConfigurationBuilder().Build());
+        var workflows = new WorkflowService(_db, new ConfigurationBuilder().Build(), new NotificationService(_db));
         _orchestrator = new RecordingOrchestrator(() => NewContext());
-        _service = new SubmissionService(_db, workflows, _orchestrator);
+        _service = new SubmissionService(_db, workflows, _orchestrator, new NotificationService(_db));
     }
 
     public async Task DisposeAsync()

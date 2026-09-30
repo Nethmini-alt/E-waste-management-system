@@ -1,4 +1,6 @@
 using System.Text.Json;
+using EWasteManagement.API.Features.Notifications.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Workflow.DTOs;
 using EWasteManagement.API.Features.Workflow.Entities;
 using EWasteManagement.API.Infrastructure.Persistence;
@@ -10,11 +12,13 @@ public class WorkflowService : IWorkflowService
 {
     private readonly ApplicationDbContext _db;
     private readonly IConfiguration _config;
+    private readonly INotificationService _notifications;
 
-    public WorkflowService(ApplicationDbContext db, IConfiguration config)
+    public WorkflowService(ApplicationDbContext db, IConfiguration config, INotificationService notifications)
     {
         _db = db;
         _config = config;
+        _notifications = notifications;
     }
 
     public CollectionWorkflow Add(Guid submissionId)
@@ -112,6 +116,29 @@ public class WorkflowService : IWorkflowService
         workflow.CompletedAt = DateTime.UtcNow;
         workflow.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        // Outcome ping for the submitter: either a collection job exists now,
+        // or the intake chain could not produce one.
+        if (request.ReadyForJobCreation)
+        {
+            await NotifyOwnerSafeAsync(
+                workflowId,
+                "Collection job created",
+                "Your submission passed review and a pickup job has been scheduled.",
+                NotificationType.Success,
+                ct);
+        }
+        else
+        {
+            await NotifyOwnerSafeAsync(
+                workflowId,
+                "Submission could not be scheduled",
+                request.FinalReasoningSummary is null
+                    ? "The intake workflow could not create a pickup job for your submission."
+                    : $"The intake workflow could not create a pickup job: {request.FinalReasoningSummary}",
+                NotificationType.Warning,
+                ct);
+        }
     }
 
     public async Task SetStatusAsync(Guid workflowId, WorkflowStatus status, CancellationToken ct = default)
@@ -169,6 +196,19 @@ public class WorkflowService : IWorkflowService
         };
         _db.WorkflowApprovalActions.Add(action);
         await _db.SaveChangesAsync(ct);
+
+        // The submitter learns about the decision from their bell, not from
+        // refreshing "My submissions". Advisory only (see NotifyOwnerSafeAsync).
+        var approved = actionType == WorkflowApprovalActionType.Approved;
+        await NotifyOwnerSafeAsync(
+            workflowId,
+            approved ? "Submission approved" : "Submission rejected",
+            approved
+                ? "Staff approved your submission — collection planning is resuming."
+                : $"Staff rejected your submission.{(comments is null ? "" : $" Reason: {comments.Trim()}")}",
+            approved ? NotificationType.Success : NotificationType.Error,
+            ct);
+
         return action;
     }
 
@@ -200,5 +240,29 @@ public class WorkflowService : IWorkflowService
     {
         return await _db.CollectionWorkflows.FirstOrDefaultAsync(w => w.WorkflowId == workflowId, ct)
             ?? throw new KeyNotFoundException($"Workflow {workflowId} not found.");
+    }
+
+    /// <summary>
+    /// Resolve a workflow's submitter and ping them. Never throws: a missing
+    /// submission row (or a notification outage) must not roll back the
+    /// approval/finalize write that triggered it.
+    /// </summary>
+    private async Task NotifyOwnerSafeAsync(
+        Guid workflowId, string title, string message, NotificationType type, CancellationToken ct)
+    {
+        try
+        {
+            var ownerId = await _db.CollectionWorkflows
+                .Where(w => w.WorkflowId == workflowId)
+                .Join(_db.Submissions, w => w.SubmissionId, s => s.Id, (_, s) => s.UserId)
+                .FirstOrDefaultAsync(ct);
+            if (ownerId == default) return;
+
+            await _notifications.NotifyAsync(ownerId, title, message, type, link: "/submissions/mine", ct: ct);
+        }
+        catch
+        {
+            // notification is advisory — the caller's write already committed
+        }
     }
 }

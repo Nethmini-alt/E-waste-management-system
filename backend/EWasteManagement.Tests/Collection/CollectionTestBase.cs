@@ -1,6 +1,7 @@
 using EWasteManagement.API.Features.Auth.Entities;
 using EWasteManagement.API.Features.Collection.Entities;
 using EWasteManagement.API.Features.Collection.Services;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Infrastructure.Persistence;
 using EWasteManagement.Tests.TestHelpers;
 using Microsoft.Data.Sqlite;
@@ -39,7 +40,8 @@ public abstract class CollectionTestBase : IAsyncLifetime
 
     protected CollectorService CreateCollectorService() => new(Db);
     protected MatchingService CreateMatchingService() => new(Db, Geo);
-    protected JobService CreateJobService() => new(Db, Geo, CreateMatchingService());
+    protected NotificationService CreateNotificationService() => new(Db);
+    protected JobService CreateJobService() => new(Db, Geo, CreateMatchingService(), CreateNotificationService());
 
     // --- seeding ------------------------------------------------------
 
