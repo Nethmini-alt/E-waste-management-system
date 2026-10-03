@@ -39,4 +39,11 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = ex.Message });
         }
     }
+
+    [HttpGet("ping")]
+    public IActionResult Ping()
+    {
+        // Always return 401 Unauthorized to show server is running
+        return Unauthorized(new { message = "Server is running, but you must authenticate." });
+    }
 }
