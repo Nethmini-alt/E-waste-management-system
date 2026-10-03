@@ -354,6 +354,7 @@ public class WorkflowFinalizeTests : CollectionTestBase
         public Task<JobResponseDto> CompleteAsync(Guid jobId, Guid requestingUserId, CompleteJobDto dto) => throw new NotSupportedException();
         public Task<List<JobResponseDto>> GetMyJobsAsync(Guid requestingUserId, JobStatus? status) => throw new NotSupportedException();
         public Task<JobResponseDto?> GetByIdAsync(Guid jobId, Guid requestingUserId, bool isPrivileged) => throw new NotSupportedException();
+        public Task<JobRouteDto?> GetRouteAsync(Guid jobId, Guid requestingUserId, decimal? fromLat, decimal? fromLng) => throw new NotSupportedException();
         public Task<List<JobResponseDto>> GetAllAsync(JobStatus? status) => throw new NotSupportedException();
         public Task<List<JobAssignmentHistoryDto>> GetHistoryAsync(Guid jobId) => throw new NotSupportedException();
         public Task<JobResponseDto> UpdateAddressAsync(Guid jobId, UpdateJobAddressDto dto) => throw new NotSupportedException();

@@ -79,6 +79,20 @@ class CollectorApi {
     return jobs;
   }
 
+  /// Road route to the job's pickup. Without a position the server uses the last one this collector reported.
+  Future<JobRoute> route(String jobId, {double? fromLat, double? fromLng}) async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/jobs/$jobId/route', queryParameters: {
+      if (fromLat != null && fromLng != null) ...{'fromLat': fromLat, 'fromLng': fromLng},
+    });
+    return JobRoute.fromJson(response.data!);
+  }
+
+  /// Customer contact and payment for one of this collector's jobs.
+  Future<CollectorJobInfo> jobInfo(String jobId) async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/v1/jobs/$jobId/collector-info');
+    return CollectorJobInfo.fromJson(response.data!);
+  }
+
   /// Completed jobs, most recently completed first.
   Future<List<CollectionJob>> myCompletedJobs() async {
     final jobs = await myJobs(JobStatus.completed);

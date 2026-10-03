@@ -140,3 +140,93 @@ class CollectionJob {
         receivedAtWarehouse: json['receivedAtWarehouse'] as bool? ?? false,
       );
 }
+
+/// JobRouteDto — the road route from the collector to a job's pickup, for the job map.
+class JobRoute {
+  const JobRoute({
+    this.originLatitude,
+    this.originLongitude,
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.distanceKm,
+    this.durationMinutes,
+    this.points = const [],
+  });
+
+  final double? originLatitude;
+  final double? originLongitude;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? distanceKm;
+  final int? durationMinutes;
+
+  /// [lat, lng] pairs, origin first. Empty when no route could be found.
+  final List<(double, double)> points;
+
+  factory JobRoute.fromJson(Map<String, dynamic> json) => JobRoute(
+        originLatitude: (json['originLatitude'] as num?)?.toDouble(),
+        originLongitude: (json['originLongitude'] as num?)?.toDouble(),
+        pickupLatitude: (json['pickupLatitude'] as num?)?.toDouble(),
+        pickupLongitude: (json['pickupLongitude'] as num?)?.toDouble(),
+        distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+        durationMinutes: json['durationMinutes'] as int?,
+        points: [
+          for (final p in (json['points'] as List<dynamic>? ?? const []).cast<List<dynamic>>())
+            ((p[0] as num).toDouble(), (p[1] as num).toDouble()),
+        ],
+      );
+}
+
+/// CollectorJobInfoDto — customer contact (only once the job is accepted) and the payment for a job.
+class CollectorJobInfo {
+  const CollectorJobInfo({
+    required this.contactAvailable,
+    this.customerName,
+    this.customerPhone,
+    this.paymentAmount,
+    required this.paymentIsEstimate,
+    this.paymentStatus,
+    this.estimateWeightKg,
+    this.baseFee,
+    this.ratePerKg,
+    this.weightAmount,
+    this.distanceKm,
+    this.distanceAmount,
+  });
+
+  final bool contactAvailable;
+  final String? customerName;
+  final String? customerPhone;
+
+  /// The real payment once the warehouse received the job, otherwise an estimate (null if unknown).
+  final double? paymentAmount;
+  final bool paymentIsEstimate;
+
+  /// "Pending" | "Paid" for a real payment.
+  final String? paymentStatus;
+
+  final double? estimateWeightKg;
+  final double? baseFee;
+  final double? ratePerKg;
+  final double? weightAmount;
+  final double? distanceKm;
+  final double? distanceAmount;
+
+  factory CollectorJobInfo.fromJson(Map<String, dynamic> json) {
+    double? d(String key) => (json[key] as num?)?.toDouble();
+    return CollectorJobInfo(
+      contactAvailable: json['contactAvailable'] as bool? ?? false,
+      customerName: json['customerName'] as String?,
+      customerPhone: json['customerPhone'] as String?,
+      paymentAmount: d('paymentAmount'),
+      paymentIsEstimate: json['paymentIsEstimate'] as bool? ?? false,
+      paymentStatus: json['paymentStatus'] as String?,
+      estimateWeightKg: d('estimateWeightKg'),
+      baseFee: d('baseFee'),
+      ratePerKg: d('ratePerKg'),
+      weightAmount: d('weightAmount'),
+      distanceKm: d('distanceKm'),
+      distanceAmount: d('distanceAmount'),
+    );
+  }
+}

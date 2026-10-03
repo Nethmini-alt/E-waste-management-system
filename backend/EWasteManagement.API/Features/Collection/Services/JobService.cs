@@ -23,6 +23,7 @@ public interface IJobService
     Task<JobResponseDto> CompleteAsync(Guid jobId, Guid requestingUserId, CompleteJobDto dto);
     Task<List<JobResponseDto>> GetMyJobsAsync(Guid requestingUserId, JobStatus? status);
     Task<JobResponseDto?> GetByIdAsync(Guid jobId, Guid requestingUserId, bool isPrivileged);
+    Task<JobRouteDto?> GetRouteAsync(Guid jobId, Guid requestingUserId, decimal? fromLat, decimal? fromLng);
     Task<List<JobResponseDto>> GetAllAsync(JobStatus? status);
 
     // Staff/admin
@@ -248,6 +249,40 @@ public class JobService : IJobService
             throw new UnauthorizedAccessException("You do not have permission to view this job.");
 
         return await ToDtoAsync(job);
+    }
+
+    // Route from the collector to the pickup. The app sends the phone's position; without one the
+    // last location the collector reported is used.
+    public async Task<JobRouteDto?> GetRouteAsync(Guid jobId, Guid requestingUserId, decimal? fromLat, decimal? fromLng)
+    {
+        var job = await _db.Jobs.FindAsync(jobId);
+        if (job is null) return null;
+
+        var collector = await _db.Collectors.FirstOrDefaultAsync(c => c.UserId == requestingUserId);
+        if (collector is null || job.CollectorId != collector.CollectorId)
+            throw new UnauthorizedAccessException("You do not have permission to view this job.");
+
+        var originLat = fromLat ?? collector.CurrentLatitude;
+        var originLng = fromLng ?? collector.CurrentLongitude;
+
+        var dto = new JobRouteDto
+        {
+            OriginLatitude = originLat,
+            OriginLongitude = originLng,
+            PickupLatitude = job.PickupLatitude,
+            PickupLongitude = job.PickupLongitude
+        };
+
+        if (originLat is null || originLng is null || job.PickupLatitude is null || job.PickupLongitude is null)
+            return dto;
+
+        var route = await _geoService.GetRouteAsync(originLat.Value, originLng.Value, job.PickupLatitude.Value, job.PickupLongitude.Value);
+        if (route is null) return dto;
+
+        dto.DistanceKm = route.DistanceKm;
+        dto.DurationMinutes = route.DurationMinutes;
+        dto.Points = route.Points.Select(p => new[] { p.Lat, p.Lng }).ToList();
+        return dto;
     }
 
     public async Task<List<JobResponseDto>> GetAllAsync(JobStatus? status)

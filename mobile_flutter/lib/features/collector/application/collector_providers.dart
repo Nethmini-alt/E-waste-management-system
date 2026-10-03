@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../core/auth/auth_controller.dart';
 import '../../../core/network/api_client.dart';
@@ -36,3 +37,28 @@ final myCompletedJobsProvider = StreamProvider.autoDispose<List<CollectionJob>>(
     await Future<void>.delayed(const Duration(seconds: 30));
   }
 });
+
+/// Route from where the phone is now to a job's pickup. The position is best-effort: without
+/// location permission (or if it times out) the server falls back to the last reported position.
+final jobRouteProvider = FutureProvider.autoDispose.family<JobRoute, String>((ref, jobId) async {
+  final position = await _currentPosition();
+  return ref.watch(collectorApiProvider).route(jobId, fromLat: position?.latitude, fromLng: position?.longitude);
+});
+
+Future<Position?> _currentPosition() async {
+  try {
+    if (!await Geolocator.isLocationServiceEnabled()) return null;
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+    if (permission != LocationPermission.always && permission != LocationPermission.whileInUse) return null;
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)),
+    );
+  } catch (_) {
+    return null;
+  }
+}
+
+final jobInfoProvider = FutureProvider.autoDispose.family<CollectorJobInfo, String>(
+  (ref, jobId) => ref.watch(collectorApiProvider).jobInfo(jobId),
+);
