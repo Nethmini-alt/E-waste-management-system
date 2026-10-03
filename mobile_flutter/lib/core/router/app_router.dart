@@ -8,6 +8,7 @@ import '../../features/buyer/presentation/buyer_requests_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/session_screens.dart';
+import '../../features/auth/presentation/welcome_screen.dart';
 import '../../features/collector/application/collector_providers.dart';
 import '../../features/collector/presentation/collector_profile_screen.dart';
 import '../../features/collector/presentation/collector_profile_setup_screen.dart';
@@ -54,9 +55,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (auth.status == AuthStatus.restoring) return path == '/splash' ? null : '/splash';
 
       final user = auth.user;
-      if (user == null) return (path == '/login' || path == '/register' || path == '/register/buyer') ? null : '/login';
+      const publicPaths = {'/welcome', '/login', '/register', '/register/buyer'};
+      if (user == null) {
+        if (publicPaths.contains(path)) return null;
+        // A forced sign-out (e.g. expired session) explains itself on the login screen; otherwise
+        // signed-out users start at the welcome page.
+        return auth.signedOutReason != null ? '/login' : '/welcome';
+      }
 
-      if (path == '/login' || path == '/register' || path == '/register/buyer' || path == '/splash') {
+      if (publicPaths.contains(path) || path == '/splash') {
         if (user.role.toLowerCase() == 'corporate') return _corporateHome(ref);
         return homeFor(user);
       }
@@ -89,6 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+      GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/register/buyer', builder: (_, __) => const BuyerRegistrationScreen()),
