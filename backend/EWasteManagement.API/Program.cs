@@ -26,12 +26,27 @@ using EWasteManagement.API.Shared.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // wwwroot/uploads must exist before Build() — ASP.NET Core snapshots
 // IWebHostEnvironment.WebRootFileProvider (what UseStaticFiles() serves from)
 // at build time, and falls back to a provider that never sees files created
 // afterwards if wwwroot didn't exist yet. LocalFileStorage also creates this
 // directory itself, defensively, for callers that construct it directly.
 Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "uploads"));
+
+//render database connection string from DATABASE_URL environment variable if it exists
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    var uri = new Uri(databaseUrl);
+    var port = uri.Port == -1 ? 5432 : uri.Port;
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var npgsqlConnectionString =
+        $"Host={uri.Host};Port={port};Database={uri.AbsolutePath.TrimStart('/')};" +
+        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = npgsqlConnectionString;
+}
+
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -178,6 +193,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
+
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
+
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider
+        .GetRequiredService<EWasteManagement.API.Infrastructure.Persistence.ApplicationDbContext>()
+        .Database.Migrate();
+}
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseExceptionHandler();
