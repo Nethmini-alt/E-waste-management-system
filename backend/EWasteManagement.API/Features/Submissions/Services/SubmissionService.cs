@@ -207,7 +207,7 @@ namespace EWasteManagement.Api.Services
                 WasteCategory = result.WasteCategory,
                 HazardLevel = result.HazardLevel,
                 EstimatedVolumeKg = result.EstimatedVolumeKg,
-                EstimatedValueUsd = result.EstimatedValueUsd,
+                EstimatedValueLkr = result.EstimatedValueLkr,
                 ConfidenceScore = result.ConfidenceScore,
             };
         }

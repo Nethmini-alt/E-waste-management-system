@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, AlertTriangle, Cpu, ShieldAlert,
-  Tag, Weight, DollarSign, Plus, Trash2, Clock, Send, Image as ImageIcon, Loader2, X,
+  Tag, Weight, Banknote, Plus, Trash2, Clock, Send, Image as ImageIcon, Loader2, X,
 } from 'lucide-react';
 import { submissionApi } from './submissionApi';
 import { extractFieldErrors, extractGeneralError, type SubmissionFieldErrors } from './submissionErrors';
@@ -11,6 +11,7 @@ import { SubmissionProgress } from './SubmissionProgress';
 import { GlassCard, Notice, PageHeader, StatusPill, btnPrimary, inputClass, labelClass } from '../../components/ui';
 import type { StatusTone } from '../../components/ui/StatusPill';
 import { uploadApi } from '../../api/uploadApi';
+import { formatMoney } from '../processing/utils/format';
 
 // Statuses SubmissionProgress can represent as a normal step reached along
 // the happy path (including the successful end states it marks "done").
@@ -359,7 +360,7 @@ const SubmitPage: React.FC = () => {
                   </span>
                 </p>
                 <p className="flex items-center gap-1.5"><Weight size={14} className="text-mint-700" /> <strong>Est. weight:</strong> {ai.estimatedVolumeKg} kg</p>
-                <p className="flex items-center gap-1.5"><DollarSign size={14} className="text-mint-700" /> <strong>Est. value:</strong> ${ai.estimatedValueUsd}</p>
+                <p className="flex items-center gap-1.5"><Banknote size={14} className="text-mint-700" /> <strong>Est. value:</strong> {formatMoney(ai.estimatedValueLkr)}</p>
               </div>
               {submission.workflow?.approvalRequired && submission.status === 'AwaitingReview' && (
                 <p className="mt-3 flex items-center gap-1.5 text-sm font-bold text-amber-700">

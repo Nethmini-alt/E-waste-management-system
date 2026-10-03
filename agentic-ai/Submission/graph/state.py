@@ -10,7 +10,7 @@ class AnalyzerState(TypedDict, total=False):
     waste_category: str
     hazard_level: str
     estimated_volume_kg: float
-    estimated_value_usd: float
+    estimated_value_lkr: float
     confidence_score: float
 
     errors: list[str]

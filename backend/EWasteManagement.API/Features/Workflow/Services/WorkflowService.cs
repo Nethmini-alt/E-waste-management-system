@@ -178,7 +178,7 @@ public class WorkflowService : IWorkflowService
         {
             AutoHazardCeiling = section["AutoHazardCeiling"] ?? "Medium",
             MinConfidenceForAuto = double.TryParse(section["MinConfidenceForAuto"], out var conf) ? conf : 0.6,
-            MaxValueForAutoUsd = decimal.TryParse(section["MaxValueForAutoUsd"], out var val) ? val : 500.0m,
+            MaxValueForAutoLkr = decimal.TryParse(section["MaxValueForAutoLkr"], out var val) ? val : 150000.0m,
         };
         return Task.FromResult(result);
     }
