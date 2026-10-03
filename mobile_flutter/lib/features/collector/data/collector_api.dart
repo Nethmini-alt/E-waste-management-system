@@ -30,6 +30,22 @@ class CollectorApi {
     return CollectorProfile.fromJson(response.data!);
   }
 
+  /// PUT /me — the collector's own name, phone, vehicle and capacity. Email is the login and can't change here.
+  Future<CollectorProfile> updateMyProfile({
+    required String fullName,
+    String? phone,
+    required String vehicleType,
+    required double capacityKg,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>('/api/v1/collectors/me', data: {
+      'fullName': fullName,
+      'phone': phone,
+      'vehicleType': vehicleType,
+      'capacityKg': capacityKg,
+    });
+    return CollectorProfile.fromJson(response.data!);
+  }
+
   Future<CollectorProfile> updateAvailability(String collectorId, bool isAvailable) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/api/v1/collectors/$collectorId/availability',
@@ -61,6 +77,12 @@ class CollectorApi {
     final lists = await Future.wait([myJobs(JobStatus.assigned), myJobs(JobStatus.accepted), myJobs(JobStatus.inProgress)]);
     final jobs = lists.expand((l) => l).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return jobs;
+  }
+
+  /// Completed jobs, most recently completed first.
+  Future<List<CollectionJob>> myCompletedJobs() async {
+    final jobs = await myJobs(JobStatus.completed);
+    return jobs..sort((a, b) => (b.completedAt ?? b.createdAt).compareTo(a.completedAt ?? a.createdAt));
   }
 
   Future<CollectionJob> accept(String jobId) async {

@@ -594,9 +594,17 @@ public class JobService : IJobService
     private async Task<JobResponseDto> ToDtoAsync(Job job) =>
         (await ToDtosAsync(new List<Job> { job }))[0];
 
-    // Resolves collector names in one query for the whole list.
+    // Resolves collector names (and which completed jobs the warehouse has received) in one query each.
     private async Task<List<JobResponseDto>> ToDtosAsync(List<Job> jobs)
     {
+        var completedIds = jobs.Where(j => j.Status == JobStatus.Completed).Select(j => j.JobId).ToList();
+        var receivedIds = completedIds.Count == 0
+            ? new HashSet<Guid>()
+            : (await _db.InventoryItems
+                .Where(i => i.JobId != null && completedIds.Contains(i.JobId.Value))
+                .Select(i => i.JobId!.Value)
+                .ToListAsync()).ToHashSet();
+
         var collectorIds = jobs.Where(j => j.CollectorId != null)
             .Select(j => j.CollectorId!.Value).Distinct().ToList();
 
@@ -614,6 +622,7 @@ public class JobService : IJobService
             var dto = ToDto(j);
             if (j.CollectorId is Guid id && names.TryGetValue(id, out var name))
                 dto.CollectorName = name;
+            dto.ReceivedAtWarehouse = receivedIds.Contains(j.JobId);
             return dto;
         }).ToList();
     }

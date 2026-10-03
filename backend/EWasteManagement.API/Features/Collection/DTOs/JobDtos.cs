@@ -64,6 +64,9 @@ public class JobResponseDto
     public DateTime? RespondedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    // Completed and weighed into inventory. A completed job that is not yet received is still in the vehicle.
+    public bool ReceivedAtWarehouse { get; set; }
 }
 
 

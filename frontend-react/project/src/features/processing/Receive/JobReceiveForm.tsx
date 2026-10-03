@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, MapPin, RefreshCw, Truck, Wallet } from 'lucide-react';
+import { CheckCircle2, MapPin, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
 import { receiveApi } from './receiveApi';
 import type { ReceivableJob, ReceiveDeliveryResponse } from './types';
 import { paymentApi } from '../Payments/paymentApi';
@@ -14,7 +14,6 @@ import {
   GlassCard,
   LoadingState,
   Notice,
-  SearchSelect,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -22,6 +21,13 @@ import {
   tableCellClass,
   tableHeadClass,
 } from '../components';
+
+interface DriverGroup {
+  id: string;
+  name: string;
+  vehicle: string | null;
+  jobs: ReceivableJob[];
+}
 
 interface JobEntry {
   selected: boolean;
@@ -89,30 +95,55 @@ const JobReceiveForm: React.FC = () => {
     }
   }, [locations.data, locationId]);
 
-  // Only collectors who actually have jobs waiting can be chosen.
-  const collectorOptions = useMemo(() => {
-    const byCollector = new Map<string, { name: string; vehicle: string | null; count: number }>();
+  // Every completed job waiting, grouped by the driver who collected it (jobs arrive newest first).
+  const drivers = useMemo(() => {
+    const byCollector = new Map<string, DriverGroup>();
     jobs.forEach((j) => {
       const existing = byCollector.get(j.collectorId);
-      if (existing) existing.count += 1;
-      else byCollector.set(j.collectorId, { name: j.collectorName ?? `Collector ${shortId(j.collectorId)}`, vehicle: j.collectorVehicleType, count: 1 });
+      if (existing) existing.jobs.push(j);
+      else
+        byCollector.set(j.collectorId, {
+          id: j.collectorId,
+          name: j.collectorName ?? `Collector ${shortId(j.collectorId)}`,
+          vehicle: j.collectorVehicleType,
+          jobs: [j],
+        });
     });
-    return [...byCollector.entries()].map(([id, c]) => ({
-      value: id,
-      label: c.name,
-      hint: `${c.vehicle ? `${c.vehicle} · ` : ''}${c.count} job${c.count === 1 ? '' : 's'} waiting`,
-    }));
+    return [...byCollector.values()];
   }, [jobs]);
 
+  // Search by driver name or vehicle (shows all their jobs), or by address / job id (shows just those jobs).
+  const [search, setSearch] = useState('');
+  const visibleDrivers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return drivers;
+    return drivers
+      .map((d) => {
+        if (d.name.toLowerCase().includes(q) || (d.vehicle ?? '').toLowerCase().includes(q)) return d;
+        const hits = d.jobs.filter((j) => j.pickupAddress.toLowerCase().includes(q) || j.jobId.toLowerCase().startsWith(q));
+        return hits.length > 0 ? { ...d, jobs: hits } : null;
+      })
+      .filter((d): d is DriverGroup => d !== null);
+  }, [drivers, search]);
+
+  const selectedDriver = drivers.find((d) => d.id === collectorId) ?? null;
   const collectorJobs = useMemo(() => jobs.filter((j) => j.collectorId === collectorId), [jobs, collectorId]);
 
-  const chooseCollector = (id: string) => {
+  // Choosing a driver opens their jobs; choosing one job also ticks it.
+  const chooseCollector = (id: string, tickJobId?: string) => {
     setCollectorId(id);
     const next: Record<string, JobEntry> = {};
     jobs.filter((j) => j.collectorId === id).forEach((j) => {
-      next[j.jobId] = entryFor(j);
+      next[j.jobId] = { ...entryFor(j), selected: j.jobId === tickJobId };
     });
     setEntries(next);
+    setSubmitted(false);
+    setError(null);
+  };
+
+  const changeDriver = () => {
+    setCollectorId('');
+    setEntries({});
     setSubmitted(false);
     setError(null);
   };
@@ -201,6 +232,7 @@ const JobReceiveForm: React.FC = () => {
     setCollectorId('');
     setEntries({});
     setNotes('');
+    setSearch('');
     setSubmitted(false);
     setError(null);
     loadJobs();
@@ -208,7 +240,7 @@ const JobReceiveForm: React.FC = () => {
 
   // ---------------------------------------------------------------- success view
   if (result) {
-    const collectorName = collectorOptions.find((c) => c.value === result.collectorId)?.label ?? 'the collector';
+    const collectorName = drivers.find((d) => d.id === result.collectorId)?.name ?? 'the collector';
     return (
       <GlassCard>
         <div className="flex items-start gap-3">
@@ -293,24 +325,106 @@ const JobReceiveForm: React.FC = () => {
       <GlassCard>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 className="font-display text-base font-bold text-ink-900">1 · Which collector is delivering?</h3>
-            <p className="text-xs text-ink-600">Type the first letters of the name. Only collectors with completed jobs waiting are listed.</p>
+            <h3 className="font-display text-base font-bold text-ink-900">1 · Which driver is delivering?</h3>
+            <p className="text-xs text-ink-600">
+              {selectedDriver
+                ? 'Their completed jobs are listed below.'
+                : 'Completed jobs waiting to be received. Choose a driver, or pick one of their jobs.'}
+            </p>
           </div>
-          <button type="button" onClick={loadJobs} className={btnSecondary} disabled={jobsLoading}>
-            <RefreshCw size={14} className={jobsLoading ? 'animate-spin' : ''} /> Refresh
-          </button>
+          <div className="flex gap-2">
+            {selectedDriver && (
+              <button type="button" onClick={changeDriver} className={btnSecondary}>
+                Change driver
+              </button>
+            )}
+            <button type="button" onClick={loadJobs} className={btnSecondary} disabled={jobsLoading}>
+              <RefreshCw size={14} className={jobsLoading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </div>
         </div>
-        <div className="mt-3 max-w-md">
-          <SearchSelect
-            id="jr-collector"
-            value={collectorId}
-            onChange={chooseCollector}
-            disabled={jobsLoading}
-            placeholder={jobsLoading ? 'Loading…' : 'Type the collector’s name…'}
-            emptyText="No collector with that name has jobs waiting"
-            options={collectorOptions}
-          />
-        </div>
+
+        {selectedDriver ? (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl border border-mint-400 bg-mint-50/70 p-3.5">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-mint-100 text-mint-700">
+              <Truck size={18} />
+            </span>
+            <div className="text-sm">
+              <div className="font-semibold text-ink-900">{selectedDriver.name}</div>
+              <div className="text-xs text-ink-600">
+                {selectedDriver.vehicle ? `${selectedDriver.vehicle} · ` : ''}
+                {selectedDriver.jobs.length} completed job{selectedDriver.jobs.length === 1 ? '' : 's'} waiting
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="relative mt-3 max-w-md">
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-600" />
+              <input
+                id="jr-driver-search"
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by driver name, vehicle or address…"
+                className={`${inputClass} pl-9`}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {jobsLoading && jobs.length === 0 ? (
+                <LoadingState label="Loading completed jobs…" />
+              ) : drivers.length === 0 ? (
+                !jobsError && (
+                  <EmptyState icon={Truck} title="No completed jobs waiting" description="Jobs appear here as soon as a driver marks them completed." />
+                )
+              ) : visibleDrivers.length === 0 ? (
+                <EmptyState icon={Search} title="No matches" description={`No driver or job matches “${search.trim()}”.`} />
+              ) : (
+                visibleDrivers.map((d) => (
+                  <div key={d.id} className="rounded-2xl border border-mint-100 bg-white/60">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-mint-50 px-3.5 py-2.5">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Truck size={15} className="text-mint-600" />
+                        <span className="font-semibold text-ink-900">{d.name}</span>
+                        <span className="text-xs text-ink-600">
+                          {d.vehicle ? `${d.vehicle} · ` : ''}
+                          {d.jobs.length} job{d.jobs.length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => chooseCollector(d.id)} className={btnSecondary}>
+                        Receive from {d.name.split(' ')[0]}
+                      </button>
+                    </div>
+                    <ul>
+                      {d.jobs.map((job) => (
+                        <li key={job.jobId}>
+                          <button
+                            type="button"
+                            onClick={() => chooseCollector(d.id, job.jobId)}
+                            className="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3.5 py-2 text-left text-xs text-ink-600 transition hover:bg-mint-50/70"
+                          >
+                            <span className="flex min-w-0 items-center gap-1.5 text-sm text-ink-900">
+                              <MapPin size={13} className="flex-shrink-0 text-mint-600" />
+                              <span className="truncate">{job.pickupAddress || 'No address recorded'}</span>
+                            </span>
+                            <span className="flex flex-wrap gap-x-4">
+                              {job.submissionCategory && <span>{job.submissionCategory}</span>}
+                              <span>{job.reportedWeightKg !== null ? formatKg(job.reportedWeightKg) : 'n/a'}</span>
+                              <span>Completed {formatDateTime(job.completedAt)}</span>
+                              <span className="font-mono">{shortId(job.jobId)}</span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
         {jobsError && <ErrorMessage className="mt-3" message={jobsError} onRetry={loadJobs} />}
       </GlassCard>
 

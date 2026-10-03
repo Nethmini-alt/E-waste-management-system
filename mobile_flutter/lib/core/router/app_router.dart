@@ -9,7 +9,9 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/session_screens.dart';
 import '../../features/collector/application/collector_providers.dart';
+import '../../features/collector/presentation/collector_profile_screen.dart';
 import '../../features/collector/presentation/collector_profile_setup_screen.dart';
+import '../../features/collector/presentation/collector_shell.dart';
 import '../../features/collector/presentation/job_detail_screen.dart';
 import '../../features/collector/presentation/job_list_screen.dart';
 import '../../features/submissions/presentation/submission_shell.dart';
@@ -94,14 +96,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/unavailable', builder: (_, __) => const RoleNotAvailableScreen()),
       GoRoute(path: '/submissions', builder: (_, __) => const SubmissionShell()),
       GoRoute(path: '/collector/setup-profile', builder: (_, __) => const CollectorProfileSetupScreen()),
-      GoRoute(
-        path: '/collector',
-        builder: (_, __) => const JobListScreen(),
-        routes: [
-          GoRoute(
-            path: 'jobs/:id',
-            builder: (_, state) => JobDetailScreen(key: ValueKey(state.pathParameters['id']), jobId: state.pathParameters['id']!),
-          ),
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, shell) => CollectorShell(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/collector',
+              builder: (_, __) => const JobListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'jobs/:id',
+                  builder: (_, state) =>
+                      JobDetailScreen(key: ValueKey(state.pathParameters['id']), jobId: state.pathParameters['id']!),
+                ),
+              ],
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/collector/profile', builder: (_, __) => const CollectorProfileScreen()),
+          ]),
         ],
       ),
       StatefulShellRoute.indexedStack(

@@ -36,6 +36,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   void _refresh() {
     ref.invalidate(_jobDetailProvider(widget.jobId));
     ref.invalidate(myActiveJobsProvider);
+    ref.invalidate(myCompletedJobsProvider);
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -125,7 +126,7 @@ class _JobBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 110), // room for the shell's bottom bar
       children: [
         GlassCard(
           child: Column(
@@ -146,10 +147,16 @@ class _JobBody extends StatelessWidget {
                   if (job.requiredCapacityKg != null) _Fact(LucideIcons.weight, '${job.requiredCapacityKg} kg'),
                   if (job.estimatedDistanceKm != null) _Fact(LucideIcons.route, '${job.estimatedDistanceKm!.toStringAsFixed(1)} km'),
                   if (job.estimatedEtaMinutes != null) _Fact(LucideIcons.clock, '~${job.estimatedEtaMinutes} min'),
+                  if (job.measuredWeightKg != null) _Fact(LucideIcons.packageCheck, 'Collected ${job.measuredWeightKg} kg'),
                 ],
               ),
               const SizedBox(height: 6),
-              Text('Status: ${jobStatusLabel(job.status)}', style: AppText.small),
+              Text(
+                job.status == JobStatus.completed
+                    ? 'Status: ${job.receivedAtWarehouse ? 'Delivered to warehouse' : 'Completed — still in your vehicle'}'
+                    : 'Status: ${jobStatusLabel(job.status)}',
+                style: AppText.small,
+              ),
             ],
           ),
         ),

@@ -26,3 +26,13 @@ final myActiveJobsProvider = StreamProvider.autoDispose<List<CollectionJob>>((re
     await Future<void>.delayed(const Duration(seconds: 30));
   }
 });
+
+/// Completed jobs, polled like [myActiveJobsProvider] so the vehicle load updates once the
+/// warehouse receives a job.
+final myCompletedJobsProvider = StreamProvider.autoDispose<List<CollectionJob>>((ref) async* {
+  final api = ref.watch(collectorApiProvider);
+  while (true) {
+    yield await api.myCompletedJobs();
+    await Future<void>.delayed(const Duration(seconds: 30));
+  }
+});
