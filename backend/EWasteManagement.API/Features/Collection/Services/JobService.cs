@@ -464,6 +464,34 @@ public class JobService : IJobService
         }
     }
 
+    // Collector bell: a job was offered to them (auto-match, re-match or staff pick). Never throws.
+    private async Task NotifyCollectorOfAssignmentAsync(Guid jobId, Guid collectorId)
+    {
+        try
+        {
+            var userId = await _db.Collectors
+                .Where(c => c.CollectorId == collectorId)
+                .Select(c => c.UserId)
+                .FirstOrDefaultAsync();
+            var address = await _db.Jobs
+                .Where(j => j.JobId == jobId)
+                .Select(j => j.PickupAddress)
+                .FirstOrDefaultAsync();
+            if (userId == default) return;
+
+            await _notifications.NotifyAsync(
+                userId,
+                "New job assigned",
+                $"Pickup at {address}. Accept or reject it from My Jobs.",
+                NotificationType.Info,
+                link: $"/collector/jobs/{jobId}");
+        }
+        catch
+        {
+            // notification is advisory — the assignment is already committed
+        }
+    }
+
     // Owner bell: a state change on their submission's pickup job. Never
     // throws, so a notification outage can't fail the job operation.
     private async Task NotifyOwnerSafeAsync(Guid submissionId, string title, string message, NotificationType type)
@@ -565,6 +593,9 @@ public class JobService : IJobService
             Reason = reason
         });
         await _db.SaveChangesAsync();
+
+        if (outcome == AssignmentOutcome.Assigned)
+            await NotifyCollectorOfAssignmentAsync(jobId, collectorId);
     }
 
     // Every write endpoint (accept/reject/complete) goes through this —

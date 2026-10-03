@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +14,8 @@ import '../../../core/utils/format.dart';
 import '../../../core/widgets/app_shell.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/glass_card.dart';
-import '../../../core/widgets/layout.dart';
+import '../../../core/widgets/greeting_header.dart';
+import '../../notifications/notification_bell.dart';
 import '../application/collector_providers.dart';
 import '../application/location_tracker.dart';
 import '../data/collector_models.dart';
@@ -40,6 +43,14 @@ class JobListScreen extends ConsumerStatefulWidget {
 class _JobListScreenState extends ConsumerState<JobListScreen> {
   LocationTracker? _tracker;
   bool _togglingAvailability = false;
+  final _completedKey = GlobalKey();
+
+  void _showCompleted() {
+    final target = _completedKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
+    }
+  }
 
   @override
   void dispose() {
@@ -89,23 +100,21 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
         final _ = await ref.refresh(myActiveJobsProvider.future);
       },
       children: [
-        PageHeader(
-          title: 'My Jobs',
-          subtitle: 'Hi ${ref.watch(authControllerProvider).user?.firstName ?? ''} · Collection',
-          icon: LucideIcons.truck,
+        // The availability switch drives matching and location tracking, so it stays one tap away.
+        GreetingHeader(
+          name: ref.watch(authControllerProvider).user?.fullName ?? '',
+          online: profile?.isAvailable,
           actions: [
-            if (profile != null)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(profile.isAvailable ? 'Online' : 'Offline', style: AppText.small),
-                  Switch(
-                    value: profile.isAvailable,
-                    onChanged: _togglingAvailability ? null : (_) => _toggleAvailability(profile),
-                    activeThumbColor: AppColors.mint600,
-                  ),
-                ],
+            if (profile != null) ...[
+              Text(profile.isAvailable ? 'Online' : 'Offline', style: AppText.small),
+              Switch(
+                value: profile.isAvailable,
+                onChanged: _togglingAvailability ? null : (_) => _toggleAvailability(profile),
+                activeThumbColor: AppColors.mint600,
               ),
+            ],
+            const SizedBox(width: 4),
+            const NotificationBell(),
           ],
         ),
         if (profile != null && !profile.isAvailable)
@@ -117,7 +126,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
             ),
           ),
         if (profile != null && completed != null) ...[
-          _CapacityCard(profile: profile, completed: completed),
+          _CapacityCard(profile: profile, completed: completed, onShowOnBoard: _showCompleted),
           const SizedBox(height: 20),
         ],
         Text('ACTIVE JOBS', style: AppText.label),
@@ -138,7 +147,7 @@ class _JobListScreenState extends ConsumerState<JobListScreen> {
           _ => const LoadingState(),
         },
         const SizedBox(height: 24),
-        Text('COMPLETED', style: AppText.label),
+        Text('COMPLETED', key: _completedKey, style: AppText.label),
         const SizedBox(height: 8),
         switch (completedAsync) {
           AsyncData(:final value) when value.isEmpty =>
@@ -206,13 +215,17 @@ class _JobCard extends StatelessWidget {
   }
 }
 
-/// Free space in the vehicle. Completed jobs stay on board until the warehouse receives them,
-/// so their measured weight counts against the capacity until then.
+/// Free space in the vehicle as a donut. Completed jobs stay on board until the warehouse receives
+/// them, so their measured weight counts against the capacity until then. Tapping the on-board
+/// slice (or its legend row — the slice can be a sliver) jumps to the completed list.
 class _CapacityCard extends StatelessWidget {
-  const _CapacityCard({required this.profile, required this.completed});
+  const _CapacityCard({required this.profile, required this.completed, required this.onShowOnBoard});
 
   final CollectorProfile profile;
   final List<CollectionJob> completed;
+  final VoidCallback onShowOnBoard;
+
+  static const _size = 132.0;
 
   @override
   Widget build(BuildContext context) {
@@ -222,11 +235,31 @@ class _CapacityCard extends StatelessWidget {
     final leftKg = (capacityKg - loadKg).clamp(0, capacityKg).toDouble();
     final usedShare = capacityKg > 0 ? (loadKg / capacityKg).clamp(0.0, 1.0) : 0.0;
     final nearlyFull = usedShare >= 0.8;
-    final barColor = nearlyFull ? AppColors.amber500 : AppColors.mint600;
+    final loadColor = nearlyFull ? AppColors.amber500 : AppColors.mint600;
+
+    final donut = SizedBox.square(
+      dimension: _size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size.square(_size),
+            painter: _DonutPainter(share: usedShare, loadColor: loadColor),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(Format.kg(leftKg), style: AppText.display(20, color: nearlyFull ? AppColors.amber900 : AppColors.ink900)),
+              const Text('free', style: AppText.small),
+            ],
+          ),
+        ],
+      ),
+    );
 
     return GlassCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
@@ -238,31 +271,157 @@ class _CapacityCard extends StatelessWidget {
               Text('${Format.kg(capacityKg)} capacity', style: AppText.small),
             ],
           ),
-          const SizedBox(height: 12),
-          Text('${Format.kg(leftKg)} free',
-              style: AppText.display(22, color: nearlyFull ? AppColors.amber900 : AppColors.ink900)),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: usedShare,
-              minHeight: 8,
-              backgroundColor: AppColors.mint100,
-              valueColor: AlwaysStoppedAnimation(barColor),
-            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Semantics(
+                label: '${Format.kg(loadKg)} on board, ${Format.kg(leftKg)} free of ${Format.kg(capacityKg)}',
+                button: onBoard.isNotEmpty,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // Only the on-board ring counts as a hit, with a generous margin around it.
+                  onTapUp: onBoard.isEmpty
+                      ? null
+                      : (d) {
+                          if (_DonutPainter.hitsLoad(d.localPosition, const Size.square(_size), usedShare)) {
+                            onShowOnBoard();
+                          }
+                        },
+                  child: donut,
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _LegendRow(
+                      color: loadColor,
+                      label: 'On board',
+                      value: Format.kg(loadKg),
+                      detail: onBoard.isEmpty
+                          ? 'Nothing waiting'
+                          : '${onBoard.length} completed job${onBoard.length == 1 ? '' : 's'}',
+                      onTap: onBoard.isEmpty ? null : onShowOnBoard,
+                    ),
+                    const SizedBox(height: 8),
+                    _LegendRow(
+                      color: AppColors.mint100,
+                      label: 'Free',
+                      value: Format.kg(leftKg),
+                      detail: '${((1 - usedShare) * 100).round()}% of capacity',
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             onBoard.isEmpty
-                ? 'Nothing on board — everything you collected has been received at the warehouse.'
-                : '${Format.kg(loadKg)} on board from ${onBoard.length} completed job${onBoard.length == 1 ? '' : 's'}. '
-                    'It frees up once the warehouse receives them.',
+                ? 'Everything you collected has been received at the warehouse.'
+                : 'On-board weight frees up once the warehouse receives it.',
             style: AppText.small,
           ),
         ],
       ),
     );
   }
+}
+
+class _LegendRow extends StatelessWidget {
+  const _LegendRow({required this.color, required this.label, required this.value, required this.detail, this.onTap});
+
+  final Color color;
+  final String label;
+  final String value;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.input),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                // The pale "free" swatch needs an outline to show up on the glass card.
+                border: color == AppColors.mint100 ? Border.all(color: AppColors.mint300) : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$label · $value', style: AppText.strong),
+                  Text(detail, style: AppText.small),
+                ],
+              ),
+            ),
+            if (onTap != null) const Icon(LucideIcons.chevronRight, size: 16, color: AppColors.ink600),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ring with the on-board share drawn from 12 o'clock, clockwise, over a light "free" track.
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter({required this.share, required this.loadColor});
+
+  final double share;
+  final Color loadColor;
+
+  static const _stroke = 18.0;
+  static const _start = -math.pi / 2;
+
+  // A non-zero load always stays visible and tappable, however small.
+  static double _sweep(double share) => share <= 0 ? 0 : math.max(share * 2 * math.pi, 0.12);
+
+  static bool hitsLoad(Offset p, Size size, double share) {
+    final center = size.center(Offset.zero);
+    final radius = (size.shortestSide - _stroke) / 2;
+    final v = p - center;
+    if ((v.distance - radius).abs() > _stroke) return false; // off the ring (with margin)
+    final sweep = _sweep(share);
+    if (sweep >= 2 * math.pi) return true;
+    var angle = math.atan2(v.dy, v.dx) - _start;
+    if (angle < 0) angle += 2 * math.pi;
+    const slack = 0.35; // ~20° either side, so a sliver is still easy to hit
+    return angle <= sweep + slack || angle >= 2 * math.pi - slack;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: (size.shortestSide - _stroke) / 2);
+    final track = Paint()
+      ..color = AppColors.mint100
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke;
+    canvas.drawArc(rect, 0, 2 * math.pi, false, track);
+
+    final sweep = _sweep(share);
+    if (sweep <= 0) return;
+    final load = Paint()
+      ..color = loadColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke
+      ..strokeCap = sweep >= 2 * math.pi ? StrokeCap.butt : StrokeCap.round;
+    canvas.drawArc(rect, _start, math.min(sweep, 2 * math.pi), false, load);
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) => old.share != share || old.loadColor != loadColor;
 }
 
 /// Jobs still in the vehicle first, then the most recent deliveries.

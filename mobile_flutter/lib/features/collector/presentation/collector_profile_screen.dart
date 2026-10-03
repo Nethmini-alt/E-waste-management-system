@@ -168,7 +168,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                     gradient: AppColors.brandGradient, borderRadius: BorderRadius.circular(AppRadius.tile)),
-                child: Text(_initials(p.fullName), style: AppText.display(20, color: Colors.white)),
+                child: Text(Format.initials(p.fullName), style: AppText.display(20, color: Colors.white)),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -290,11 +290,6 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
     );
   }
 
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
-  }
 }
 
 class _Row extends StatelessWidget {

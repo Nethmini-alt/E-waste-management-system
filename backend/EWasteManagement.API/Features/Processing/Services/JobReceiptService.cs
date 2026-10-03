@@ -1,4 +1,6 @@
 using EWasteManagement.API.Features.Collection.Entities;
+using EWasteManagement.API.Features.Notifications.Entities;
+using EWasteManagement.API.Features.Notifications.Services;
 using EWasteManagement.API.Features.Processing.DTOs;
 using EWasteManagement.API.Features.Processing.Entities;
 using EWasteManagement.API.Features.Processing.Exceptions;
@@ -13,15 +15,17 @@ public class JobReceiptService : IJobReceiptService
     private readonly IJobVerificationService _jobVerification;
     private readonly ICollectorPaymentService _paymentService;
     private readonly IItemTypeCatalogService _itemTypes;
+    private readonly INotificationService _notifications;
 
     public JobReceiptService(
         ApplicationDbContext db, IJobVerificationService jobVerification, ICollectorPaymentService paymentService,
-        IItemTypeCatalogService itemTypes)
+        IItemTypeCatalogService itemTypes, INotificationService notifications)
     {
         _db = db;
         _jobVerification = jobVerification;
         _paymentService = paymentService;
         _itemTypes = itemTypes;
+        _notifications = notifications;
     }
     
     public async Task<ReceiveJobWasteResponse> ReceiveAsync(
@@ -34,6 +38,7 @@ public class JobReceiptService : IJobReceiptService
             request.JobId, request.CollectorId, request.WarehouseLocationId, request.VerifiedWeightKg, request.ItemType,
             receivedByStaffId, deliveryId: null, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        await NotifyCollectorOfReceiptAsync(request.CollectorId, 1, received.VerifiedWeightKg, received.PaymentAmount);
 
         return new ReceiveJobWasteResponse
         {
@@ -85,6 +90,8 @@ public class JobReceiptService : IJobReceiptService
         }
 
         await transaction.CommitAsync(cancellationToken);
+        await NotifyCollectorOfReceiptAsync(
+            request.CollectorId, results.Count, results.Sum(r => r.VerifiedWeightKg), results.Sum(r => r.PaymentAmount));
 
         return new ReceiveDeliveryResponse
         {
@@ -94,6 +101,32 @@ public class JobReceiptService : IJobReceiptService
             Jobs = results,
             TotalPendingAmount = results.Sum(r => r.PaymentAmount)
         };
+    }
+
+    // Collector bell: their load is off the vehicle and a payment is pending. Never throws — the
+    // receipt is already committed.
+    private async Task NotifyCollectorOfReceiptAsync(Guid collectorId, int jobCount, decimal weightKg, decimal paymentAmount)
+    {
+        try
+        {
+            var userId = await _db.Collectors
+                .Where(c => c.CollectorId == collectorId)
+                .Select(c => c.UserId)
+                .FirstOrDefaultAsync();
+            if (userId == default) return;
+
+            await _notifications.NotifyAsync(
+                userId,
+                "Delivery received",
+                $"The warehouse received {jobCount} job{(jobCount == 1 ? "" : "s")} ({weightKg:0.##} kg). " +
+                $"Payment of Rs. {paymentAmount:N2} is pending.",
+                NotificationType.Success,
+                link: "/collector");
+        }
+        catch
+        {
+            // notification is advisory
+        }
     }
 
     private async Task EnsureLocationAndCollectorExistAsync(Guid locationId, Guid collectorId, CancellationToken cancellationToken)
