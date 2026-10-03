@@ -113,7 +113,11 @@ builder.Services.AddHttpClient<IGeoService, OpenStreetMapService>();
 // Shared image upload (Submission items today, Collection completion photos
 // later). Singleton: holds no per-request state, and constructing it once
 // creates wwwroot/uploads up front.
-builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+var storageProvider = builder.Configuration["Storage:Provider"] ?? "Local";
+if (storageProvider.Equals("Cloudinary", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddSingleton<IFileStorage, CloudinaryFileStorage>();
+else
+    builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
 // Component D — Sales services
 builder.Services.AddScoped<IBuyerService, BuyerService>();
