@@ -156,14 +156,27 @@ public class WorkflowService : IWorkflowService
             .FirstOrDefaultAsync(s => s.Id == submissionId, ct);
 
         if (submission is null) return null;
+        var items = submission.Items.OrderBy(i => i.Position).ToList();
 
         return new SubmissionSnapshotResponse
         {
             SubmissionId = submission.Id,
             SubmissionType = submission.UserType,
-            Description = string.Join(" | ", submission.Items.Select(i => i.Description).Where(d => !string.IsNullOrWhiteSpace(d))),
-            ImageUrls = submission.Items.Select(i => i.ImageUrl).Where(u => !string.IsNullOrWhiteSpace(u)).ToList(),
+            Description = string.Join(" | ", items.Select(i => i.Description).Where(d => !string.IsNullOrWhiteSpace(d))),
+            ImageUrls = items.Select(i => i.ImageUrl).Where(u => !string.IsNullOrWhiteSpace(u)).ToList(),
             PickupAddress = submission.PickupAddress,
+            Category = submission.Category,
+            EstimatedWeightKg = submission.EstimatedWeight,
+            Source = submission.Source,
+            Items = items.Select(i => new SubmissionSnapshotItem
+            {
+                ItemName = i.ItemName,
+                Description = string.IsNullOrWhiteSpace(i.Description) ? null : i.Description,
+                ImageUrl = string.IsNullOrWhiteSpace(i.ImageUrl) ? null : i.ImageUrl,
+                Quantity = i.Quantity,
+                EstimatedWeightKg = i.EstimatedWeightKg,
+                CategoryHint = i.CategoryHint,
+            }).ToList(),
         };
     }
 

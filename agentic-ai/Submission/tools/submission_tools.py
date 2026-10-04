@@ -45,6 +45,18 @@ async def submit_analysis(workflow_id: UUID, result: dict) -> dict:
         "estimatedVolumeKg": result["estimated_volume_kg"],
         "estimatedValueLkr": result["estimated_value_lkr"],
         "confidenceScore": result["confidence_score"],
+        "items": [
+            {
+                "itemName": i["item_name"],
+                "quantity": i.get("quantity", 1),
+                "wasteCategory": i["waste_category"],
+                "hazardLevel": i["hazard_level"],
+                "estimatedVolumeKg": i["estimated_volume_kg"],
+                "estimatedValueLkr": i["estimated_value_lkr"],
+                "confidenceScore": i["confidence_score"],
+            }
+            for i in result.get("items", [])
+        ],
     }
     return await _post(f"/api/agent/workflows/{workflow_id}/analyzer-result", payload)
 
