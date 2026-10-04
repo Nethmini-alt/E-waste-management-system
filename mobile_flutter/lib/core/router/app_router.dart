@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/buyer/application/buyer_providers.dart';
+import '../../features/buyer/presentation/buyer_account_screen.dart';
+import '../../features/buyer/presentation/buyer_notifications_screen.dart';
 import '../../features/buyer/presentation/buyer_registration_screen.dart';
+import '../../features/buyer/presentation/buyer_request_detail_screen.dart';
 import '../../features/buyer/presentation/buyer_requests_screen.dart';
+import '../../features/buyer/presentation/buyer_shell.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/session_screens.dart';
@@ -100,8 +104,36 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/register/buyer', builder: (_, __) => const BuyerRegistrationScreen()),
-      GoRoute(path: '/buyer', builder: (_, __) => const BuyerRequestsScreen()),
       GoRoute(path: '/unavailable', builder: (_, __) => const RoleNotAvailableScreen()),
+      // The buyer portal is a three-tab app like the warehouse and collector apps: the
+      // request portfolio, the updates feed, and the account. A request's full view
+      // nests under the portfolio tab so it keeps the bottom bar.
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, shell) => BuyerShell(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/buyer',
+              builder: (_, __) => const BuyerRequestsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'requests/:id',
+                  builder: (_, state) => BuyerRequestDetailScreen(
+                    key: ValueKey(state.pathParameters['id']),
+                    requestId: state.pathParameters['id']!,
+                  ),
+                ),
+              ],
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/buyer/updates', builder: (_, __) => const BuyerNotificationsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/buyer/account', builder: (_, __) => const BuyerAccountScreen()),
+          ]),
+        ],
+      ),
       GoRoute(path: '/submissions', builder: (_, __) => const SubmissionShell()),
       GoRoute(path: '/collector/setup-profile', builder: (_, __) => const CollectorProfileSetupScreen()),
       StatefulShellRoute.indexedStack(

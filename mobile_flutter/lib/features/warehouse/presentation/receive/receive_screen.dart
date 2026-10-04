@@ -13,7 +13,7 @@ import '../../../../core/widgets/layout.dart';
 import '../../application/warehouse_providers.dart';
 import '../../data/warehouse_models.dart';
 import '../warehouse_shell.dart';
-import '../widgets/pill_tabs.dart';
+import '../../../../core/widgets/pill_tabs.dart';
 import 'extra_waste_form.dart';
 import 'receipt_history.dart';
 import 'receive_delivery_sheet.dart';
