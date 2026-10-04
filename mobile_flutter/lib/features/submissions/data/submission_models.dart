@@ -43,21 +43,21 @@ class SubmissionAnalysis {
     required this.wasteCategory,
     required this.hazardLevel,
     required this.estimatedVolumeKg,
-    required this.estimatedValueUsd,
+    required this.estimatedValueLkr,
     required this.confidenceScore,
   });
 
   final String wasteCategory;
   final String hazardLevel;
   final double estimatedVolumeKg;
-  final double estimatedValueUsd;
+  final double estimatedValueLkr;
   final double confidenceScore;
 
   factory SubmissionAnalysis.fromJson(Map<String, dynamic> json) => SubmissionAnalysis(
         wasteCategory: json['wasteCategory'] as String? ?? '',
         hazardLevel: json['hazardLevel'] as String? ?? '',
         estimatedVolumeKg: (json['estimatedVolumeKg'] as num?)?.toDouble() ?? 0,
-        estimatedValueUsd: (json['estimatedValueUsd'] as num?)?.toDouble() ?? 0,
+        estimatedValueLkr: (json['estimatedValueLkr'] as num?)?.toDouble() ?? 0,
         confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0,
       );
 }

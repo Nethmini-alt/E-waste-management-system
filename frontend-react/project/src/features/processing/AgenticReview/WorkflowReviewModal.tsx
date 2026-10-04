@@ -4,7 +4,7 @@ import { agenticReviewApi } from './agenticReviewApi';
 import { parseAnalyzerResult, parseValidatorResult } from './parseWorkflow';
 import { WORKFLOW_STATUS_LABELS, type ApprovalEntry, type ExecutionStep, type WorkflowStatus, type WorkflowSummary } from './types';
 import { getApiErrorMessage } from '../utils/apiError';
-import { formatDateTime, formatKg, shortId } from '../utils/format';
+import { formatDateTime, formatKg, formatMoney, shortId } from '../utils/format';
 import {
   ErrorMessage,
   GlassCard,
@@ -214,7 +214,7 @@ const WorkflowReviewModal: React.FC<WorkflowReviewModalProps> = ({ workflow, can
                     <KeyValue label="Waste category">{analyzer.wasteCategory ?? '—'}</KeyValue>
                     <KeyValue label="Hazard level">{analyzer.hazardLevel ?? '—'}</KeyValue>
                     <KeyValue label="Estimated volume">{analyzer.estimatedVolumeKg !== null ? formatKg(analyzer.estimatedVolumeKg) : '—'}</KeyValue>
-                    <KeyValue label="Estimated value">{analyzer.estimatedValueUsd !== null ? `$${analyzer.estimatedValueUsd.toFixed(2)}` : '—'}</KeyValue>
+                    <KeyValue label="Estimated value">{analyzer.estimatedValueLkr !== null ? formatMoney(analyzer.estimatedValueLkr) : '—'}</KeyValue>
                     <KeyValue label="Confidence">
                       {confidencePct !== null ? (
                         <span className="inline-flex items-center gap-2">

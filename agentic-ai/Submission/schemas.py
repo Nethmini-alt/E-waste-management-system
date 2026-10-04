@@ -8,7 +8,9 @@ class ClassificationOutput(BaseModel):
     waste_category: str = Field(description="e.g. Household Electronics, Batteries, IT Equipment, Heavy Appliances")
     hazard_level: str = Field(description="Low, Medium, High, or Critical")
     estimated_volume_kg: float
-    estimated_value_usd: float
+    estimated_value_lkr: float = Field(
+        description="Estimated recovery/resale value in Sri Lankan Rupees (LKR), at local Sri Lankan e-waste and scrap prices"
+    )
     confidence_score: float = Field(description="0.0 to 1.0 — how confident the classification is")
 
 
@@ -26,7 +28,7 @@ class AnalyzerRunResponse(BaseModel):
     waste_category: str = Field(alias="wasteCategory")
     hazard_level: str = Field(alias="hazardLevel")
     estimated_volume_kg: float = Field(alias="estimatedVolumeKg")
-    estimated_value_usd: float = Field(alias="estimatedValueUsd")
+    estimated_value_lkr: float = Field(alias="estimatedValueLkr")
     confidence_score: float = Field(alias="confidenceScore")
 
     model_config = {"populate_by_name": True}

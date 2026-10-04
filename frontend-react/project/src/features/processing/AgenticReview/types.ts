@@ -73,7 +73,7 @@ export interface AnalyzerResult {
   wasteCategory: string | null;
   hazardLevel: string | null;
   estimatedVolumeKg: number | null;
-  estimatedValueUsd: number | null;
+  estimatedValueLkr: number | null;
   confidenceScore: number | null;
 }
 

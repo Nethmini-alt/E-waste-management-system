@@ -33,7 +33,7 @@ export const parseAnalyzerResult = (json: string | null): AnalyzerResult | null 
     wasteCategory: asString(pick(o, 'wasteCategory')),
     hazardLevel: asString(pick(o, 'hazardLevel')),
     estimatedVolumeKg: asNumber(pick(o, 'estimatedVolumeKg')),
-    estimatedValueUsd: asNumber(pick(o, 'estimatedValueUsd')),
+    estimatedValueLkr: asNumber(pick(o, 'estimatedValueLkr')),
     confidenceScore: asNumber(pick(o, 'confidenceScore')),
   };
 };

@@ -113,7 +113,7 @@ public class SubmissionServiceTests : IAsyncLifetime
         var pending = await SeedAsync(_alice, WorkflowStatus.PendingApproval, analysis: new AnalyzerResultRequest
         {
             WasteCategory = "Batteries", HazardLevel = "High",
-            EstimatedVolumeKg = 2.5m, EstimatedValueUsd = 40m, ConfidenceScore = 0.9,
+            EstimatedVolumeKg = 2.5m, EstimatedValueLkr = 40m, ConfidenceScore = 0.9,
         });
         var rejected = await SeedAsync(_bob, WorkflowStatus.Rejected);
         var failed = await SeedAsync(_bob, WorkflowStatus.Failed);

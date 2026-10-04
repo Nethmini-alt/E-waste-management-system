@@ -46,7 +46,7 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
         "waste_category": state["waste_category"],
         "hazard_level": state["hazard_level"],
         "estimated_volume_kg": state["estimated_volume_kg"],
-        "estimated_value_usd": state["estimated_value_usd"],
+        "estimated_value_lkr": state["estimated_value_lkr"],
         "confidence_score": state["confidence_score"],
     }
     await tools.submit_analysis(req.workflow_id, result)
@@ -61,7 +61,7 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
         wasteCategory=result["waste_category"],
         hazardLevel=result["hazard_level"],
         estimatedVolumeKg=result["estimated_volume_kg"],
-        estimatedValueUsd=result["estimated_value_usd"],
+        estimatedValueLkr=result["estimated_value_lkr"],
         confidenceScore=result["confidence_score"],
     )
 
