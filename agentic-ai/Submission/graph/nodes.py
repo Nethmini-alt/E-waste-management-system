@@ -21,7 +21,7 @@ DEFAULT_RESULT = {
     "waste_category": "Uncategorized",
     "hazard_level": "Medium",
     "estimated_volume_kg": 1.0,
-    "estimated_value_usd": 0.0,
+    "estimated_value_lkr": 0.0,
     "confidence_score": 0.0,
 }
 
@@ -59,7 +59,9 @@ async def classify_node(state: AnalyzerState) -> AnalyzerState:
 
     prompt_text = (
         "You are an expert E-Waste Management Inspector. Analyze this electronic "
-        "waste item and return a structured classification.\n\n"
+        "waste item and return a structured classification.\n"
+        "Give every money value in Sri Lankan Rupees (LKR), using local Sri Lankan e-waste and "
+        "scrap prices — never US dollars.\n\n"
         f"User description: {submission.description or '(none provided)'}"
     )
 
@@ -83,7 +85,7 @@ async def classify_node(state: AnalyzerState) -> AnalyzerState:
                 "waste_category": result.waste_category,
                 "hazard_level": result.hazard_level,
                 "estimated_volume_kg": result.estimated_volume_kg,
-                "estimated_value_usd": result.estimated_value_usd,
+                "estimated_value_lkr": result.estimated_value_lkr,
                 "confidence_score": result.confidence_score,
             }
         except Exception as exc:

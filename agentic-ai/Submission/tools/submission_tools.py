@@ -43,7 +43,7 @@ async def submit_analysis(workflow_id: UUID, result: dict) -> dict:
         "wasteCategory": result["waste_category"],
         "hazardLevel": result["hazard_level"],
         "estimatedVolumeKg": result["estimated_volume_kg"],
-        "estimatedValueUsd": result["estimated_value_usd"],
+        "estimatedValueLkr": result["estimated_value_lkr"],
         "confidenceScore": result["confidence_score"],
     }
     return await _post(f"/api/agent/workflows/{workflow_id}/analyzer-result", payload)

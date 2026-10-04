@@ -30,7 +30,7 @@ export interface SubmissionAnalysis {
   wasteCategory: string;
   hazardLevel: string;
   estimatedVolumeKg: number;
-  estimatedValueUsd: number;
+  estimatedValueLkr: number;
   confidenceScore: number;
 }
 

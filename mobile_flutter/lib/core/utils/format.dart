@@ -33,6 +33,13 @@ abstract final class Format {
     return d == null ? '—' : _date.format(d);
   }
 
+  /// "NA" from "Nayanathara Amarathunga" — for avatars.
+  static String initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    return (parts.first[0] + (parts.length > 1 ? parts.last[0] : '')).toUpperCase();
+  }
+
   /// "3fa85f64…" — enough of a GUID to recognise it without filling the screen.
   static String shortId(String? id) => id == null || id.isEmpty ? '—' : '${id.substring(0, id.length < 8 ? id.length : 8)}…';
 }

@@ -11,6 +11,7 @@ import {
   btnSecondary, inputClass,
 } from '../../components/ui';
 import type { StatusTone } from '../../components/ui/StatusPill';
+import { formatMoney } from '../processing/utils/format';
 
 const STATUS_TONE: Record<string, StatusTone> = {
   CollectorAssigned: 'success',
@@ -153,7 +154,7 @@ const AdminReviewPage: React.FC = () => {
               const imgUrl = item?.imageUrl;
               const hazard = ai?.hazardLevel;
               const category = ai?.wasteCategory;
-              const value = ai?.estimatedValueUsd;
+              const value = ai?.estimatedValueLkr;
 
               return (
                 <div key={sub.id} className="flex flex-wrap items-center gap-4 p-5">
@@ -192,7 +193,7 @@ const AdminReviewPage: React.FC = () => {
                             {hazard}
                           </span>
                         </span>
-                        <span><strong>Value:</strong> ${value}</span>
+                        <span><strong>Value:</strong> {value !== undefined ? formatMoney(value) : '—'}</span>
                       </div>
                     ) : sub.status === 'Analyzing' ? (
                       <span className="mt-2 inline-block text-xs font-medium text-amber-700">Pending AI analysis…</span>

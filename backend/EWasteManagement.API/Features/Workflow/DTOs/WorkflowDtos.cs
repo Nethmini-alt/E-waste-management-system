@@ -14,7 +14,7 @@ public class AnalyzerResultRequest
     public string WasteCategory { get; set; } = string.Empty;
     public string HazardLevel { get; set; } = string.Empty;
     public decimal EstimatedVolumeKg { get; set; }
-    public decimal EstimatedValueUsd { get; set; }
+    public decimal EstimatedValueLkr { get; set; }
     public double ConfidenceScore { get; set; }
 }
 
@@ -55,7 +55,7 @@ public class BusinessRulesResponse
 {
     public string AutoHazardCeiling { get; set; } = "Medium";
     public double MinConfidenceForAuto { get; set; } = 0.6;
-    public decimal MaxValueForAutoUsd { get; set; } = 500.0m;
+    public decimal MaxValueForAutoLkr { get; set; } = 150000.0m;
     public List<string> RequiredFields { get; set; } = new() { "wasteCategory", "hazardLevel" };
 }
 

@@ -53,7 +53,7 @@ namespace EWasteManagement.Api.Dtos
         public string WasteCategory { get; set; } = string.Empty;
         public string HazardLevel { get; set; } = string.Empty;
         public decimal EstimatedVolumeKg { get; set; }
-        public decimal EstimatedValueUsd { get; set; }
+        public decimal EstimatedValueLkr { get; set; }
         public double ConfidenceScore { get; set; }
     }
 }
