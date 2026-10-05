@@ -137,7 +137,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, state) => ReceiveScreen(
                 initialTab: switch (state.uri.queryParameters['tab']) {
                   'extra' => ReceiveTab.extra,
-                  'history' => ReceiveTab.history,
                   _ => ReceiveTab.job,
                 },
               ),

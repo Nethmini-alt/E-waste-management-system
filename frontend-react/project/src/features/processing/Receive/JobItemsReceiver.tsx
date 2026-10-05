@@ -188,8 +188,8 @@ export const JobItemsReceiver: React.FC<Props> = ({ job, entry, itemTypes, itemT
           <thead className="bg-mint-50/80 text-left font-mono text-[11px] uppercase tracking-wide text-ink-600">
             <tr>
               <th className="px-3 py-2">Item</th>
-              <th className="px-3 py-2 text-right">Expected</th>
-              <th className="w-24 px-3 py-2">Received</th>
+              <th className="w-24 px-3 py-2 text-center">Expected</th>
+              <th className="w-24 px-3 py-2 text-center">Received</th>
               <th className="w-56 px-3 py-2">Item type</th>
               <th className="w-36 px-3 py-2">Verified kg</th>
             </tr>
@@ -208,13 +208,16 @@ export const JobItemsReceiver: React.FC<Props> = ({ job, entry, itemTypes, itemT
                     {!brought && <div className="text-xs font-semibold text-amber-700">Not brought</div>}
                     {short && <div className="text-xs font-semibold text-amber-700">{item.quantity - receivedOf(e)} short</div>}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">{item.quantity}</td>
+                  {/* Padded to the input's height so the number lines up with the Received box beside it. */}
+                  <td className="px-3 py-2 text-center font-mono">
+                    <div className="py-[11px] leading-5">{item.quantity}</div>
+                  </td>
                   <td className="px-3 py-2">
                     <input
                       aria-label={`${item.itemName}: units received`}
                       type="number" min="0" max={item.quantity} step="1" value={e?.received ?? ''}
                       onChange={(ev) => setItem(item.submissionItemId, { received: ev.target.value })}
-                      className={inputClass}
+                      className={`${inputClass} text-center`}
                     />
                   </td>
                   <td className="px-3 py-2">
