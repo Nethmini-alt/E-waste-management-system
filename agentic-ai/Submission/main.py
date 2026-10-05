@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from graph.nodes import classify_node
 from graph.state import AnalyzerState
-from schemas import AnalyzerRunRequest, AnalyzerRunResponse
+from schemas import AnalyzedItem, AnalyzerRunRequest, AnalyzerRunResponse
 from tools import submission_tools as tools
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -48,6 +48,7 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
         "estimated_volume_kg": state["estimated_volume_kg"],
         "estimated_value_lkr": state["estimated_value_lkr"],
         "confidence_score": state["confidence_score"],
+        "items": state.get("items", []),
     }
     await tools.submit_analysis(req.workflow_id, result)
     await tools.log_execution(
@@ -63,6 +64,18 @@ async def run(req: AnalyzerRunRequest) -> AnalyzerRunResponse:
         estimatedVolumeKg=result["estimated_volume_kg"],
         estimatedValueLkr=result["estimated_value_lkr"],
         confidenceScore=result["confidence_score"],
+        items=[
+            AnalyzedItem(
+                itemName=i["item_name"],
+                quantity=i.get("quantity", 1),
+                wasteCategory=i["waste_category"],
+                hazardLevel=i["hazard_level"],
+                estimatedVolumeKg=i["estimated_volume_kg"],
+                estimatedValueLkr=i["estimated_value_lkr"],
+                confidenceScore=i["confidence_score"],
+            )
+            for i in result["items"]
+        ],
     )
 
 

@@ -95,7 +95,10 @@ class _ItemBody extends ConsumerWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(item.itemType, style: AppText.display(22))),
+                  Expanded(
+                    child: Text(item.quantity > 1 ? '${item.itemType} × ${item.quantity}' : item.itemType,
+                        style: AppText.display(22)),
+                  ),
                   Text(Format.kg(item.verifiedWeightKg), style: AppText.display(18, color: AppColors.mint700)),
                 ],
               ),

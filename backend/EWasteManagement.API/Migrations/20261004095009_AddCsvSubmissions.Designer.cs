@@ -3,6 +3,7 @@ using System;
 using EWasteManagement.API.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EWasteManagement.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261004095009_AddCsvSubmissions")]
+    partial class AddCsvSubmissions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -727,12 +730,6 @@ namespace EWasteManagement.API.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("parent_inventory_item_id");
 
-                    b.Property<int>("Quantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1)
-                        .HasColumnName("quantity");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -742,10 +739,6 @@ namespace EWasteManagement.API.Migrations
                     b.Property<Guid?>("SubmissionId")
                         .HasColumnType("uuid")
                         .HasColumnName("submission_id");
-
-                    b.Property<Guid?>("SubmissionItemId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("submission_item_id");
 
                     b.Property<decimal>("VerifiedWeightKg")
                         .HasColumnType("decimal(10,3)")
@@ -765,23 +758,15 @@ namespace EWasteManagement.API.Migrations
 
                     b.HasIndex("JobId")
                         .IsUnique()
-                        .HasDatabaseName("IX_inventory_items_job_id_whole_job")
-                        .HasFilter("job_id IS NOT NULL AND submission_item_id IS NULL");
+                        .HasFilter("job_id IS NOT NULL");
 
                     b.HasIndex("ParentInventoryItemId");
-
-                    b.HasIndex("JobId", "SubmissionItemId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_inventory_items_job_id_submission_item_id")
-                        .HasFilter("job_id IS NOT NULL AND submission_item_id IS NOT NULL");
 
                     b.ToTable("inventory_items", null, t =>
                         {
                             t.HasCheckConstraint("ck_inventory_items_kind", "kind IN ('unit','component','material')");
 
                             t.HasCheckConstraint("ck_inventory_items_origin_type", "origin_type IN ('jobcollection','extrawaste')");
-
-                            t.HasCheckConstraint("ck_inventory_items_quantity", "quantity >= 1");
 
                             t.HasCheckConstraint("ck_inventory_items_status", "status IN ('received','sorting','dismantling','classified','readyforsale','exportonly','onhold','recovered')");
                         });

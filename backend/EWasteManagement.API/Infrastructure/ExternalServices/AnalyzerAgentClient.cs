@@ -1,3 +1,4 @@
+using EWasteManagement.API.Features.Workflow.DTOs;
 using System.Net.Http.Json;
 
 namespace EWasteManagement.API.Infrastructure.ExternalServices;
@@ -46,4 +47,5 @@ public class AnalyzerAgentResult
     public decimal EstimatedVolumeKg { get; set; }
     public decimal EstimatedValueLkr { get; set; }
     public double ConfidenceScore { get; set; }
+    public List<AnalyzedItem> Items { get; set; } = new();
 }

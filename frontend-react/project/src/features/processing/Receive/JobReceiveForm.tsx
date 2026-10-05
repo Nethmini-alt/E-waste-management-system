@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, MapPin, RefreshCw, Search, Truck, Wallet } from 'lucide-react';
 import { receiveApi } from './receiveApi';
 import type { ReceivableJob, ReceiveDeliveryResponse } from './types';
+import { JobItemsReceiver, entryFor, jobLine, jobProblems, type JobEntry } from './JobItemsReceiver';
 import { paymentApi } from '../Payments/paymentApi';
 import { useItemTypes, useWarehouseLocations } from '../hooks/useLookups';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -29,23 +30,11 @@ interface DriverGroup {
   jobs: ReceivableJob[];
 }
 
-interface JobEntry {
-  selected: boolean;
-  weight: string;
-  itemType: string;
-}
-
-const entryFor = (job: ReceivableJob): JobEntry => ({
-  selected: false,
-  weight: job.reportedWeightKg !== null ? String(job.reportedWeightKg) : '',
-  // Pre-select the customer's category when it is on the item-type list; otherwise staff must choose.
-  itemType: job.suggestedItemType ?? '',
-});
-
 /**
  * A collector often brings several completed jobs in one visit. Choose the collector, tick the jobs
- * they brought and weigh each one. Every job still becomes its own inventory item and its own
- * payment (same formula as before); they are saved together and shown with one pending total.
+ * they brought, then for each job go through its items: how many came, what each is and what it
+ * weighs. Every item brought becomes its own inventory item (a lot for several units); each job
+ * still gets ONE payment on its total weight. Everything is saved together.
  */
 const JobReceiveForm: React.FC = () => {
   const locations = useWarehouseLocations();
@@ -179,9 +168,7 @@ const JobReceiveForm: React.FC = () => {
   if (!collectorId) problems.push('Choose the collector.');
   else if (selectedJobs.length === 0) problems.push('Tick at least one job the collector brought.');
   selectedJobs.forEach((j, i) => {
-    const e = entries[j.jobId];
-    if (!e.itemType) problems.push(`Job ${i + 1} (${shortId(j.jobId)}): choose the item type.`);
-    if (!(Number(e.weight) > 0)) problems.push(`Job ${i + 1} (${shortId(j.jobId)}): enter the verified weight.`);
+    problems.push(...jobProblems(j, entries[j.jobId], `Job ${i + 1} (${shortId(j.jobId)})`));
   });
   if (!locationId) problems.push('Choose the warehouse location.');
 
@@ -196,11 +183,7 @@ const JobReceiveForm: React.FC = () => {
         collectorId,
         warehouseLocationId: locationId,
         notes,
-        jobs: selectedJobs.map((j) => ({
-          jobId: j.jobId,
-          verifiedWeightKg: Number(entries[j.jobId].weight),
-          itemType: entries[j.jobId].itemType,
-        })),
+        jobs: selectedJobs.map((j) => jobLine(j, entries[j.jobId])),
       });
       setResult(res);
     } catch (err) {
@@ -251,36 +234,56 @@ const JobReceiveForm: React.FC = () => {
             <h3 className="font-display text-lg font-bold text-ink-900">
               {result.jobs.length} job{result.jobs.length === 1 ? '' : 's'} received from {collectorName}
             </h3>
-            <p className="text-sm text-ink-600">Each job became an inventory item and has its own payment. Together they are one delivery.</p>
+            <p className="text-sm text-ink-600">Each item brought became its own inventory item; each job has one payment on its total weight. Together they are one delivery.</p>
           </div>
         </div>
 
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[620px] border-collapse">
+          <table className="w-full min-w-[680px] border-collapse">
             <thead>
               <tr className="border-b border-mint-100">
-                <th className={`${tableHeadClass} px-4 py-2`}>Job</th>
                 <th className={`${tableHeadClass} px-4 py-2`}>Item</th>
+                <th className={`${tableHeadClass} px-4 py-2`}>Type</th>
+                <th className={`${tableHeadClass} px-4 py-2 text-right`}>Received</th>
                 <th className={`${tableHeadClass} px-4 py-2 text-right`}>Verified</th>
-                <th className={`${tableHeadClass} px-4 py-2 text-right`}>Difference</th>
                 <th className={`${tableHeadClass} px-4 py-2 text-right`}>Payment</th>
               </tr>
             </thead>
             <tbody>
               {result.jobs.map((j) => (
-                <tr key={j.jobId} className="border-b border-mint-50">
-                  <td className={`${tableCellClass} font-mono text-xs`}>{shortId(j.jobId)}</td>
-                  <td className={tableCellClass}>
-                    <Link to={`/processing/inventory/${j.inventoryItemId}`} className="font-semibold text-mint-700 hover:underline">
-                      {j.itemType}
-                    </Link>
-                  </td>
-                  <td className={`${tableCellClass} text-right font-mono`}>{formatKg(j.verifiedWeightKg)}</td>
-                  <td className={`${tableCellClass} text-right font-mono`}>
-                    {j.discrepancyKg === null ? '—' : Math.abs(j.discrepancyKg) < 0.005 ? 'None' : formatSignedKg(j.discrepancyKg)}
-                  </td>
-                  <td className={`${tableCellClass} text-right font-mono`}>{formatMoney(j.paymentAmount)}</td>
-                </tr>
+                <React.Fragment key={j.jobId}>
+                  <tr className="border-b border-mint-100 bg-mint-50/60">
+                    <td colSpan={2} className={`${tableCellClass} text-xs`}>
+                      <span className="font-mono">Job {shortId(j.jobId)}</span>
+                      <span className="ml-3 text-ink-600">
+                        {j.receivedQuantity} of {j.expectedQuantity} item{j.expectedQuantity === 1 ? '' : 's'} received
+                        {j.discrepancyKg !== null && Math.abs(j.discrepancyKg) >= 0.005 && ` · ${formatSignedKg(j.discrepancyKg)} vs reported`}
+                      </span>
+                    </td>
+                    <td />
+                    <td className={`${tableCellClass} text-right font-mono font-semibold`}>{formatKg(j.verifiedWeightKg)}</td>
+                    <td className={`${tableCellClass} text-right font-mono font-semibold`}>{formatMoney(j.paymentAmount)}</td>
+                  </tr>
+                  {j.items.map((item, i) => (
+                    <tr key={item.submissionItemId ?? i} className="border-b border-mint-50">
+                      <td className={tableCellClass}>
+                        {item.inventoryItemId ? (
+                          <Link to={`/processing/inventory/${item.inventoryItemId}`} className="font-semibold text-mint-700 hover:underline">
+                            {item.itemName}
+                          </Link>
+                        ) : (
+                          <span className="text-ink-600">{item.itemName}</span>
+                        )}
+                      </td>
+                      <td className={tableCellClass}>{item.itemType ?? <span className="text-amber-700">Not brought</span>}</td>
+                      <td className={`${tableCellClass} text-right font-mono`}>
+                        {item.receivedQuantity} / {item.expectedQuantity}
+                      </td>
+                      <td className={`${tableCellClass} text-right font-mono`}>{item.receivedQuantity > 0 ? formatKg(item.verifiedWeightKg) : '—'}</td>
+                      <td />
+                    </tr>
+                  ))}
+                </React.Fragment>
               ))}
               <tr>
                 <td colSpan={4} className={`${tableCellClass} text-right font-semibold text-ink-900`}>
@@ -432,8 +435,10 @@ const JobReceiveForm: React.FC = () => {
         <GlassCard padded={false}>
           <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-5">
             <div>
-              <h3 className="font-display text-base font-bold text-ink-900">2 · Tick the jobs they brought and weigh each one</h3>
-              <p className="text-xs text-ink-600">Each ticked job gets its own inventory item and payment.</p>
+              <h3 className="font-display text-base font-bold text-ink-900">2 · Tick the jobs they brought, then check each item</h3>
+              <p className="text-xs text-ink-600">
+                Set how many of each item came, confirm its type and weigh it. Each item becomes its own inventory item; each job gets one payment.
+              </p>
             </div>
             {collectorJobs.length > 1 && (
               <label className="flex items-center gap-2 text-sm font-semibold text-ink-800">
@@ -475,6 +480,12 @@ const JobReceiveForm: React.FC = () => {
                           <span className="whitespace-nowrap font-mono text-xs text-ink-600">{shortId(job.jobId)}</span>
                         </span>
                         <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-600">
+                          {job.items.length > 0 && (
+                            <span>
+                              {job.items.length} item{job.items.length === 1 ? '' : 's'}
+                              {job.items.some((it) => it.quantity > 1) && ` · ${job.items.reduce((n, it) => n + it.quantity, 0)} units`}
+                            </span>
+                          )}
                           {job.submissionCategory && <span>Category: {job.submissionCategory}</span>}
                           <span>Reported {job.reportedWeightKg !== null ? formatKg(job.reportedWeightKg) : 'n/a'}</span>
                           {job.estimatedDistanceKm !== null && <span>{job.estimatedDistanceKm} km</span>}
@@ -484,42 +495,13 @@ const JobReceiveForm: React.FC = () => {
                     </label>
 
                     {e.selected && (
-                      <div className="mt-3 grid gap-3 pl-7 sm:grid-cols-2">
-                        <div>
-                          <label className={labelClass} htmlFor={`jr-type-${job.jobId}`}>
-                            Item type
-                          </label>
-                          <select
-                            id={`jr-type-${job.jobId}`}
-                            value={e.itemType}
-                            onChange={(ev) => update(job.jobId, { itemType: ev.target.value })}
-                            className={inputClass}
-                            disabled={itemTypes.loading}
-                          >
-                            <option value="">{itemTypes.loading ? 'Loading…' : 'Choose what was collected…'}</option>
-                            {itemTypes.data.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={labelClass} htmlFor={`jr-weight-${job.jobId}`}>
-                            Verified weight (kg)
-                          </label>
-                          <input
-                            id={`jr-weight-${job.jobId}`}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={e.weight}
-                            onChange={(ev) => update(job.jobId, { weight: ev.target.value })}
-                            className={inputClass}
-                            placeholder="Weighed at the warehouse"
-                          />
-                        </div>
-                      </div>
+                      <JobItemsReceiver
+                        job={job}
+                        entry={e}
+                        itemTypes={itemTypes.data}
+                        itemTypesLoading={itemTypes.loading}
+                        onChange={(next) => setEntries((prev) => ({ ...prev, [job.jobId]: next }))}
+                      />
                     )}
                   </div>
                 );

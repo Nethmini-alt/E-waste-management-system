@@ -124,6 +124,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             EstimatedVolumeKg = result.EstimatedVolumeKg,
             EstimatedValueLkr = result.EstimatedValueLkr,
             ConfidenceScore = result.ConfidenceScore,
+            Items = result.Items,
         }, ct);
     }
 
