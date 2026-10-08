@@ -1,0 +1,273 @@
+{
+    "metrics": {
+        "http_req_blocked": {
+            "max": 0.978532,
+            "p(90)": 0.012581599999999998,
+            "p(95)": 0.014603299999999994,
+            "avg": 0.013319976744186043,
+            "min": 0.003186,
+            "med": 0.004919
+        },
+        "data_received": {
+            "count": 210583,
+            "rate": 6554.563642709786
+        },
+        "http_req_duration": {
+            "p(95)": 7.873937999999917,
+            "avg": 14.18968100930233,
+            "min": 1.221923,
+            "med": 3.603221,
+            "max": 238.563395,
+            "p(90)": 5.7691976
+        },
+        "http_req_receiving": {
+            "med": 0.06878,
+            "max": 0.382624,
+            "p(90)": 0.13734819999999998,
+            "p(95)": 0.1758078999999998,
+            "avg": 0.08145237674418605,
+            "min": 0.040337
+        },
+        "vus": {
+            "min": 0,
+            "max": 1,
+            "value": 1
+        },
+        "checks": {
+            "passes": 210,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_duration{type:read}": {
+            "p(90)": 5.2823064,
+            "p(95)": 5.7727018999999995,
+            "avg": 3.533550689655172,
+            "min": 1.420249,
+            "med": 3.558306,
+            "max": 6.414393,
+            "thresholds": {
+                "p(95)<500": false
+            }
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0
+        },
+        "vus_max": {
+            "value": 1,
+            "min": 1,
+            "max": 1
+        },
+        "http_req_duration{type:login}": {
+            "min": 228.532525,
+            "med": 229.888131,
+            "max": 231.263836,
+            "p(90)": 230.7768964,
+            "p(95)": 231.02036619999998,
+            "avg": 229.8528318571429,
+            "thresholds": {
+                "p(95)<1000": false
+            }
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 215,
+            "thresholds": {
+                "rate==0": false
+            },
+            "value": 0
+        },
+        "http_req_connecting": {
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.002630469767441861,
+            "min": 0,
+            "med": 0,
+            "max": 0.289849
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(95)": 7.873937999999917,
+            "avg": 14.18968100930233,
+            "min": 1.221923,
+            "med": 3.603221,
+            "max": 238.563395,
+            "p(90)": 5.7691976
+        },
+        "http_req_sending": {
+            "p(90)": 0.043484,
+            "p(95)": 0.05437089999999997,
+            "avg": 0.027774288372093035,
+            "min": 0.009959,
+            "med": 0.023325,
+            "max": 0.160744
+        },
+        "http_req_waiting": {
+            "p(90)": 5.6109202,
+            "p(95)": 7.715993799999919,
+            "avg": 14.080454344186034,
+            "min": 0.703762,
+            "med": 3.477524,
+            "max": 238.165672
+        },
+        "iterations": {
+            "count": 29,
+            "rate": 0.9026481037813299
+        },
+        "data_sent": {
+            "rate": 4356.148623052016,
+            "count": 139953
+        },
+        "group_duration": {
+            "avg": 12.168975394957982,
+            "min": 2.808657,
+            "med": 7.975098,
+            "max": 229.888182,
+            "p(90)": 9.0049754,
+            "p(95)": 9.2343931
+        },
+        "iteration_duration": {
+            "p(90)": 1074.2013491999999,
+            "p(95)": 1256.9367158,
+            "avg": 1050.8089686551725,
+            "min": 1025.299807,
+            "med": 1027.269446,
+            "max": 1257.069811
+        },
+        "http_reqs": {
+            "count": 215,
+            "rate": 6.692046286654687
+        }
+    },
+    "setup_data": {
+        "collectorToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmZWI4NDRjMS1iYzllLTQ1MzUtOGMwMC1iNjI2NWJiNDhlYzAiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLmNvbGxlY3Rvci4xNzkxNDQ2NzM4MDY5OTI0OUBld2FzdGUudGVzdCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkNvbGxlY3RvciIsImp0aSI6IjFhMzY2MWVlLTNmZGEtNDM0MS05ZDljLWNkZTU2OTYyMTlhNiIsImV4cCI6MTc5MTQ1MDMzOCwiaXNzIjoiRVdhc3RlTWFuYWdlbWVudC5BUEkiLCJhdWQiOiJFV2FzdGVNYW5hZ2VtZW50LkNsaWVudHMifQ.2tTyjW4rOD6bKDmmIr_dniBA6zaVoV7XqzXiEPvE9m8",
+        "householdEmail": "perf.household.179144673760163912@ewaste.test",
+        "householdToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5MWZhMmJlZi01YWMwLTQ2YTQtYjhkMC03ODUxOTI5MmFjYWIiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLmhvdXNlaG9sZC4xNzkxNDQ2NzM3NjAxNjM5MTJAZXdhc3RlLnRlc3QiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJIb3VzZWhvbGQiLCJqdGkiOiJhODhlY2M4OC0zNTY5LTQ1MDUtODU5Ny1iOGI0ZjZkZDAwZGIiLCJleHAiOjE3OTE0NTAzMzgsImlzcyI6IkVXYXN0ZU1hbmFnZW1lbnQuQVBJIiwiYXVkIjoiRVdhc3RlTWFuYWdlbWVudC5DbGllbnRzIn0.D1Zv42HRNbiZ6Mv2mAurLMCsTa-cVRl1gVGxBJz_o5E",
+        "staffToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZmIwZmY1Yi01NDAxLTRhYzMtODc1Ni1hMzVlOWQ1YzY1MGUiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLnN0YWZmLjE3OTE0NDY3MzczNjJAZXdhc3RlLnRlc3QiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJTdGFmZiIsImp0aSI6IjE4MGI2ZDg3LWM5OTYtNGUxZi1hZGE0LWJiMDAyM2I1ODQ0NyIsImV4cCI6MTc5MTQ1MDMzOCwiaXNzIjoiRVdhc3RlTWFuYWdlbWVudC5BUEkiLCJhdWQiOiJFV2FzdGVNYW5hZ2VtZW50LkNsaWVudHMifQ.ao1cxloQ5kBNGnFxhbZMHHcIg65Z0d8njkcpcRbPD50"
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "groups": {},
+                "checks": {
+                        "login 200": {
+                            "name": "login 200",
+                            "path": "::setup::login 200",
+                            "id": "647055af8ffe21e58084ae4b140cdda0",
+                            "passes": 4,
+                            "fails": 0
+                        }
+                    },
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a"
+            },
+            "A - household: my submissions": {
+                "name": "A - household: my submissions",
+                "path": "::A - household: my submissions",
+                "id": "4a8be171b47dc60d770d1f0ca53a8a4a",
+                "groups": {},
+                "checks": {
+                        "GET /api/v1/submissions/mine 200": {
+                            "path": "::A - household: my submissions::GET /api/v1/submissions/mine 200",
+                            "id": "b0d08297c3f9c154200278887e8b7ce6",
+                            "passes": 29,
+                            "fails": 0,
+                            "name": "GET /api/v1/submissions/mine 200"
+                        }
+                    }
+            },
+            "B - collector: my jobs": {
+                "checks": {
+                    "GET /api/v1/jobs/my 200": {
+                        "id": "5774e8ae0f9df448e420c467ca190f98",
+                        "passes": 29,
+                        "fails": 0,
+                        "name": "GET /api/v1/jobs/my 200",
+                        "path": "::B - collector: my jobs::GET /api/v1/jobs/my 200"
+                    }
+                },
+                "name": "B - collector: my jobs",
+                "path": "::B - collector: my jobs",
+                "id": "8e6eb0eb61775d4c1e217e324def6488",
+                "groups": {}
+            },
+            "C - staff: inventory": {
+                "name": "C - staff: inventory",
+                "path": "::C - staff: inventory",
+                "id": "25c6c007756153dcb56bb60562df646d",
+                "groups": {},
+                "checks": {
+                        "GET /api/v1/inventory 200": {
+                            "name": "GET /api/v1/inventory 200",
+                            "path": "::C - staff: inventory::GET /api/v1/inventory 200",
+                            "id": "60bb91358604c8f116c167970fcc7c3c",
+                            "passes": 29,
+                            "fails": 0
+                        },
+                        "GET /api/v1/inventory/recovered-materials 200": {
+                            "name": "GET /api/v1/inventory/recovered-materials 200",
+                            "path": "::C - staff: inventory::GET /api/v1/inventory/recovered-materials 200",
+                            "id": "59794fb95cb243f63efc1cb32ceca6d2",
+                            "passes": 29,
+                            "fails": 0
+                        }
+                    }
+            },
+            "D - staff: sales": {
+                "name": "D - staff: sales",
+                "path": "::D - staff: sales",
+                "id": "0dd4c7687ce20b0463b38113582ac44e",
+                "groups": {},
+                "checks": {
+                        "GET /api/recovered-materials/available 200": {
+                            "path": "::D - staff: sales::GET /api/recovered-materials/available 200",
+                            "id": "0423b8d24dee8eb378ba85a8bedcea4b",
+                            "passes": 29,
+                            "fails": 0,
+                            "name": "GET /api/recovered-materials/available 200"
+                        },
+                        "GET /api/sales-orders 200": {
+                            "name": "GET /api/sales-orders 200",
+                            "path": "::D - staff: sales::GET /api/sales-orders 200",
+                            "id": "63f80dbd301b3f3922d3194c4cd04f49",
+                            "passes": 29,
+                            "fails": 0
+                        },
+                        "GET /api/revenue/summary 200": {
+                            "name": "GET /api/revenue/summary 200",
+                            "path": "::D - staff: sales::GET /api/revenue/summary 200",
+                            "id": "73fc0ae4d2261c52a6096a8aab469baa",
+                            "passes": 29,
+                            "fails": 0
+                        }
+                    }
+            },
+            "Auth - login": {
+                "name": "Auth - login",
+                "path": "::Auth - login",
+                "id": "5cba200390c2a7b596a35abc054fa0ca",
+                "groups": {},
+                "checks": {
+                        "login 200": {
+                            "name": "login 200",
+                            "path": "::Auth - login::login 200",
+                            "id": "69a012a3a407261fed7a0f200457a9c7",
+                            "passes": 3,
+                            "fails": 0
+                        }
+                    }
+            }
+        },
+        "checks": {}
+    }
+}

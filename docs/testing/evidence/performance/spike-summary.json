@@ -1,0 +1,259 @@
+{
+    "metrics": {
+        "http_req_duration": {
+            "med": 1.8802295,
+            "max": 268.436067,
+            "p(90)": 3.1420676999999992,
+            "p(95)": 3.8614394999999986,
+            "avg": 4.188718008289967,
+            "min": 0.541666
+        },
+        "http_req_connecting": {
+            "med": 0,
+            "max": 1.256649,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0006066458800855398,
+            "min": 0
+        },
+        "http_req_tls_handshaking": {
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "avg": 4.188718008289967,
+            "min": 0.541666,
+            "med": 1.8802295,
+            "max": 268.436067,
+            "p(90)": 3.1420676999999992,
+            "p(95)": 3.8614394999999986
+        },
+        "data_received": {
+            "count": 74969096,
+            "rate": 433827.4976797258
+        },
+        "data_sent": {
+            "count": 50372509,
+            "rate": 291493.1711504093
+        },
+        "http_req_duration{type:read}": {
+            "avg": 1.9466564165205056,
+            "min": 0.541666,
+            "med": 1.869299,
+            "max": 21.550728,
+            "p(90)": 2.9866398000000003,
+            "p(95)": 3.600235899999999,
+            "thresholds": {
+                "p(95)<2000": false
+            }
+        },
+        "http_reqs": {
+            "count": 75754,
+            "rate": 438.3695417539775
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 75754,
+            "thresholds": {
+                "rate<0.05": false
+            },
+            "value": 0
+        },
+        "http_req_blocked": {
+            "avg": 0.0044691018032051175,
+            "min": 0.001292,
+            "med": 0.002936,
+            "max": 1.317374,
+            "p(90)": 0.00532,
+            "p(95)": 0.007744349999999991
+        },
+        "vus": {
+            "value": 4,
+            "min": 0,
+            "max": 150
+        },
+        "iteration_duration": {
+            "med": 1013.524375,
+            "max": 1288.971224,
+            "p(90)": 1039.9583948000004,
+            "p(95)": 1162.6615332000001,
+            "avg": 1030.8295957277162,
+            "min": 1009.961851
+        },
+        "vus_max": {
+            "value": 150,
+            "min": 150,
+            "max": 150
+        },
+        "http_req_waiting": {
+            "med": 1.8352845,
+            "max": 268.354102,
+            "p(90)": 3.0714249999999996,
+            "p(95)": 3.7831958499999963,
+            "avg": 4.13762176027669,
+            "min": 0.51188
+        },
+        "group_duration": {
+            "med": 3.7443785,
+            "max": 268.617991,
+            "p(90)": 6.501124300000002,
+            "p(95)": 8.186154300000002,
+            "avg": 7.393340593762937,
+            "min": 1.020623
+        },
+        "http_req_receiving": {
+            "avg": 0.03928833635187596,
+            "min": 0.012664,
+            "med": 0.033403,
+            "max": 3.308663,
+            "p(90)": 0.05597299999999997,
+            "p(95)": 0.06832
+        },
+        "iterations": {
+            "count": 10669,
+            "rate": 61.738847334440244
+        },
+        "checks": {
+            "passes": 75749,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_sending": {
+            "avg": 0.011807911661430378,
+            "min": 0.004138,
+            "med": 0.009598,
+            "max": 0.799904,
+            "p(90)": 0.018535,
+            "p(95)": 0.024006
+        }
+    },
+    "setup_data": {
+        "householdToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NjJiZDhhZi0yMWIyLTRlOWQtYTE3MC1mYmVhZjM0YWU4ZjgiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLmhvdXNlaG9sZC4xNzkxNDQ2NTQyMjg4MjE0OTY2QGV3YXN0ZS50ZXN0IiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiSG91c2Vob2xkIiwianRpIjoiOWNiNGQ1ZTQtMGYzNy00NmZhLWJiYzAtNTY5Y2QyNzQzZjBlIiwiZXhwIjoxNzkxNDUwMTQyLCJpc3MiOiJFV2FzdGVNYW5hZ2VtZW50LkFQSSIsImF1ZCI6IkVXYXN0ZU1hbmFnZW1lbnQuQ2xpZW50cyJ9.PPqIsW9UuNcPKpl1dJE6dgYYOX0PLuNmVf0r399akGM",
+        "staffToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2ZjRlNWU0Yy1jNTk0LTQ0MWQtODYzOS0xNmUyYjBkYzFhNDYiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLnN0YWZmLjE3OTE0NDY1NDIwNTFAZXdhc3RlLnRlc3QiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJTdGFmZiIsImp0aSI6IjRjOTRlZDUzLWJmZjItNGMzYi04Yzc0LWNlMzM0MTVkNDliNiIsImV4cCI6MTc5MTQ1MDE0MywiaXNzIjoiRVdhc3RlTWFuYWdlbWVudC5BUEkiLCJhdWQiOiJFV2FzdGVNYW5hZ2VtZW50LkNsaWVudHMifQ.pDvZ9_FbtSw7dpqpGylcs5euRAKFdJfdqRpfyQSYVz0",
+        "collectorToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWY2OWFjMy02M2Q0LTRlYWQtODkxOS01YzA4M2UwNzFhYWYiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJwZXJmLmNvbGxlY3Rvci4xNzkxNDQ2NTQyNzU2NTM1NjY5QGV3YXN0ZS50ZXN0IiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQ29sbGVjdG9yIiwianRpIjoiNDZlZDhjNjctZGRiMS00NWNjLWI2M2ItODgyNjQzNzAyYmM0IiwiZXhwIjoxNzkxNDUwMTQzLCJpc3MiOiJFV2FzdGVNYW5hZ2VtZW50LkFQSSIsImF1ZCI6IkVXYXN0ZU1hbmFnZW1lbnQuQ2xpZW50cyJ9._k3RQogw4ppFVNjnkL_zjeT8o67shTb0ffooUjqn2pg",
+        "householdEmail": "perf.household.1791446542288214966@ewaste.test"
+    },
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {
+            "setup": {
+                "name": "setup",
+                "path": "::setup",
+                "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+                "groups": {},
+                "checks": {
+                        "login 200": {
+                            "fails": 0,
+                            "name": "login 200",
+                            "path": "::setup::login 200",
+                            "id": "647055af8ffe21e58084ae4b140cdda0",
+                            "passes": 4
+                        }
+                    }
+            },
+            "A - household: my submissions": {
+                "checks": {
+                    "GET /api/v1/submissions/mine 200": {
+                        "name": "GET /api/v1/submissions/mine 200",
+                        "path": "::A - household: my submissions::GET /api/v1/submissions/mine 200",
+                        "id": "b0d08297c3f9c154200278887e8b7ce6",
+                        "passes": 10669,
+                        "fails": 0
+                    }
+                },
+                "name": "A - household: my submissions",
+                "path": "::A - household: my submissions",
+                "id": "4a8be171b47dc60d770d1f0ca53a8a4a",
+                "groups": {}
+            },
+            "B - collector: my jobs": {
+                "name": "B - collector: my jobs",
+                "path": "::B - collector: my jobs",
+                "id": "8e6eb0eb61775d4c1e217e324def6488",
+                "groups": {},
+                "checks": {
+                        "GET /api/v1/jobs/my 200": {
+                            "name": "GET /api/v1/jobs/my 200",
+                            "path": "::B - collector: my jobs::GET /api/v1/jobs/my 200",
+                            "id": "5774e8ae0f9df448e420c467ca190f98",
+                            "passes": 10669,
+                            "fails": 0
+                        }
+                    }
+            },
+            "C - staff: inventory": {
+                "name": "C - staff: inventory",
+                "path": "::C - staff: inventory",
+                "id": "25c6c007756153dcb56bb60562df646d",
+                "groups": {},
+                "checks": {
+                        "GET /api/v1/inventory 200": {
+                            "name": "GET /api/v1/inventory 200",
+                            "path": "::C - staff: inventory::GET /api/v1/inventory 200",
+                            "id": "60bb91358604c8f116c167970fcc7c3c",
+                            "passes": 10669,
+                            "fails": 0
+                        },
+                        "GET /api/v1/inventory/recovered-materials 200": {
+                            "name": "GET /api/v1/inventory/recovered-materials 200",
+                            "path": "::C - staff: inventory::GET /api/v1/inventory/recovered-materials 200",
+                            "id": "59794fb95cb243f63efc1cb32ceca6d2",
+                            "passes": 10669,
+                            "fails": 0
+                        }
+                    }
+            },
+            "D - staff: sales": {
+                "checks": {
+                    "GET /api/recovered-materials/available 200": {
+                        "name": "GET /api/recovered-materials/available 200",
+                        "path": "::D - staff: sales::GET /api/recovered-materials/available 200",
+                        "id": "0423b8d24dee8eb378ba85a8bedcea4b",
+                        "passes": 10669,
+                        "fails": 0
+                    },
+                    "GET /api/sales-orders 200": {
+                        "id": "63f80dbd301b3f3922d3194c4cd04f49",
+                        "passes": 10669,
+                        "fails": 0,
+                        "name": "GET /api/sales-orders 200",
+                        "path": "::D - staff: sales::GET /api/sales-orders 200"
+                    },
+                    "GET /api/revenue/summary 200": {
+                        "passes": 10669,
+                        "fails": 0,
+                        "name": "GET /api/revenue/summary 200",
+                        "path": "::D - staff: sales::GET /api/revenue/summary 200",
+                        "id": "73fc0ae4d2261c52a6096a8aab469baa"
+                    }
+                },
+                "name": "D - staff: sales",
+                "path": "::D - staff: sales",
+                "id": "0dd4c7687ce20b0463b38113582ac44e",
+                "groups": {}
+            },
+            "Auth - login": {
+                "checks": {
+                    "login 200": {
+                        "name": "login 200",
+                        "path": "::Auth - login::login 200",
+                        "id": "69a012a3a407261fed7a0f200457a9c7",
+                        "passes": 1062,
+                        "fails": 0
+                    }
+                },
+                "name": "Auth - login",
+                "path": "::Auth - login",
+                "id": "5cba200390c2a7b596a35abc054fa0ca",
+                "groups": {}
+            }
+        },
+        "checks": {},
+        "name": "",
+        "path": ""
+    }
+}
