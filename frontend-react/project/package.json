@@ -13,7 +13,9 @@
     "e2e:ui": "playwright test --project=ui-e2e",
     "e2e:report": "playwright show-report e2e-report",
     "reliability": "playwright test -c playwright.reliability.config.ts",
-    "reliability:report": "playwright show-report reliability-report"
+    "reliability:report": "playwright show-report reliability-report",
+    "a11y": "playwright test -c playwright.a11y.config.ts",
+    "a11y:report": "playwright show-report a11y-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -28,6 +30,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.11.10",
