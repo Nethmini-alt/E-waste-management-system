@@ -14,7 +14,7 @@
 // this file only replaces the agents so the *integration* can be tested.
 //
 // A control server lets a test choose behaviour and read back what was called:
-//   POST /__control   { analyzer: 'ok'|'fail', validator: 'approval'|'auto', matcherCollectorId }
+//   POST /__control   { analyzer: 'ok'|'fail'|'hang', validator: 'approval'|'auto', matcherCollectorId }
 //   POST /__reset     back to defaults, clears the call log
 //   GET  /__calls     every call received, in order: [{ service, path, body, at }]
 //   GET  /__health
@@ -36,7 +36,7 @@ const PORTS = {
 const PICKUP = { lat: 6.9271, lng: 79.8612 };
 
 const defaults = () => ({
-  analyzer: 'ok',          // 'fail' -> HTTP 500, to test safe failure
+  analyzer: 'ok',          // 'fail' -> HTTP 500, to test safe failure; 'hang' -> never answers (G4 reliability)
   validator: 'approval',   // 'auto' -> no human approval needed
   matcherCollectorId: null,
 });
@@ -101,6 +101,9 @@ serve('planner', (req, res, url, body) => {
 // ---- Analyzer ----
 serve('analyzer', (req, res, url, body) => {
   if (config.analyzer === 'fail') return send(res, 500, { error: 'E2E stub: analyzer down' });
+  // Hold the request open so the workflow stays in Analyzing (crash-recovery and
+  // timeout tests). The API's own HttpClient timeout or a killed API ends it.
+  if (config.analyzer === 'hang') return;
   send(res, 200, {
     workflowId: body.workflowId,
     wasteCategory: 'IT Equipment',

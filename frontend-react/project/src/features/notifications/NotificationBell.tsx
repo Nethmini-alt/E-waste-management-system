@@ -127,7 +127,7 @@ export const NotificationBell: React.FC = () => {
         <Bell size={19} />
         {unread > 0 && (
           <span
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 font-mono text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/40"
+            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 font-mono text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/40"
             aria-hidden
           >
             {badge}

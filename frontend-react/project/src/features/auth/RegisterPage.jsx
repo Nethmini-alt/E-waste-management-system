@@ -35,20 +35,20 @@ const RegisterPage = () => {
   return (
     <AuthShell title="Create Account" icon={UserPlus} wide>
       <form onSubmit={onSubmit} className="mt-4">
-        <label className="text-xs font-mono uppercase text-ink-600">Full Name</label>
-        <input value={fullName} onChange={(e) => setFullName(e.target.value)} required className={inputClass} />
+        <label htmlFor="register-name" className="text-xs font-mono uppercase text-ink-600">Full Name</label>
+        <input id="register-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className={inputClass} />
 
-        <label className="text-xs font-mono uppercase text-ink-600 block mt-4">Email</label>
-        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+        <label className="text-xs font-mono uppercase text-ink-600 block mt-4" htmlFor="register-email">Email</label>
+        <input id="register-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
 
-        <label className="text-xs font-mono uppercase text-ink-600 block mt-4">Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className={inputClass} />
+        <label className="text-xs font-mono uppercase text-ink-600 block mt-4" htmlFor="register-password">Password</label>
+        <input id="register-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className={inputClass} />
 
-        <label className="text-xs font-mono uppercase text-ink-600 block mt-4">Phone (optional)</label>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
+        <label className="text-xs font-mono uppercase text-ink-600 block mt-4" htmlFor="register-phone">Phone (optional)</label>
+        <input id="register-phone" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
 
-        <label className="text-xs font-mono uppercase text-ink-600 block mt-4">I am a…</label>
-        <select value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
+        <label className="text-xs font-mono uppercase text-ink-600 block mt-4" htmlFor="register-role">I am a…</label>
+        <select id="register-role" value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
           <option value="Household">Household</option>
           <option value="Corporate">Corporate</option>
           <option value="Collector">Collector</option>

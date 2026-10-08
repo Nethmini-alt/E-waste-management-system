@@ -106,6 +106,7 @@ const AdminReviewPage: React.FC = () => {
           <div className="relative">
             <Filter size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-600" />
             <select
+              aria-label="Filter by status"
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               className={`${inputClass} pl-9`}
@@ -126,6 +127,7 @@ const AdminReviewPage: React.FC = () => {
           </div>
 
           <select
+            aria-label="Filter by hazard level"
             value={selectedHazard}
             onChange={(e) => setSelectedHazard(e.target.value)}
             className={inputClass}

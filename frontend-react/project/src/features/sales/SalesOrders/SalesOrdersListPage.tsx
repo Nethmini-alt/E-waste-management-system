@@ -117,7 +117,7 @@ const SalesOrdersListPage: React.FC = () => {
               className={`${inputClass} pl-10`}
             />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
+          <select aria-label="Filter by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
             <option value="All">All statuses</option>
             <option value="WaitingForStock">Waiting for stock</option>
             <option value="WaitingForPrice">Waiting for price</option>
@@ -127,7 +127,7 @@ const SalesOrdersListPage: React.FC = () => {
             <option value="Completed">Completed</option>
             <option value="Cancelled">Cancelled</option>
           </select>
-          <select value={buyerFilter} onChange={(e) => setBuyerFilter(e.target.value)} className={`${inputClass} !w-auto`}>
+          <select aria-label="Filter by buyer" value={buyerFilter} onChange={(e) => setBuyerFilter(e.target.value)} className={`${inputClass} !w-auto`}>
             <option value="">All buyers</option>
             {buyers.map((b) => (
               <option key={b.buyerId} value={b.buyerId}>{b.companyName}</option>

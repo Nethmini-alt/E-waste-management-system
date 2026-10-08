@@ -41,8 +41,9 @@ const LoginPage = () => {
           </div>
         )}
 
-        <label className="text-xs font-mono uppercase text-ink-600">Email</label>
+        <label htmlFor="login-email" className="text-xs font-mono uppercase text-ink-600">Email</label>
         <input
+          id="login-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -51,8 +52,9 @@ const LoginPage = () => {
           className={inputClass}
         />
 
-        <label className="text-xs font-mono uppercase text-ink-600 block mt-4">Password</label>
+        <label htmlFor="login-password" className="text-xs font-mono uppercase text-ink-600 block mt-4">Password</label>
         <input
+          id="login-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

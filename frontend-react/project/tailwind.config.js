@@ -11,7 +11,8 @@ export default {
           300: '#6ee7b7',
           400: '#34d399',
           500: '#10b981',
-          600: '#059669',
+          // Darkened from #059669 (3.76:1 with white text) to meet WCAG AA 4.5:1 — DEF-A11Y-01
+          600: '#047f5a',
           700: '#047857',
           800: '#065f46',
           900: '#064e3b',
