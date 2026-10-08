@@ -1,0 +1,11 @@
+
+ RUN  v3.2.7 C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project
+
+ ✓ src/features/processing/__tests__/receivingRules.test.ts (15 tests) 16ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  17:30:09
+   Duration  5.42s (transform 439ms, setup 1.20s, collect 629ms, tests 16ms, environment 2.11s, prepare 281ms)
+
+JUNIT report written to C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project/test-results/vitest-junit.xml

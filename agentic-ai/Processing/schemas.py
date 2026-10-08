@@ -22,6 +22,9 @@ class BusinessRules(BaseModel):
     min_confidence_for_auto: float = Field(alias="minConfidenceForAuto", default=0.6)
     max_value_for_auto_lkr: float = Field(alias="maxValueForAutoLkr", default=150000.0)
     required_fields: list[str] = Field(alias="requiredFields", default_factory=lambda: ["wasteCategory", "hazardLevel"])
+    # False when the backend could not be reached and the defaults above are only placeholders.
+    # The validator then refuses to auto-approve (DEF-C-01). Never sent or received over HTTP.
+    loaded_from_backend: bool = Field(default=True, exclude=True)
 
     model_config = {"populate_by_name": True}
 
