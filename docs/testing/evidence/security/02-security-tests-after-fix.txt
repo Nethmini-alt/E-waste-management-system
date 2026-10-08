@@ -1,0 +1,13 @@
+
+Running 8 tests using 1 worker
+
+  ok 1 [setup] › e2e\setup\environment.setup.ts:13:1 › G0: API, database, stubs and reference data are ready (3.2s)
+  ok 2 [security] › e2e\specs\security.sec.spec.ts:50:1 › TC-SEC-001: forged, tampered and missing tokens are rejected (401) (14.6s)
+  ok 3 [security] › e2e\specs\security.sec.spec.ts:113:1 › TC-SEC-002: role × endpoint access matrix (allowed → 200, everyone else → 403) (6.1s)
+  ok 4 [security] › e2e\specs\security.sec.spec.ts:139:1 › TC-SEC-003: users cannot read or act on other users' records (IDOR) (11.0s)
+  ok 5 [security] › e2e\specs\security.sec.spec.ts:172:1 › TC-SEC-004: agent (machine-to-machine) endpoints refuse calls without the agent key (5.0s)
+  ok 6 [security] › e2e\specs\security.sec.spec.ts:200:1 › TC-SEC-005: injection-style and oversized input is handled safely (5.9s)
+  ok 7 [security] › e2e\specs\security.sec.spec.ts:245:1 › TC-SEC-006: login is protected against password guessing (brute force) (7.3s)
+  ok 8 [security] › e2e\specs\security.sec.spec.ts:265:1 › TC-SEC-011: security headers are sent on every API response, including errors (3.6s)
+
+  8 passed (1.1m)

@@ -1,0 +1,1 @@
+Passed!  - Failed:     0, Passed:   618, Skipped:     0, Total:   618, Duration: 28 s - EWasteManagement.Tests.dll (net8.0)

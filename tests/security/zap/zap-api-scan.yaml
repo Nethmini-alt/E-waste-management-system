@@ -1,0 +1,62 @@
+# TC-SEC-007 — OWASP ZAP API scan of the E-Waste Management API.
+# ZAP imports every endpoint from the Swagger (OpenAPI) definition, sends all requests with an
+# admin bearer token (so protected endpoints are really exercised), then runs the passive and
+# active scan rules. Run it with run-zap.ps1 — it fills in ZAP_AUTH_TOKEN and ZAP_REPORT_DIR.
+#
+# Only ever point this at the isolated test API (port 5180): the active scan sends attack requests.
+
+env:
+  contexts:
+    - name: ewaste-api
+      urls:
+        - http://localhost:5180
+      includePaths:
+        - "http://localhost:5180.*"
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: replacer
+    parameters:
+      deleteAllRules: false
+    rules:
+      - description: Admin bearer token on every request
+        matchType: req_header
+        matchString: Authorization
+        matchRegex: false
+        replacementString: "Bearer ${ZAP_AUTH_TOKEN}"
+
+  - type: openapi
+    parameters:
+      apiUrl: http://localhost:5180/swagger/v1/swagger.json
+      targetUrl: http://localhost:5180
+      context: ewaste-api
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: ewaste-api
+      maxRuleDurationInMins: 2
+      maxScanDurationInMins: 15
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: ${ZAP_REPORT_DIR}
+      reportFile: 07-zap-api-scan-report
+      reportTitle: "OWASP ZAP API scan - E-Waste Management API (TC-SEC-007)"
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: ${ZAP_REPORT_DIR}
+      reportFile: 07-zap-api-scan-report

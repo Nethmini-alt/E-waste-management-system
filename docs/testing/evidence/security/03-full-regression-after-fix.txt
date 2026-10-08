@@ -1,0 +1,49 @@
+﻿
+Running 15 tests using 1 worker
+
+(node:78020) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [setup] › e2e\setup\environment.setup.ts:13:1 › G0: API, database, stubs and reference data are ready (2.7s)
+(node:85316) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  2 [api-e2e] › e2e\specs\full-workflow.api.spec.ts:19:1 › TC-E2E-001: submission → collection → warehouse processing → sale → revenue (8.0s)
+  ok  3 [api-e2e] › e2e\specs\workflow-rules.api.spec.ts:18:1 › TC-E2E-002: Analyzer agent down → workflow fails safely, no job, customer sees Failed (3.5s)
+  ok  4 [api-e2e] › e2e\specs\workflow-rules.api.spec.ts:41:1 › TC-E2E-003: reviewer rejects → workflow Rejected, Matcher never runs, no job (2.7s)
+  ok  5 [api-e2e] › e2e\specs\workflow-rules.api.spec.ts:57:1 › TC-E2E-004: Validator approves automatically → job assigned with no human step (2.8s)
+  ok  6 [api-e2e] › e2e\specs\workflow-rules.api.spec.ts:69:1 › TC-E2E-005: business rules hold across component boundaries (6.6s)
+  ok  7 [api-e2e] › e2e\specs\workflow-rules.api.spec.ts:160:1 › TC-E2E-006: each role is limited to its own part of the workflow (3.1s)
+(node:105736) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  8 [security] › e2e\specs\security.sec.spec.ts:50:1 › TC-SEC-001: forged, tampered and missing tokens are rejected (401) (3.5s)
+  ok  9 [security] › e2e\specs\security.sec.spec.ts:113:1 › TC-SEC-002: role × endpoint access matrix (allowed → 200, everyone else → 403) (3.5s)
+  ok 10 [security] › e2e\specs\security.sec.spec.ts:139:1 › TC-SEC-003: users cannot read or act on other users' records (IDOR) (6.2s)
+  ok 11 [security] › e2e\specs\security.sec.spec.ts:172:1 › TC-SEC-004: agent (machine-to-machine) endpoints refuse calls without the agent key (2.6s)
+  ok 12 [security] › e2e\specs\security.sec.spec.ts:200:1 › TC-SEC-005: injection-style and oversized input is handled safely (2.7s)
+  ok 13 [security] › e2e\specs\security.sec.spec.ts:245:1 › TC-SEC-006: login is protected against password guessing (brute force) (4.3s)
+  ok 14 [security] › e2e\specs\security.sec.spec.ts:265:1 › TC-SEC-011: security headers are sent on every API response, including errors (2.9s)
+(node:69432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  15 [ui-e2e] › e2e\specs\full-workflow.ui.spec.ts:32:1 › TC-E2E-007: household submits in the web app → … → staff see the sold Copper in the web app (2.1m)
+
+
+  1) [ui-e2e] › e2e\specs\full-workflow.ui.spec.ts:32:1 › TC-E2E-007: household submits in the web app → … → staff see the sold Copper in the web app 
+
+    Test timeout of 120000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    e2e-results\artifacts\specs-full-workflow.ui-TC--78356--sold-Copper-in-the-web-app-ui-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: e2e-results\artifacts\specs-full-workflow.ui-TC--78356--sold-Copper-in-the-web-app-ui-e2e\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    e2e-results\artifacts\specs-full-workflow.ui-TC--78356--sold-Copper-in-the-web-app-ui-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace e2e-results\artifacts\specs-full-workflow.ui-TC--78356--sold-Copper-in-the-web-app-ui-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [ui-e2e] › e2e\specs\full-workflow.ui.spec.ts:32:1 › TC-E2E-007: household submits in the web app → … → staff see the sold Copper in the web app 
+  14 passed (4.3m)

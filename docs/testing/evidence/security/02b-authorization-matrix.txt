@@ -1,0 +1,18 @@
+TC-SEC-002 authorization matrix (HTTP status returned per role) — 2026-10-08T10:01Z
+Expected: 200 for the allowed roles, 403 for every other role
+
+GET /api/v1/submissions  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/v1/submissions/mine  Admin:403  Staff:403  Worker:403  Household:200  Collector:403
+GET /api/workflows  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/v1/jobs/my  Admin:403  Staff:403  Worker:403  Household:403  Collector:200
+GET /api/v1/collectors  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/v1/inventory  Admin:200  Staff:200  Worker:200  Household:403  Collector:403
+GET /api/v1/inventory/job-collection/receivable  Admin:200  Staff:200  Worker:200  Household:403  Collector:403
+GET /api/v1/payments  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/material-pricing  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/sales-orders  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/export-orders  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/revenue  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/buyers  Admin:200  Staff:200  Worker:403  Household:403  Collector:403
+GET /api/v1/admin/staff  Admin:200  Staff:403  Worker:403  Household:403  Collector:403
+GET /api/v1/admin/admins  Admin:200  Staff:403  Worker:403  Household:403  Collector:403

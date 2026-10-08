@@ -15,11 +15,13 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _db;
     private readonly IJwtService _jwtService;
+    private readonly ILoginAttemptTracker _attempts;
 
-    public AuthService(ApplicationDbContext db, IJwtService jwtService)
+    public AuthService(ApplicationDbContext db, IJwtService jwtService, ILoginAttemptTracker attempts)
     {
         _db = db;
         _jwtService = jwtService;
+        _attempts = attempts;
     }
 
     // Staff and Admin accounts are created by an admin only (see StaffService), never self-registered.
@@ -51,14 +53,22 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
+        // Checked before the password, so a locked account costs no BCrypt work either.
+        if (_attempts.IsLockedOut(request.Email))
+            throw new UnauthorizedAccessException("Too many failed sign-in attempts. Try again in 15 minutes.");
+
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        {
+            _attempts.RecordFailure(request.Email);
             throw new UnauthorizedAccessException("Invalid email or password.");
+        }
 
         if (!user.IsActive)
             throw new UnauthorizedAccessException("This account has been deactivated.");
 
+        _attempts.RecordSuccess(request.Email);
         return BuildResponse(user);
     }
 
