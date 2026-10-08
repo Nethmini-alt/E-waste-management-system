@@ -1,0 +1,10 @@
+00:00 +0: loading /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/mobile_flutter/test/collector/collector_app_test.dart
+00:00 +0: TC-FL-B-001: active jobs are listed with a collector-friendly status
+00:00 +1: TC-FL-B-002: no active jobs shows the empty state
+00:00 +2: TC-FL-B-003: a failed job request shows an error with a retry, not a crash
+00:00 +3: TC-FL-B-004: an offline collector is told they will not be matched
+00:01 +4: TC-FL-B-005: the availability switch asks the API to go online
+00:01 +5: TC-FL-B-006: a job cannot be completed without a photo
+00:01 +6: TC-FL-B-007: active jobs = Assigned + Accepted + InProgress, newest first
+00:01 +7: TC-FL-B-008: every backend job status maps to a known label
+00:01 +8: All tests passed!
