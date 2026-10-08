@@ -132,7 +132,10 @@ jobs:
           cache-dependency-path: agentic-ai/${{ matrix.agent }}/requirements.txt
 
       - name: Install
-        run: pip install -r requirements.txt pytest
+        run: |
+          pip install -r requirements.txt pytest
+          if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+
 
       - name: pytest
         run: |

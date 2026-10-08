@@ -1,0 +1,39 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/agentic-ai/Collection/venv/bin/python
+rootdir: /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/agentic-ai/Collection
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1, respx-0.23.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 21 items
+
+tests/test_decide_node.py::test_TC_AI_B_001_clear_best_routine_job_is_auto_assigned PASSED [  4%]
+tests/test_decide_node.py::test_TC_AI_B_002_no_candidates_fails_safely_to_staff_review PASSED [  9%]
+tests/test_decide_node.py::test_TC_AI_B_003_single_candidate_is_not_ambiguous PASSED [ 14%]
+tests/test_decide_node.py::test_TC_AI_B_004_near_tie_is_ambiguous_and_left_for_staff PASSED [ 19%]
+tests/test_decide_node.py::test_TC_AI_B_005_value_threshold_boundary PASSED [ 23%]
+tests/test_decide_node.py::test_TC_AI_B_006_escalated_workflow_is_never_auto_assigned PASSED [ 28%]
+tests/test_decide_node.py::test_TC_AI_B_007_unresolved_distance_is_not_auto_assigned PASSED [ 33%]
+tests/test_decide_node.py::test_TC_AI_B_008_backend_order_is_authoritative PASSED [ 38%]
+tests/test_decide_node.py::test_TC_AI_B_009_same_input_gives_same_decision PASSED [ 42%]
+tests/test_run_endpoint.py::test_TC_AI_B_010_response_matches_the_output_schema PASSED [ 47%]
+tests/test_run_endpoint.py::test_TC_AI_B_011_decision_is_submitted_and_logged PASSED [ 52%]
+tests/test_run_endpoint.py::test_TC_AI_B_012_missing_or_malformed_workflow_id_is_rejected PASSED [ 57%]
+tests/test_run_endpoint.py::test_TC_AI_B_013_impossible_values_are_rejected PASSED [ 61%]
+tests/test_run_endpoint.py::test_TC_AI_B_014_excluded_collector_is_never_recommended PASSED [ 66%]
+tests/test_run_endpoint.py::test_TC_AI_B_015_collector_without_enough_capacity_is_never_recommended PASSED [ 71%]
+tests/test_run_endpoint.py::test_TC_AI_B_016_no_eligible_candidate_left_goes_to_staff PASSED [ 76%]
+tests/test_run_endpoint.py::test_TC_AI_B_017_injected_text_and_extra_fields_cannot_force_auto_assign PASSED [ 80%]
+tests/test_run_endpoint.py::test_TC_AI_B_018_backend_lookup_failure_is_logged_and_reported PASSED [ 85%]
+tests/test_tools.py::test_TC_AI_B_019_candidate_lookup_sends_agent_key_and_contract PASSED [ 90%]
+tests/test_tools.py::test_TC_AI_B_020_rejected_agent_key_raises_instead_of_returning_no_candidates PASSED [ 95%]
+tests/test_tools.py::test_TC_AI_B_021_execution_logging_never_breaks_the_run PASSED [100%]
+
+=============================== warnings summary ===============================
+venv/lib64/python3.14/site-packages/fastapi/testclient.py:1
+  /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/agentic-ai/Collection/venv/lib64/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+- generated xml file: /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/docs/testing/evidence/component-B/pytest-after.xml -
+======================== 21 passed, 1 warning in 0.07s =========================

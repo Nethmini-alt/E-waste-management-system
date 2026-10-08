@@ -1,12 +1,15 @@
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Planning) [4 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Analyzing) [3 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Finished_workflow_is_not_requeued(status: Failed) [409 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Finished_workflow_is_not_requeued(status: Completed) [6 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Finished_workflow_is_not_requeued(status: Rejected) [3 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Planning) [5 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Analyzing) [4 ms]
   Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Finalizing) [4 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Matching) [3 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Validating) [5 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Pending_approval_workflow_is_not_requeued [5 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Matching) [5 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.In_progress_workflow_is_requeued(status: Validating) [6 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Pending_approval_workflow_is_not_requeued [6 ms]
   Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Exactly_the_five_in_progress_workflows_are_requeued_once_each_oldest_first [12 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.A_database_failure_does_not_stop_api_startup [9 ms]
-  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Nothing_is_requeued_when_recovery_is_disabled [3 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.A_database_failure_does_not_stop_api_startup [10 ms]
+  Passed EWasteManagement.Tests.Workflow.WorkflowStartupRecoveryTests.Nothing_is_requeued_when_recovery_is_disabled [4 ms]
 Total tests: 12
      Passed: 12
- Total time: 2.8921 Seconds
+ Total time: 3.0775 Seconds

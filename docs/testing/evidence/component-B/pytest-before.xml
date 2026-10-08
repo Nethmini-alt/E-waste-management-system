@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="21" time="0.138" timestamp="2026-10-08T16:24:08.779426+05:30" hostname="fedora"><testcase classname="tests.test_decide_node" name="test_TC_AI_B_001_clear_best_routine_job_is_auto_assigned" time="0.001" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_002_no_candidates_fails_safely_to_staff_review" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_003_single_candidate_is_not_ambiguous" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_004_near_tie_is_ambiguous_and_left_for_staff" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_005_value_threshold_boundary" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_006_escalated_workflow_is_never_auto_assigned" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_007_unresolved_distance_is_not_auto_assigned" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_008_backend_order_is_authoritative" time="0.000" /><testcase classname="tests.test_decide_node" name="test_TC_AI_B_009_same_input_gives_same_decision" time="0.000" /><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_010_response_matches_the_output_schema" time="0.004" /><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_011_decision_is_submitted_and_logged" time="0.002" /><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_012_missing_or_malformed_workflow_id_is_rejected" time="0.003" /><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_013_impossible_values_are_rejected" time="0.002"><failure message="AssertionError: assert 200 == 422&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code&#10; +    where &lt;Response [200 OK]&gt; = post('/run', json={'workflowId': 'ab45e429-04ca-4a43-aff3-e826e9ab10f3', 'pickupLatitude': 6.9271, 'pickupLongitude': 79.8612, 'estimatedWeightKg': -5, ...})&#10; +      where post = &lt;starlette.testclient.TestClient object at 0x7fcd2aafe780&gt;.post&#10; +      and   {'workflowId': 'ab45e429-04ca-4a43-aff3-e826e9ab10f3', 'pickupLatitude': 6.9271, 'pickupLongitude': 79.8612, 'estimatedWeightKg': -5, ...} = &lt;function run_request at 0x7fcd2aae0300&gt;(estimatedWeightKg=-5)">client = &lt;starlette.testclient.TestClient object at 0x7fcd2aafe780&gt;
+backend = &lt;conftest.FakeBackend object at 0x7fcd2aafdcd0&gt;
+body = &lt;function run_request at 0x7fcd2aae0300&gt;
+collector = &lt;function make_collector at 0x7fcd2afedf30&gt;
+
+    def test_TC_AI_B_013_impossible_values_are_rejected(client, backend, body, collector):
+        # DEF-B-02: negative weight/value and impossible coordinates must not reach the decision.
+        backend.candidates = [collector()]
+    
+&gt;       assert client.post("/run", json=body(estimatedWeightKg=-5)).status_code == 422
+E       AssertionError: assert 200 == 422
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+E        +    where &lt;Response [200 OK]&gt; = post('/run', json={'workflowId': 'ab45e429-04ca-4a43-aff3-e826e9ab10f3', 'pickupLatitude': 6.9271, 'pickupLongitude': 79.8612, 'estimatedWeightKg': -5, ...})
+E        +      where post = &lt;starlette.testclient.TestClient object at 0x7fcd2aafe780&gt;.post
+E        +      and   {'workflowId': 'ab45e429-04ca-4a43-aff3-e826e9ab10f3', 'pickupLatitude': 6.9271, 'pickupLongitude': 79.8612, 'estimatedWeightKg': -5, ...} = &lt;function run_request at 0x7fcd2aae0300&gt;(estimatedWeightKg=-5)
+
+tests/test_run_endpoint.py:56: AssertionError</failure></testcase><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_014_excluded_collector_is_never_recommended" time="0.003"><failure message="AssertionError: assert 'c04e1059-738...-31e2b64c12d9' == '115b307a-420...-2264c23b00ea'&#10;  &#10;  - 115b307a-4203-4bca-93ea-2264c23b00ea&#10;  + c04e1059-7384-400f-af09-31e2b64c12d9">client = &lt;starlette.testclient.TestClient object at 0x7fcd2aafefd0&gt;
+backend = &lt;conftest.FakeBackend object at 0x7fcd2aafe520&gt;
+body = &lt;function run_request at 0x7fcd2aae0300&gt;
+collector = &lt;function make_collector at 0x7fcd2afedf30&gt;
+
+    def test_TC_AI_B_014_excluded_collector_is_never_recommended(client, backend, body, collector):
+        # DEF-B-01: a collector who already rejected this job is in excludeCollectorIds.
+        # Even if the candidate list still contains them, the Matcher must not pick them.
+        rejected = collector(distance_km=0.5, rating=5.0)
+        fallback = collector(distance_km=6.0, rating=4.0)
+        backend.candidates = [rejected, fallback]
+    
+        res = client.post("/run", json=body(excludeCollectorIds=[str(rejected.collector_id)]))
+    
+        assert res.status_code == 200
+&gt;       assert res.json()["recommendedCollectorId"] == str(fallback.collector_id)
+E       AssertionError: assert 'c04e1059-738...-31e2b64c12d9' == '115b307a-420...-2264c23b00ea'
+E         
+E         - 115b307a-4203-4bca-93ea-2264c23b00ea
+E         + c04e1059-7384-400f-af09-31e2b64c12d9
+
+tests/test_run_endpoint.py:75: AssertionError</failure></testcase><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_015_collector_without_enough_capacity_is_never_recommended" time="0.002"><failure message="AssertionError: assert '4ee1239b-64f...-e94d9357e541' == 'dc18fddc-9a4...-7910d83019cd'&#10;  &#10;  - dc18fddc-9a4c-4f51-bac5-7910d83019cd&#10;  + 4ee1239b-64fa-4d27-8884-e94d9357e541">client = &lt;starlette.testclient.TestClient object at 0x7fcd2a931010&gt;
+backend = &lt;conftest.FakeBackend object at 0x7fcd2a931130&gt;
+body = &lt;function run_request at 0x7fcd2aae0300&gt;
+collector = &lt;function make_collector at 0x7fcd2afedf30&gt;
+
+    def test_TC_AI_B_015_collector_without_enough_capacity_is_never_recommended(client, backend, body, collector):
+        # DEF-B-01: a 50 kg bike cannot take a 120 kg pickup, whatever the ranking says.
+        bike = collector(distance_km=0.5, rating=5.0, capacity_kg=50, vehicle="Bike")
+        lorry = collector(distance_km=5.0, rating=4.0, capacity_kg=1000)
+        backend.candidates = [bike, lorry]
+    
+        res = client.post("/run", json=body(estimatedWeightKg=120))
+    
+&gt;       assert res.json()["recommendedCollectorId"] == str(lorry.collector_id)
+E       AssertionError: assert '4ee1239b-64f...-e94d9357e541' == 'dc18fddc-9a4...-7910d83019cd'
+E         
+E         - dc18fddc-9a4c-4f51-bac5-7910d83019cd
+E         + 4ee1239b-64fa-4d27-8884-e94d9357e541
+
+tests/test_run_endpoint.py:86: AssertionError</failure></testcase><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_016_no_eligible_candidate_left_goes_to_staff" time="0.002"><failure message="AssertionError: assert '9d36f479-34a5-4025-8f46-6cb0aee7a83f' is None">client = &lt;starlette.testclient.TestClient object at 0x7fcd2a98c380&gt;
+backend = &lt;conftest.FakeBackend object at 0x7fcd2a98d040&gt;
+body = &lt;function run_request at 0x7fcd2aae0300&gt;
+collector = &lt;function make_collector at 0x7fcd2afedf30&gt;
+
+    def test_TC_AI_B_016_no_eligible_candidate_left_goes_to_staff(client, backend, body, collector):
+        only = collector()
+        backend.candidates = [only]
+    
+        res = client.post("/run", json=body(excludeCollectorIds=[str(only.collector_id)]))
+    
+        assert res.status_code == 200
+&gt;       assert res.json()["recommendedCollectorId"] is None
+E       AssertionError: assert '9d36f479-34a5-4025-8f46-6cb0aee7a83f' is None
+
+tests/test_run_endpoint.py:96: AssertionError</failure></testcase><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_017_injected_text_and_extra_fields_cannot_force_auto_assign" time="0.002" /><testcase classname="tests.test_run_endpoint" name="test_TC_AI_B_018_backend_lookup_failure_is_logged_and_reported" time="0.002"><failure message="assert 500 == 502&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">client = &lt;starlette.testclient.TestClient object at 0x7fcd2a98e250&gt;
+backend = &lt;conftest.FakeBackend object at 0x7fcd2a9d3150&gt;
+body = &lt;function run_request at 0x7fcd2aae0300&gt;
+
+    def test_TC_AI_B_018_backend_lookup_failure_is_logged_and_reported(client, backend, body):
+        # DEF-B-03: if the candidate lookup fails (backend down / 401), the run must fail
+        # cleanly AND record the failure in the execution log, like a decision failure does.
+        backend.lookup_error = httpx.ConnectError("backend unreachable")
+    
+        res = client.post("/run", json=body())
+    
+&gt;       assert res.status_code == 502
+E       assert 500 == 502
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+tests/test_run_endpoint.py:123: AssertionError</failure></testcase><testcase classname="tests.test_tools" name="test_TC_AI_B_019_candidate_lookup_sends_agent_key_and_contract" time="0.010" /><testcase classname="tests.test_tools" name="test_TC_AI_B_020_rejected_agent_key_raises_instead_of_returning_no_candidates" time="0.006" /><testcase classname="tests.test_tools" name="test_TC_AI_B_021_execution_logging_never_breaks_the_run" time="0.006" /></testsuite></testsuites>
