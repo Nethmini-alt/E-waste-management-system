@@ -1,0 +1,32 @@
+
+ RUN  v3.2.7 C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project
+      Coverage enabled with v8
+
+ ✓ src/features/processing/__tests__/apiError.test.ts (8 tests) 14ms
+ ✓ src/features/processing/__tests__/processingEnums.test.ts (15 tests) 23ms
+ ✓ src/features/processing/__tests__/format.test.ts (6 tests) 44ms
+ ✓ src/features/processing/__tests__/requests.test.ts (6 tests) 184ms
+ ✓ src/features/processing/__tests__/receivingRules.test.ts (15 tests) 18ms
+ ✓ src/features/processing/__tests__/screens.test.tsx (18 tests) 1749ms
+   ✓ TC-C-R04 / R06 receive job deliveries > shows the error and recovers on "Try again" when the API fails  344ms
+ ✓ src/features/processing/__tests__/DismantleModal.test.tsx (6 tests) 3023ms
+   ✓ TC-C-R10 dismantle modal > shows the item and warns that the first step moves it to Dismantling  358ms
+   ✓ TC-C-R10 dismantle modal > blocks outputs heavier than the item (12 kg from an 11.5 kg laptop)  769ms
+   ✓ TC-C-R10 dismantle modal > a valid step previews the new weight and sends the material  890ms
+   ✓ TC-C-R10 dismantle modal > warns that a known hazardous material will be put on hold  311ms
+   ✓ TC-C-R10 dismantle modal > shows the server message when the API refuses the step  481ms
+
+ Test Files  7 passed (7)
+      Tests  74 passed (74)
+   Start at  17:31:55
+   Duration  10.00s (transform 994ms, setup 9.30s, collect 2.84s, tests 5.05s, environment 19.01s, prepare 1.98s)
+
+JUNIT report written to C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project/test-results/vitest-junit.xml
+ % Coverage report from v8
+
+=============================== Coverage summary ===============================
+Statements   : 29.42% ( 1627/5529 )
+Branches     : 76.77% ( 400/521 )
+Functions    : 54.6% ( 89/163 )
+Lines        : 29.42% ( 1627/5529 )
+================================================================================

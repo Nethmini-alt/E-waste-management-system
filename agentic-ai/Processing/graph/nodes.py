@@ -21,6 +21,12 @@ def validate_node(state: ValidatorState) -> ValidatorState:
     rules = state["rules"]
     reasons: list[str] = []
 
+    # --- Rules availability (DEF-C-01) ---
+    # Without the backend's current thresholds there is nothing trustworthy to
+    # auto-approve against, so a person must review the submission.
+    if not rules.loaded_from_backend:
+        reasons.append("Business rules could not be loaded from the backend, so this submission needs human review.")
+
     # --- Completeness check ---
     if not analyzer.waste_category or analyzer.waste_category == "Uncategorized":
         reasons.append("Classification is incomplete or uncategorized.")

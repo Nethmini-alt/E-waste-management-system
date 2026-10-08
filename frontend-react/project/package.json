@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "e2e:api": "playwright test --project=api-e2e",
     "e2e:ui": "playwright test --project=ui-e2e",
@@ -17,7 +19,6 @@
     "a11y": "playwright test -c playwright.a11y.config.ts",
     "a11y:report": "playwright show-report a11y-report",
     "e2e:security": "playwright test --project=security"
-    
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -34,17 +35,25 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/three": "^0.160.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.2.7",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
+    "msw": "^2.15.0",
     "pg": "^8.13.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vitest": "^3.2.7"
   }
 }

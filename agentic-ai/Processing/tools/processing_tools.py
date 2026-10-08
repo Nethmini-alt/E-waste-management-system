@@ -34,10 +34,10 @@ async def get_business_rules() -> BusinessRules:
         data = await _get("/api/agent/business-rules")
         return BusinessRules(**data)
     except Exception:
-        # Safe failure: if the backend can't tell us the current thresholds,
-        # fall back to the strictest built-in defaults rather than guessing —
-        # never silently approve on missing information.
-        return BusinessRules()
+        # Safe failure: if the backend can't tell us the current thresholds, the
+        # defaults are only placeholders. Mark them as such so the validator sends
+        # the submission to a human — never silently approve on missing information.
+        return BusinessRules(loaded_from_backend=False)
 
 
 # ---------- Tool 2: submitValidation ----------

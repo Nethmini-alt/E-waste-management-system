@@ -1,0 +1,22 @@
+00:00 +0: loading C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart
+00:00 +0: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_api_test.dart: TC-C-F02 warehouse API requests status change sends the status as its backend number and blank notes as null
+00:00 +1: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: (setUpAll)
+00:00 +2: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: (setUpAll)
+00:00 +3: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: (setUpAll)
+00:00 +3: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_api_test.dart: TC-C-F02 warehouse API requests extra-waste receipt trims item types and only rejected lines keep a reason
+00:00 +4: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: TC-C-F10 only worker staff get the warehouse app a worker lands on the warehouse after signing in
+00:00 +5: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_api_test.dart: TC-C-F02 warehouse API requests a dismantle step trims names and sends components and materials
+00:00 +6: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: TC-C-F10 only worker staff get the warehouse app management staff and admins are sent to the web portal, never the warehouse
+00:00 +7: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_api_test.dart: TC-C-F02 warehouse API requests a 409 from the server becomes a readable message for the worker
+00:00 +8: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_api_test.dart: TC-C-F02 warehouse API requests a 409 from the server becomes a readable message for the worker
+00:00 +9: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: TC-C-F09 warehouse navigation the bottom bar switches between Home, Receive, Inventory and Scan
+00:00 +10: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_access_navigation_test.dart: TC-C-F09 warehouse navigation the bottom bar switches between Home, Receive, Inventory and Scan
+00:01 +11: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F03 receive screen lists the collectors who have completed jobs waiting
+00:02 +12: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F03 receive screen says when there is nothing to receive
+00:02 +13: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F03 receive screen shows the error and loads again on "Try again"
+00:02 +14: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F06 inventory list shows items, and the kind filter asks the API for materials only
+00:03 +15: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F06 inventory list says when there is no inventory yet
+00:03 +16: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F08 material stock lists each material and totals the weight
+00:03 +17: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: TC-C-F08 material stock says when there are no materials in stock
+00:03 +18: C:/Users/manod/Videos/SEF_Test/E-waste-management-system/mobile_flutter/test/warehouse/warehouse_screens_test.dart: (tearDownAll)
+00:03 +18: All tests passed!

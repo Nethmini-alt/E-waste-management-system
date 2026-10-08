@@ -1,0 +1,64 @@
+
+ RUN  v3.2.7 C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project
+
+ ❯ src/features/processing/__tests__/receivingRules.test.ts (15 tests | 2 failed) 28ms
+   ✓ TC-C-R05 receiving rules > pre-fills from the job: full quantity, suggested type, and the reported weight for a one-item job 3ms
+   ✓ TC-C-R05 receiving rules > a correctly filled job has no problems and sends one line per item 1ms
+   ✓ TC-C-R05 receiving rules > received quantity "0" is refused 1ms
+   × TC-C-R05 receiving rules > received quantity "" is refused 10ms
+     → expected [ Array(1) ] to include 'Job 1 · Old laptop: received must be …'
+   ✓ TC-C-R05 receiving rules > received quantity "-1" is refused 0ms
+   ✓ TC-C-R05 receiving rules > received quantity "2" is refused 0ms
+   ✓ TC-C-R05 receiving rules > received quantity "0.5" is refused 0ms
+   ✓ TC-C-R05 receiving rules > verified weight "0" is refused for a received item 0ms
+   ✓ TC-C-R05 receiving rules > verified weight "-2" is refused for a received item 0ms
+   ✓ TC-C-R05 receiving rules > verified weight "" is refused for a received item 0ms
+   ✓ TC-C-R05 receiving rules > verified weight "abc" is refused for a received item 0ms
+   ✓ TC-C-R05 receiving rules > a received item must have an item type 0ms
+   × TC-C-R05 receiving rules > DEF-C-02: a blank quantity on one item of a delivery is refused, not silently treated as "not brought" 4ms
+     → expected [] to deeply equal [ Array(1) ]
+   ✓ TC-C-R05 receiving rules > an item not brought (0) needs no type or weight, and is sent as received 0 0ms
+   ✓ TC-C-R05 receiving rules > a job without submission items is received as a whole: type and weight > 0 required 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/processing/__tests__/receivingRules.test.ts > TC-C-R05 receiving rules > received quantity "" is refused
+AssertionError: expected [ Array(1) ] to include 'Job 1 · Old laptop: received must be …'
+ ❯ src/features/processing/__tests__/receivingRules.test.ts:57:44
+     55|     const j = job();
+     56|     const entry: JobEntry = { ...entryFor(j), items: { 'item-1': { rec…
+     57|     expect(jobProblems(j, entry, 'Job 1')).toContain(problem);
+       |                                            ^
+     58|   });
+     59| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/processing/__tests__/receivingRules.test.ts > TC-C-R05 receiving rules > DEF-C-02: a blank quantity on one item of a delivery is refused, not silently treated as "not brought"
+AssertionError: expected [] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+- [
+-   "Job 1 · Phones: received must be a whole number from 0 to 2.",
+- ]
++ []
+
+ ❯ src/features/processing/__tests__/receivingRules.test.ts:78:44
+     76|       items: { a: { received: '3', itemType: 'Laptop', weight: '6' }, …
+     77|     };
+     78|     expect(jobProblems(j, entry, 'Job 1')).toEqual(['Job 1 · Phones: r…
+       |                                            ^
+     79|   });
+     80| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 13 passed (15)
+   Start at  17:29:51
+   Duration  5.33s (transform 493ms, setup 1.12s, collect 686ms, tests 28ms, environment 1.97s, prepare 327ms)
+
+JUNIT report written to C:/Users/manod/Videos/SEF_Test/E-waste-management-system/frontend-react/project/test-results/vitest-junit.xml

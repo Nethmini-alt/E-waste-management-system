@@ -61,8 +61,11 @@ export function jobProblems(job: ReceivableJob, entry: JobEntry, label: string):
   let anyReceived = false;
   job.items.forEach((item) => {
     const e = entry.items[item.submissionItemId];
-    const n = Number(e?.received);
-    if (!Number.isInteger(n) || n < 0 || n > item.quantity) {
+    // A cleared box must be refused, not read as Number('') === 0 ("not brought") — that would
+    // silently leave the item out of inventory and out of the collector's payment (DEF-C-02).
+    const raw = (e?.received ?? '').trim();
+    const n = Number(raw);
+    if (raw === '' || !Number.isInteger(n) || n < 0 || n > item.quantity) {
       problems.push(`${label} · ${item.itemName}: received must be a whole number from 0 to ${item.quantity}.`);
       return;
     }
