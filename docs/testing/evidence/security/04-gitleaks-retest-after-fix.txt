@@ -1,0 +1,4 @@
+gitleaks dir scan of the repository content (committed files + G3 redaction), 2026-10-08T09:34Z
+3:04PM INF scanned ~6129692 bytes (6.13 MB) in 3.43s
+3:04PM INF no leaks found
+exit code: 0

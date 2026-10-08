@@ -32,6 +32,8 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /setup\/.*\.setup\.ts/ },
     { name: 'api-e2e', testMatch: /.*\.api\.spec\.ts/, dependencies: ['setup'] },
+    // G3 — automated security tests (e2e/specs/security.sec.spec.ts)
+    { name: 'security', testMatch: /.*\.sec\.spec\.ts/, dependencies: ['setup'] },
     {
       name: 'ui-e2e',
       testMatch: /.*\.ui\.spec\.ts/,

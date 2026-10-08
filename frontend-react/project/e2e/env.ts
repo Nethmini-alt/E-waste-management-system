@@ -30,6 +30,9 @@ export const E2E = {
     fullName: 'E2E Admin',
   },
 
+  // Agent key the test API is started with (scripts/start-api.mjs) — for agent-endpoint security tests.
+  agentKey: process.env.E2E_AGENT_KEY ?? 'e2e-test-agent-key',
+
   // Material the workflow dismantles out and sells. Setup makes sure an
   // Approved, live price exists for it.
   material: 'Copper',

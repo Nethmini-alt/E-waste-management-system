@@ -330,7 +330,7 @@ Full steps, expected and actual results are in **Appendix A**.
 ### 6.1 Performance and load testing (G2 — Nethmini) ⏳
 ### 6.2 Security testing (G3 — Dinuri) ⏳
 Security observations already noted during G1, to be assessed in G3:
-- OBS-SEC-01 — JWT signing key and agent API key are stored in `appsettings.json` in the repository.
+- OBS-SEC-01 — The JWT signing key is committed in `appsettings.json` and hard-coded as a fallback in `Program.cs`. Anyone with repository access could sign valid tokens for any role.
 - OBS-SEC-02 — CORS policy allows any origin (`AllowAnyOrigin`).
 - OBS-SEC-03 — For unhandled errors (HTTP 500), `GlobalExceptionHandler` returns the raw exception message in `detail`.
 ### 6.3 Additional non-functional testing and justification (G4) ⏳

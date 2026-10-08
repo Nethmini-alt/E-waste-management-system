@@ -43,7 +43,9 @@ public class StaffAndAuthTests : IAsyncLifetime
         public IAsyncEnumerable<Guid> DequeueAllAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 
-    private AuthService Auth() => new(_db, new FakeJwtService());
+    private readonly LoginAttemptTracker _attempts = new();
+
+    private AuthService Auth() => new(_db, new FakeJwtService(), _attempts);
 
     // ---------------------------------------------------------------- registration and roles
 
