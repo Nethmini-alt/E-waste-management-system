@@ -31,13 +31,27 @@ async def health():
 async def run(req: MatcherRunRequest) -> MatcherRunResponse:
     started = time.time()
 
-    ranked = await tools.get_ranked_candidates(
-        pickup_latitude=req.pickup_latitude,
-        pickup_longitude=req.pickup_longitude,
-        required_capacity_kg=req.estimated_weight_kg,
-        exclude_collector_ids=req.exclude_collector_ids,
-        max_results=3,
-    )
+    try:
+        ranked = await tools.get_ranked_candidates(
+            pickup_latitude=req.pickup_latitude,
+            pickup_longitude=req.pickup_longitude,
+            required_capacity_kg=req.estimated_weight_kg,
+            exclude_collector_ids=req.exclude_collector_ids,
+            max_results=3,
+        )
+    except Exception as exc:
+        # Log the failure like a decision failure, and report it as a bad gateway (DEF-B-03).
+        message = f"Collector candidate lookup failed: {exc}"
+        await tools.log_execution(req.workflow_id, 4, req.model_dump(mode="json"), None, False, message)
+        log.exception("Matcher candidate lookup failed")
+        raise HTTPException(status_code=502, detail=message) from exc
+
+    # Enforce the business rules here too, rather than trusting the candidate list:
+    # never recommend a collector who was excluded (e.g. already rejected this job)
+    # or whose vehicle cannot carry the load (DEF-B-01).
+    excluded = set(req.exclude_collector_ids)
+    ranked = [c for c in ranked
+              if c.collector_id not in excluded and c.capacity_kg >= req.estimated_weight_kg]
 
     state: MatcherState = {
         "workflow_id": str(req.workflow_id),

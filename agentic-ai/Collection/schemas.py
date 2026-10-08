@@ -23,10 +23,11 @@ class CollectorMatch(BaseModel):
 
 class MatcherRunRequest(BaseModel):
     workflow_id: UUID = Field(alias="workflowId")
-    pickup_latitude: float = Field(alias="pickupLatitude")
-    pickup_longitude: float = Field(alias="pickupLongitude")
-    estimated_weight_kg: float = Field(alias="estimatedWeightKg")
-    estimated_value_lkr: float = Field(alias="estimatedValueLkr", default=0.0)
+    # Range checks reject impossible input with 422 before any decision is made (DEF-B-02).
+    pickup_latitude: float = Field(alias="pickupLatitude", ge=-90, le=90)
+    pickup_longitude: float = Field(alias="pickupLongitude", ge=-180, le=180)
+    estimated_weight_kg: float = Field(alias="estimatedWeightKg", ge=0)
+    estimated_value_lkr: float = Field(alias="estimatedValueLkr", default=0.0, ge=0)
     already_escalated: bool = Field(
         alias="alreadyEscalated", default=False,
         description="True if Validator already flagged this workflow for human review — "
