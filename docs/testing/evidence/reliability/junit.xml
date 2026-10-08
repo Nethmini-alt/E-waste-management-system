@@ -1,0 +1,50 @@
+<testsuites id="" name="" tests="4" failures="0" skipped="0" errors="0" time="114.769584">
+<testsuite name="recovery.reliability.spec.ts" timestamp="2026-10-08T09:29:55.907Z" hostname="" tests="4" failures="0" skipped="0" time="103.847" errors="0">
+<testcase name="TC-REL-001: API crashes while an agent call is in flight → workflow resumes after restart, no step repeated" classname="recovery.reliability.spec.ts" time="8.898">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/recovery.reliability-TC-RE-ffc8f-er-restart-no-step-repeated/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="TC-REL-002: API crashes while a workflow waits for human approval → still waiting after restart, approval works" classname="recovery.reliability.spec.ts" time="13.753">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/recovery.reliability-TC-RE-a3b5f-fter-restart-approval-works/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="TC-REL-003: API crashes after the job was created → nothing re-runs, no duplicate job, collector carries on" classname="recovery.reliability.spec.ts" time="15.511">
+<properties>
+<property name="serial" value="">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/recovery.reliability-TC-RE-78c65-te-job-collector-carries-on/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="TC-REL-004: an agent hangs (no crash) → request times out and the workflow fails safely" classname="recovery.reliability.spec.ts" time="65.685">
+<properties>
+<property name="serial" value="">
+</property>
+<property name="time to fail" value="61 s">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|artifacts/recovery.reliability-TC-RE-b42d6-d-the-workflow-fails-safely/trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,0 +1,52 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 e2e/reliability/recovery.reliability.spec.ts:60:1 › TC-REL-001: API crashes while an agent call is in flight → workflow resumes after restart, no step repeated (1.1m)
+
+
+  1) e2e/reliability/recovery.reliability.spec.ts:60:1 › TC-REL-001: API crashes while an agent call is in flight → workflow resumes after restart, no step repeated › startup recovery re-queues it and the chain carries on 
+
+    Error: workflow 78ca7b2a-945b-4f4d-b6c2-23bf8da8dacf to reach PendingApproval
+
+    workflow 78ca7b2a-945b-4f4d-b6c2-23bf8da8dacf to reach PendingApproval
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "PendingApproval"
+    Received: "Analyzing"
+
+    Call Log:
+    - Timeout 60000ms exceeded while waiting on the predicate
+
+       at ../steps/a-submission.ts:48
+
+      46 |       return workflow.status;
+      47 |     }, { message: `workflow ${workflowId} to reach ${status}`, timeout: timeoutMs, intervals: [250, 500, 1000] })
+    > 48 |     .toBe(status);
+         |      ^
+      49 |   return workflow;
+      50 | }
+      51 |
+        at waitForWorkflowStatus (/home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/e2e/steps/a-submission.ts:48:6)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/e2e/reliability/recovery.reliability.spec.ts:74:11)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/node_modules/playwright/lib/common/index.js:2404:36)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/node_modules/playwright/lib/common/index.js:2402:25)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/e2e/reliability/recovery.reliability.spec.ts:73:3)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/node_modules/playwright/lib/worker/workerProcessEntry.js:1655:9)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/node_modules/playwright/lib/worker/workerProcessEntry.js:1135:11)
+        at /home/nethmini/Documents/year 3/sef/E-waste management system (y3s1 project)/E-waste-management-system/frontend-react/project/node_modules/playwright/lib/worker/workerProcessEntry.js:1653:7)
+
+    Error Context: reliability-results/artifacts/recovery.reliability-TC-RE-ffc8f-er-restart-no-step-repeated/error-context.md
+
+    Error Context: reliability-results/artifacts/recovery.reliability-TC-RE-ffc8f-er-restart-no-step-repeated/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    reliability-results/artifacts/recovery.reliability-TC-RE-ffc8f-er-restart-no-step-repeated/trace.zip
+    Usage:
+
+        npx playwright show-trace reliability-results/artifacts/recovery.reliability-TC-RE-ffc8f-er-restart-no-step-repeated/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    e2e/reliability/recovery.reliability.spec.ts:60:1 › TC-REL-001: API crashes while an agent call is in flight → workflow resumes after restart, no step repeated 

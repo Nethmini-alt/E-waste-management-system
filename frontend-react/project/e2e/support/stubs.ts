@@ -2,7 +2,7 @@ import { request } from '@playwright/test';
 import { E2E } from '../env';
 
 export interface StubConfig {
-  analyzer?: 'ok' | 'fail';
+  analyzer?: 'ok' | 'fail' | 'hang';
   validator?: 'approval' | 'auto';
   matcherCollectorId?: string | null;
 }

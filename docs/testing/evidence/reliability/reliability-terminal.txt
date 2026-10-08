@@ -1,0 +1,9 @@
+
+Running 4 tests using 1 worker
+
+  ✓  1 e2e/reliability/recovery.reliability.spec.ts:60:1 › TC-REL-001: API crashes while an agent call is in flight → workflow resumes after restart, no step repeated (8.9s)
+  ✓  2 e2e/reliability/recovery.reliability.spec.ts:91:1 › TC-REL-002: API crashes while a workflow waits for human approval → still waiting after restart, approval works (13.8s)
+  ✓  3 e2e/reliability/recovery.reliability.spec.ts:119:1 › TC-REL-003: API crashes after the job was created → nothing re-runs, no duplicate job, collector carries on (15.5s)
+  ✓  4 e2e/reliability/recovery.reliability.spec.ts:142:1 › TC-REL-004: an agent hangs (no crash) → request times out and the workflow fails safely (1.1m)
+
+  4 passed (1.9m)

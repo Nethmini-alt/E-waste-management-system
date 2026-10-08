@@ -5,4 +5,6 @@ blob-report/
 playwright/.cache/
 e2e-report/
 e2e-results/
+reliability-report/
+reliability-results/
 e2e/.api-build/
