@@ -238,8 +238,9 @@ const SubmitPage: React.FC = () => {
               {tab === 'items' ? (
                 <>
                   <div>
-                    <label className={labelClass}>Category</label>
+                    <label htmlFor="submit-category" className={labelClass}>Category</label>
                     <select
+                      id="submit-category"
                       className={inputClass}
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
@@ -253,8 +254,9 @@ const SubmitPage: React.FC = () => {
                     <FieldError message={fieldErrors?.category} />
                   </div>
                   <div>
-                    <label className={labelClass}>Estimated weight (kg)</label>
+                    <label htmlFor="submit-weight" className={labelClass}>Estimated weight (kg)</label>
                     <input
+                      id="submit-weight"
                       type="number"
                       min="0.1"
                       step="0.1"
@@ -365,8 +367,9 @@ const SubmitPage: React.FC = () => {
           ) : (
             <>
               <div>
-                <label className={labelClass}>Category</label>
+                <label htmlFor="submit-category" className={labelClass}>Category</label>
                 <select
+                  id="submit-category"
                   className={inputClass}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -380,8 +383,9 @@ const SubmitPage: React.FC = () => {
                 <FieldError message={fieldErrors?.category} />
               </div>
               <div>
-                <label className={labelClass}>Estimated weight (kg)</label>
+                <label htmlFor="submit-weight" className={labelClass}>Estimated weight (kg)</label>
                 <input
+                  id="submit-weight"
                   type="number"
                   min="0.1"
                   step="0.1"

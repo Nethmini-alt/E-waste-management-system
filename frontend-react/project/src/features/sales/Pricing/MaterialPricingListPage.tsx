@@ -171,7 +171,7 @@ const MaterialPricingListPage: React.FC = () => {
               className={`${inputClass} pl-10`}
             />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
+          <select aria-label="Filter by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
             <option value="All">All statuses</option>
             <option value="Draft">Draft</option>
             <option value="Approved">Approved</option>

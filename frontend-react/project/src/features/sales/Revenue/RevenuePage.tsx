@@ -130,7 +130,7 @@ const RevenuePage: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5">
                 <Filter size={14} className="text-ink-600" />
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
+                <select aria-label="Filter by type" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as any)} className={`${inputClass} !w-auto`}>
                   <option value="All">All types</option>
                   <option value="LocalSale">Local sale</option>
                   <option value="Export">Export</option>
