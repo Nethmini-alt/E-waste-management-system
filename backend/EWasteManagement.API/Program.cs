@@ -86,6 +86,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Services Registration
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Singleton: failed sign-in counts must survive across requests (DEF-SEC-01 brute-force lockout).
+builder.Services.AddSingleton<ILoginAttemptTracker, LoginAttemptTracker>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IAdminAccountService, AdminAccountService>();
@@ -207,6 +209,21 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<EWasteManagement.API.Infrastructure.Persistence.ApplicationDbContext>()
         .Database.Migrate();
 }
+
+// DEF-SEC-04 (found by the OWASP ZAP API scan): basic security headers on every response.
+// Added in OnStarting, so error responses rewritten by the exception handlers keep them too.
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        return Task.CompletedTask;
+    });
+    await next();
+});
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseExceptionHandler();

@@ -1,0 +1,84 @@
+﻿
+=== ZAP: zap-api-scan.yaml ===
+
+C:\Users\manod\AppData\Local\Temp\claude\c--Users-manod-Videos-SEF-Test\540450f7-205b-42e8-8161-72482e8c7681\scratchpad\zapdist\ZAP_2.17.0>if exist "C:\Users\manod\ZAP\.ZAP_JVM.properties" (set /p jvmopts= 0<"C:\Users\manod\ZAP\.ZAP_JVM.properties" )  else (set jvmopts=-Xmx512m ) 
+
+C:\Users\manod\AppData\Local\Temp\claude\c--Users-manod-Videos-SEF-Test\540450f7-205b-42e8-8161-72482e8c7681\scratchpad\zapdist\ZAP_2.17.0>java -Xmx512m -jar zap-2.17.0.jar -cmd -dir C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642 -port 8095 -autorun C:\Users\manod\Videos\SEF_Test\E-waste-management-system\tests\security\zap\zap-api-scan.yaml 
+491 [main] INFO  org.parosproxy.paros.Constant - Copying default configuration to C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642\config.xml
+603 [main] INFO  org.parosproxy.paros.Constant - Creating directory C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642\session
+604 [main] INFO  org.parosproxy.paros.Constant - Creating directory C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642\dirbuster
+604 [main] INFO  org.parosproxy.paros.Constant - Creating directory C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642\fuzzers
+604 [main] INFO  org.parosproxy.paros.Constant - Creating directory C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642\plugin
+No check for updates for over 3 month - add-ons may well be out of date
+Job replacer set deleteAllRules = false
+Job replacer set description = Admin bearer token on every request
+Job replacer set matchType = req_header
+Job replacer set matchString = Authorization
+Job replacer set matchRegex = false
+Job replacer set replacementString = Bearer ${ZAP_AUTH_TOKEN}
+Job openapi set apiUrl = http://localhost:5180/swagger/v1/swagger.json
+Job openapi set targetUrl = http://localhost:5180
+Job openapi set context = ewaste-api
+Job passiveScan-wait set maxDuration = 5
+Job activeScan set context = ewaste-api
+Job activeScan set maxRuleDurationInMins = 2
+Job activeScan set maxScanDurationInMins = 15
+Job passiveScan-wait set maxDuration = 5
+Job report set template = traditional-html
+Job report set reportDir = ${ZAP_REPORT_DIR}
+Job report set reportFile = 07-zap-api-scan-report
+Job report set reportTitle = OWASP ZAP API scan - E-Waste Management API (TC-SEC-007)
+Job report set template = traditional-json
+Job report set reportDir = ${ZAP_REPORT_DIR}
+Job report set reportFile = 07-zap-api-scan-report
+Job replacer set deleteAllRules = false
+Job replacer started
+Job replacer finished, time taken: 00:00:00
+Job openapi started
+Job openapi added 134 URLs
+Job openapi finished, time taken: 00:00:01
+Job passiveScan-wait started
+Job passiveScan-wait finished, time taken: 00:00:57
+Job activeScan started
+Job activeScan finished, time taken: 00:03:52
+Job passiveScan-wait started
+Job passiveScan-wait finished, time taken: 00:00:00
+Job report started
+Job report generated report C:\Users\manod\Videos\SEF_Test\E-waste-management-system\docs\testing\evidence\security\07-zap-api-scan-report.html
+Job report finished, time taken: 00:00:01
+Job report started
+Job report generated report C:\Users\manod\Videos\SEF_Test\E-waste-management-system\docs\testing\evidence\security\07-zap-api-scan-report.json
+Job report finished, time taken: 00:00:00
+Automation plan succeeded!
+
+=== ZAP: zap-web-baseline.yaml ===
+
+C:\Users\manod\AppData\Local\Temp\claude\c--Users-manod-Videos-SEF-Test\540450f7-205b-42e8-8161-72482e8c7681\scratchpad\zapdist\ZAP_2.17.0>if exist "C:\Users\manod\ZAP\.ZAP_JVM.properties" (set /p jvmopts= 0<"C:\Users\manod\ZAP\.ZAP_JVM.properties" )  else (set jvmopts=-Xmx512m ) 
+
+C:\Users\manod\AppData\Local\Temp\claude\c--Users-manod-Videos-SEF-Test\540450f7-205b-42e8-8161-72482e8c7681\scratchpad\zapdist\ZAP_2.17.0>java -Xmx512m -jar zap-2.17.0.jar -cmd -dir C:\Users\manod\AppData\Local\Temp\zap-ewaste-20261008155642 -port 8095 -autorun C:\Users\manod\Videos\SEF_Test\E-waste-management-system\tests\security\zap\zap-web-baseline.yaml 
+No check for updates for over 3 month - add-ons may well be out of date
+Job spider set context = ewaste-web
+Job spider set maxDuration = 2
+Job passiveScan-wait set maxDuration = 5
+Job report set template = traditional-html
+Job report set reportDir = ${ZAP_REPORT_DIR}
+Job report set reportFile = 08-zap-web-baseline-report
+Job report set reportTitle = OWASP ZAP baseline scan - E-Waste web app (TC-SEC-008)
+Job report set template = traditional-json
+Job report set reportDir = ${ZAP_REPORT_DIR}
+Job report set reportFile = 08-zap-web-baseline-report
+Job spider started
+Job spider requesting URL http://localhost:5175
+Job spider found 20 URLs
+Job spider finished, time taken: 00:00:04
+Job passiveScan-wait started
+Job passiveScan-wait finished, time taken: 00:01:30
+Job report started
+Job report generated report C:\Users\manod\Videos\SEF_Test\E-waste-management-system\docs\testing\evidence\security\08-zap-web-baseline-report.html
+Job report finished, time taken: 00:00:03
+Job report started
+Job report generated report C:\Users\manod\Videos\SEF_Test\E-waste-management-system\docs\testing\evidence\security\08-zap-web-baseline-report.json
+Job report finished, time taken: 00:00:00
+Automation plan succeeded!
+
+Reports written to C:\Users\manod\Videos\SEF_Test\E-waste-management-system\docs\testing\evidence\security

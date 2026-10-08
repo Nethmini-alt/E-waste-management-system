@@ -54,6 +54,9 @@ const env = {
   ASPNETCORE_URLS: apiUrl,
   ConnectionStrings__DefaultConnection:
     `Host=${db.host};Port=${db.port};Database=${db.name};Username=${db.user};Password=${db.password}`,
+  // A fixed agent key, so agent-only endpoints behave the same on every machine and in CI
+  // (the committed appsettings.json has an empty key, and local copies differ).
+  Agent__ApiKey: process.env.E2E_AGENT_KEY ?? 'e2e-test-agent-key',
   Agent__BaseUrl: stub('E2E_STUB_SALES_PORT', 18001),
   Agent__PlannerBaseUrl: stub('E2E_STUB_PLANNER_PORT', 18002),
   Agent__AnalyzerBaseUrl: stub('E2E_STUB_ANALYZER_PORT', 18003),

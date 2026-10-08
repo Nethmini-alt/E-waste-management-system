@@ -15,7 +15,9 @@
     "reliability": "playwright test -c playwright.reliability.config.ts",
     "reliability:report": "playwright show-report reliability-report",
     "a11y": "playwright test -c playwright.a11y.config.ts",
-    "a11y:report": "playwright show-report a11y-report"
+    "a11y:report": "playwright show-report a11y-report",
+    "e2e:security": "playwright test --project=security"
+    
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

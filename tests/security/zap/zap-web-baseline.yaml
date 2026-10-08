@@ -1,0 +1,39 @@
+# TC-SEC-008 — OWASP ZAP baseline (passive) scan of the React web app.
+# Crawls the production build served by `vite preview` and reports passive findings such as
+# missing security headers. Passive only: it reads responses and sends no attacks.
+# Run it with run-zap.ps1, which fills in ZAP_REPORT_DIR.
+
+env:
+  contexts:
+    - name: ewaste-web
+      urls:
+        - http://localhost:5175
+      includePaths:
+        - "http://localhost:5175.*"
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: ewaste-web
+      maxDuration: 2
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: ${ZAP_REPORT_DIR}
+      reportFile: 08-zap-web-baseline-report
+      reportTitle: "OWASP ZAP baseline scan - E-Waste web app (TC-SEC-008)"
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: ${ZAP_REPORT_DIR}
+      reportFile: 08-zap-web-baseline-report

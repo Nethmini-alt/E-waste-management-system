@@ -1,0 +1,75 @@
+
+Running 7 tests using 1 worker
+
+  ok 1 [setup] › e2e\setup\environment.setup.ts:13:1 › G0: API, database, stubs and reference data are ready (1.2s)
+  ok 2 [security] › e2e\specs\security.sec.spec.ts:48:1 › TC-SEC-001: forged, tampered and missing tokens are rejected (401) (2.8s)
+  ok 3 [security] › e2e\specs\security.sec.spec.ts:111:1 › TC-SEC-002: role × endpoint access matrix (allowed → 200, everyone else → 403) (2.3s)
+  ok 4 [security] › e2e\specs\security.sec.spec.ts:136:1 › TC-SEC-003: users cannot read or act on other users' records (IDOR) (4.6s)
+  x  5 [security] › e2e\specs\security.sec.spec.ts:169:1 › TC-SEC-004: agent (machine-to-machine) endpoints refuse calls without the agent key (1.8s)
+  ok 6 [security] › e2e\specs\security.sec.spec.ts:191:1 › TC-SEC-005: injection-style and oversized input is handled safely (2.0s)
+  x  7 [security] › e2e\specs\security.sec.spec.ts:236:1 › TC-SEC-006: login is protected against password guessing (brute force) (4.0s)
+
+
+  1) [security] › e2e\specs\security.sec.spec.ts:169:1 › TC-SEC-004: agent (machine-to-machine) endpoints refuse calls without the agent key 
+
+    Error: POST /api/commercial-plans with no key → 400
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: 400
+    Received array: [401, 503]
+
+      179 |       const res = await anon.fetch(path, { method, data, headers: key ? { 'X-Agent-Key': key } : {} });
+      180 |       // 401 = rejected; 503 = agent endpoints disabled because no key is configured. Both deny access.
+    > 181 |       expect([401, 503], `${method} ${path} with ${key ?? 'no'} key → ${res.status()}`).toContain(res.status());
+          |                                                                                         ^
+      182 |     }
+      183 |   }
+      184 |   // A logged-in human user is not an agent either.
+        at C:\Users\manod\Videos\SEF_Test\E-waste-management-system\frontend-react\project\e2e\specs\security.sec.spec.ts:181:89
+
+    Error Context: e2e-results\artifacts\specs-security.sec-TC-SEC--8f6a6-calls-without-the-agent-key-security\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    e2e-results\artifacts\specs-security.sec-TC-SEC--8f6a6-calls-without-the-agent-key-security\trace.zip
+    Usage:
+
+        npx playwright show-trace e2e-results\artifacts\specs-security.sec-TC-SEC--8f6a6-calls-without-the-agent-key-security\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [security] › e2e\specs\security.sec.spec.ts:236:1 › TC-SEC-006: login is protected against password guessing (brute force) 
+
+    Error: login right after 10 wrong guesses
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not 200
+
+      248 |   // the next attempt — even with the CORRECT password — should be refused (429 or 401/423 lockout).
+      249 |   const afterGuessing = await anon.post('/api/auth/login', { data: { email, password } });
+    > 250 |   expect(afterGuessing.status(), 'login right after 10 wrong guesses').not.toBe(200);
+          |                                                                            ^
+      251 |   await anon.dispose();
+      252 | });
+      253 |
+        at C:\Users\manod\Videos\SEF_Test\E-waste-management-system\frontend-react\project\e2e\specs\security.sec.spec.ts:250:76
+
+    attachment #1: wrong-attempt-statuses.txt (text/plain) ─────────────────────────────────────────
+    401, 401, 401, 401, 401, 401, 401, 401, 401, 401
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: e2e-results\artifacts\specs-security.sec-TC-SEC--9fc24-sword-guessing-brute-force--security\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    e2e-results\artifacts\specs-security.sec-TC-SEC--9fc24-sword-guessing-brute-force--security\trace.zip
+    Usage:
+
+        npx playwright show-trace e2e-results\artifacts\specs-security.sec-TC-SEC--9fc24-sword-guessing-brute-force--security\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [security] › e2e\specs\security.sec.spec.ts:169:1 › TC-SEC-004: agent (machine-to-machine) endpoints refuse calls without the agent key 
+    [security] › e2e\specs\security.sec.spec.ts:236:1 › TC-SEC-006: login is protected against password guessing (brute force) 
+  5 passed (30.2s)

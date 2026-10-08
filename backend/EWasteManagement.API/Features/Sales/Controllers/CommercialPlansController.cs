@@ -2,6 +2,7 @@ using System.Security.Claims;
 using EWasteManagement.API.Features.Sales.DTOs;
 using EWasteManagement.API.Features.Sales.Services;
 using EWasteManagement.API.Infrastructure.ExternalServices;
+using EWasteManagement.API.Shared.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,6 +29,9 @@ public class CommercialPlansController : ControllerBase
     /// </summary>
     [HttpPost]
     [AllowAnonymous]
+    // DEF-SEC-02: [RequireAgentKey] is an authorization filter, so a caller without the key gets
+    // 401 before model validation runs, instead of a 400 that describes the request format.
+    [RequireAgentKey]
     [ProducesResponseType(typeof(CommercialPlanResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<CommercialPlanResponse>> Create(
@@ -35,6 +39,8 @@ public class CommercialPlansController : ControllerBase
         [FromHeader(Name = "X-Agent-Key")] string? agentKey,
         CancellationToken ct)
     {
+        // Kept as a second check: the filter lets requests through in Development when no key is
+        // configured, but this endpoint has always refused calls without a matching key.
         var expectedKey = HttpContext.RequestServices
             .GetRequiredService<IConfiguration>()["Agent:ApiKey"];
 
