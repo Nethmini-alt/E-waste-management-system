@@ -345,7 +345,7 @@ const iconBtn: React.CSSProperties = {
   background: 'transparent', border: 'none', cursor: 'pointer', padding: 6,
 };
 const btnPrimary: React.CSSProperties = {
-  background: '#1565c0', color: '#fff', border: 'none', padding: '10px 16px',
+  background: '#10b981', color: '#fff', border: 'none', padding: '10px 16px',
   borderRadius: 6, cursor: 'pointer', fontWeight: 'bold',
 };
 const btnSecondary: React.CSSProperties = {
@@ -353,7 +353,7 @@ const btnSecondary: React.CSSProperties = {
   borderRadius: 6, cursor: 'pointer',
 };
 const btnSmall: React.CSSProperties = {
-  background: '#e3f2fd', color: '#1565c0', border: 'none', padding: '6px 10px',
+  background: '#e3f2fd', color: '#10b981', border: 'none', padding: '6px 10px',
   borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 'bold',
   display: 'flex', alignItems: 'center', gap: 4,
 };

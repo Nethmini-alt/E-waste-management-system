@@ -518,7 +518,7 @@ const backdrop: React.CSSProperties = {
   zIndex: 1000,
 };
 
-const modal: React.CSSProperties = {
+const modal: React.CSSProperties = { 
   background: '#fff',
   padding: 25,
   borderRadius: 10,
@@ -545,7 +545,7 @@ const iconBtn: React.CSSProperties = {
 };
 
 const btnPrimary: React.CSSProperties = {
-  background: '#1565c0',
+  background: '#10b981',
   color: '#fff',
   border: 'none',
   padding: '10px 16px',
